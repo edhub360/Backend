@@ -7,11 +7,10 @@ import urllib.parse
 Base = declarative_base()
 
 # --- Environment variables ---
-DB_USER = os.getenv("DB_USER", "postgres")
-DB_NAME = os.getenv("DB_NAME", "StudHub")
-DB_PASS = os.getenv("DB_PASS", "Edhub@360")
+DB_USER = os.getenv("DB_USER")
+DB_NAME = os.getenv("DB_NAME")
+DB_PASS = os.getenv("DB_PASS") # From Secret Manager
 DB_PASS = urllib.parse.quote_plus(DB_PASS)
-#DB_PASS = os.getenv("DB_PASS")  # From Secret Manager
 CLOUD_SQL_CONNECTION_NAME = os.getenv("CLOUD_SQL_CONNECTION_NAME")
 USE_CLOUD_SQL_SOCKET = os.getenv("USE_CLOUD_SQL_SOCKET", "true").lower() == "true"
 
