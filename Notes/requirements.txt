@@ -1,0 +1,16 @@
+fastapi
+uvicorn[standard]
+asyncpg
+sqlalchemy[asyncio]==2.0.*
+sqlalchemy_pgvector
+alembic
+python-docx
+python-pptx
+PyMuPDF
+google-cloud-storage
+requests
+beautifulsoup4
+youtube_transcript_api
+pydantic
+google-genai
+numpy
