@@ -4,6 +4,7 @@ from starlette.requests import Request
 import uvicorn
 from utils.logging import setup_logging
 from routes import notebooks, sources, embeddings
+from routes import chat
 
 app = FastAPI(title="NotebookLM Backend", version="1.0.0")
 
@@ -21,6 +22,7 @@ setup_logging(app)
 app.include_router(notebooks.router, prefix="/api/notebooks")
 app.include_router(sources.router, prefix="/api/sources")
 app.include_router(embeddings.router, prefix="/api/embeddings")
+app.include_router(chat.router, prefix="/api") 
 
 @app.get("/")
 async def root():
