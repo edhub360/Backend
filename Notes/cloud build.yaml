@@ -1,0 +1,16 @@
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args: ['build', -t , 'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/notebook-repo/notebook-service:${SHORT_SHA}', '.']
+  - name: gcr.io/cloud-builders/docker
+    args: ['push', 'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/notebook-repo/notebook-service:${SHORT_SHA}', 
+  #store images to artifact repository
+images:
+  - us-central1-docker.pkg.dev/arctic-sentry-467317-s7/notebook-repo/notebook-service:${SHORT_SHA}
+  #    - '--region'
+  #    - us-central1
+  #    - '--platform'
+  #    - managed
+  #    - '--allow-unauthenticated'
+  #    - '--memor-1Gi'
+  #    - '--cpu=1'
+  #    - port=8080
