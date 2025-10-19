@@ -1,14 +1,14 @@
 steps:
   - name: gcr.io/cloud-builders/docker
-    args: ['build', -t , 'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/notebook-repo/notebook-service:${SHORT_SHA}', '.']
+    args: ['build', -t , 'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/notebook-repo/notebook-service:v1', '.']
  options:
 #    logging: CLOUD_LOGGING_ONLY
     defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET
   - name: gcr.io/cloud-builders/docker
-    args: ['push', 'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/notebook-repo/notebook-service:${SHORT_SHA}'] 
+    args: ['push', 'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/notebook-repo/notebook-service:v1'] 
 #store images to artifact repository
 images:
-  - us-central1-docker.pkg.dev/arctic-sentry-467317-s7/notebook-repo/notebook-service:${SHORT_SHA}
+  - us-central1-docker.pkg.dev/arctic-sentry-467317-s7/notebook-repo/notebook-service:v1
   #    - '--region'
   #    - us-central1
   #    - '--platform'
