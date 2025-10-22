@@ -2,7 +2,7 @@ fastapi
 uvicorn[standard]
 asyncpg
 sqlalchemy[asyncio]==2.0.*
-sqlalchemy_pgvector
+pgvector
 alembic
 python-docx
 python-pptx
