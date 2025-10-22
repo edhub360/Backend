@@ -43,7 +43,7 @@ steps:
     args: [
       'build', 
       '-t', 'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/login-repo/login-service:${SHORT_SHA}-${BUILD_ID}', 
-      '.app/login'
+      './login/app'
     ]
   - name: 'gcr.io/cloud-builders/docker'
     args: [
