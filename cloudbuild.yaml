@@ -29,13 +29,13 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args: [
       'build', 
-      '-t', 'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/notebook-repo/notes-service:${SHORT_SHA}-${BUILD_ID}', 
+      '-t', 'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/notebook-repo/notebook-service:${SHORT_SHA}-${BUILD_ID}', 
       './Notes'
     ]
   - name: 'gcr.io/cloud-builders/docker'
     args: [
       'push', 
-      'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/notebook-repo/notes-service:${SHORT_SHA}-${BUILD_ID}'
+      'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/notebook-repo/notebook-service:${SHORT_SHA}-${BUILD_ID}'
     ]
 
   # 2. Build and push Login backend
@@ -95,8 +95,8 @@ options:
   defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET
 
 images:
-  - 'us-central1-docker.pkg.dev/$PROJECT_ID/notebook-repo/notes-service:${SHORT_SHA}-${BUILD_ID}'
-  - 'us-central1-docker.pkg.dev/$PROJECT_ID/notebook-repo/login-service:${SHORT_SHA}-${BUILD_ID}'
-  - 'us-central1-docker.pkg.dev/$PROJECT_ID/notebook-repo/quiz-service:${SHORT_SHA}-${BUILD_ID}'
-  - 'us-central1-docker.pkg.dev/$PROJECT_ID/notebook-repo/flashcard-service:${SHORT_SHA}-${BUILD_ID}'
-  - 'us-central1-docker.pkg.dev/$PROJECT_ID/notebook-repo/aichat-service:${SHORT_SHA}-${BUILD_ID}'
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/notebook-repo/notebook-service:${SHORT_SHA}-${BUILD_ID}'
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/login-repo/login-service:${SHORT_SHA}-${BUILD_ID}'
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/quiz-repo/quiz-service:${SHORT_SHA}-${BUILD_ID}'
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/flashcard-repo/flashcard-service:${SHORT_SHA}-${BUILD_ID}'
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/ai-chat-repo/aichat-service:${SHORT_SHA}-${BUILD_ID}'
