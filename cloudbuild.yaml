@@ -6,8 +6,8 @@ steps:
     args: ['push', 'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/notebook-repo/notebook-service:${SHORT_SHA}']
 
 # Images to be built and pushed by this build
-images:
-  - us-central1-docker.pkg.dev/arctic-sentry-467317-s7/notebook-repo/notebook-service:${SHORT_SHA}
+#images:
+#  - us-central1-docker.pkg.dev/arctic-sentry-467317-s7/notebook-repo/notebook-service:${SHORT_SHA}
 
 # Options for the entire build. This is a top-level key.
 options:
