@@ -56,7 +56,7 @@ steps:
     args: [
       'build', 
       '-t', 'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/quiz-repo/quiz-service:${SHORT_SHA}-${BUILD_ID}', 
-      './quiz/backend'
+      './quiz'
     ]
   - name: 'gcr.io/cloud-builders/docker'
     args: [
@@ -69,7 +69,7 @@ steps:
     args: [
       'build', 
       '-t', 'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/flashcard-repo/flashcard-service:${SHORT_SHA}-${BUILD_ID}', 
-      './flashcard/backend'
+      './flashcard'
     ]
   - name: 'gcr.io/cloud-builders/docker'
     args: [
