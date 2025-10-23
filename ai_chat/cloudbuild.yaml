@@ -14,7 +14,7 @@ steps:
 
 # Options for the entire build. This is a top-level key.
 options:
-  # logging: CLOUD_LOGGING_ONLY # This is commented out.
+  # logging: CLOUD_LOGGING_ONLY 
   defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET
 
 images:
