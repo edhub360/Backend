@@ -1,0 +1,19 @@
+steps:
+    - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'build',
+      '-t', 'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/ai-chat-repo/ai-chat-service:${SHORT_SHA}-${BUILD_ID}',
+      './ai_chat'
+    ]
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'push',
+      'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/ai-chat-repo/ai-chat-service:${SHORT_SHA}-${BUILD_ID}'
+    ]
+# Options for the entire build. This is a top-level key.
+options:
+  # logging: CLOUD_LOGGING_ONLY # This is commented out.
+  defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET
+
+images:
+- 'us-central1-docker.pkg.dev/$PROJECT_ID/ai-chat-repo/ai-chat-service:${SHORT_SHA}-${BUILD_ID}'
