@@ -5,7 +5,7 @@ steps:
           '-t', 'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/quiz-repo/quiz-service:${SHORT_SHA}-${BUILD_ID}', 
           './quiz'
         ]
-  - name: 'gcr.io/cloud-builders/docker'
+    - name: 'gcr.io/cloud-builders/docker'
         args: [
           'push', 
           'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/quiz-repo/quiz-service:${SHORT_SHA}-${BUILD_ID}'
