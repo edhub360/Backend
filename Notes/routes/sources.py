@@ -10,7 +10,7 @@ from db import get_session
 from models import Source, Notebook
 from schemas import Source as SourceSchema
 from services.extract_service import extract_text_from_file_content, extract_from_url, extract_from_youtube
-from services.gcs_service import upload_file_to_gcs
+from services.gcs_service import get_gcs_client, upload_file_to_gcs
 from services.embedding_service import store_embeddings_for_source
 
 router = APIRouter()
@@ -28,6 +28,7 @@ async def add_source(
     file: Optional[UploadFile] = File(None),
     website_url: Optional[str] = Form(None),
     youtube_url: Optional[str] = Form(None),
+    metadata: Optional[str] = Form(None),
     user_id: str = Depends(get_user_id),
     session: AsyncSession = Depends(get_session)
 ):
@@ -71,7 +72,8 @@ async def add_source(
                 # Reset file position for GCS upload
                 import io
                 file.file = io.BytesIO(file_content)
-                file_url = upload_file_to_gcs(file)
+                client = get_gcs_client()
+                file_url = upload_file_to_gcs(file, file_content, client=client)
                 print(f"DEBUG: File uploaded to GCS: {file_url}")
             except Exception as e:
                 print(f"DEBUG: GCS upload failed: {e}")

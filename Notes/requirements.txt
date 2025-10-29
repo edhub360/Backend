@@ -2,7 +2,7 @@ fastapi
 uvicorn[standard]
 asyncpg
 sqlalchemy[asyncio]==2.0.*
-pgvector
+pgvector==0.3.4
 alembic
 python-docx
 python-pptx
@@ -12,5 +12,6 @@ requests
 beautifulsoup4
 youtube_transcript_api
 pydantic
-google-genai
+google-generativeai 
+python-multipart
 numpy
