@@ -10,6 +10,39 @@ steps:
       'push', 
       'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/login-repo/login-service:${SHORT_SHA}-${BUILD_ID}'
     ]
+
+  # 2. Deploy to Cloud Run using secrets from Secret Manager
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        gcloud run deploy login-service \
+          --image=us-central1-docker.pkg.dev/arctic-sentry-467317-s7/login-repo/login-service:${SHORT_SHA}-${BUILD_ID} \
+          --platform=managed \
+          --region=us-central1 \
+          --allow-unauthenticated \
+          --memory=1Gi \
+          --cpu=1 \
+          --timeout=300 \
+          --max-instances=10 \
+          --port=8080 \
+          --add-cloudsql-instances=arctic-sentry-467317-s7:us-central1:studenthub \
+          --set-env-vars="DB_ECHO=false,ACCESS_TOKEN_EXPIRE_MINUTES=15,REFRESH_TOKEN_EXPIRE_DAYS=30,BCRYPT_ROUNDS=12,RATE_LIMIT_REQUESTS=5,APP_NAME=Auth Microservice,DEBUG=true,CORS_ORIGINS=[\"http://localhost:3000\",\"http://127.0.0.1:3000\",\"https://www.alconsultingltd.com\"]" \
+          --update-secrets=DATABASE_URL=DATABASE_URL:latest,JWT_SECRET_KEY=JWT_SECRET_KEY:latest,JWT_ALGORITHM=JWT_ALGORITHM:latest,GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID:latest
+
+availableSecrets:
+  secretManager:
+    - versionName: projects/arctic-sentry-467317-s7/secrets/DATABASE_URL/versions/latest
+      env: DATABASE_URL
+    - versionName: projects/arctic-sentry-467317-s7/secrets/JWT_SECRET_KEY/versions/latest
+      env: JWT_SECRET_KEY
+    - versionName: projects/arctic-sentry-467317-s7/secrets/JWT_ALGORITHM/versions/latest
+      env: JWT_ALGORITHM
+    - versionName: projects/arctic-sentry-467317-s7/secrets/GOOGLE_CLIENT_ID/versions/latest
+      env: GOOGLE_CLIENT_ID
+
+
 options:
   # logging: CLOUD_LOGGING_ONLY # This is commented out.
   defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET
