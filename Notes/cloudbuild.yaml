@@ -26,7 +26,7 @@ steps:
 
         gcloud run deploy notebook-service \
           --region=us-central1 \
-          --image=us-central1-docker.pkg.dev/arctic-sentry-467317-s7/notebook-repo/notebook-service:$${SHORT_SHA}-$${BUILD_ID} \
+          --image=us-central1-docker.pkg.dev/arctic-sentry-467317-s7/notebook-repo/notebook-service:${SHORT_SHA}-${BUILD_ID} \
           --platform=managed \
           --allow-unauthenticated \
           --memory=1Gi --cpu=1 --timeout=300 --max-instances=10 --port=8080 \
