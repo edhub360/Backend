@@ -28,7 +28,7 @@ steps:
           --max-instances=10 \
           --port=8080 \
           --add-cloudsql-instances=arctic-sentry-467317-s7:us-central1:studenthub \
-          --set-env-vars="DB_ECHO=false,ACCESS_TOKEN_EXPIRE_MINUTES=15,REFRESH_TOKEN_EXPIRE_DAYS=30,BCRYPT_ROUNDS=12,RATE_LIMIT_REQUESTS=5,APP_NAME=Auth Microservice,DEBUG=true,CORS_ORIGINS=[\"http://localhost:3000\",\"http://127.0.0.1:3000\",\"https://www.alconsultingltd.com\"]" \
+          --set-env-vars="DB_ECHO=false,ACCESS_TOKEN_EXPIRE_MINUTES=15,REFRESH_TOKEN_EXPIRE_DAYS=30,BCRYPT_ROUNDS=12,RATE_LIMIT_REQUESTS=5,APP_NAME=Auth Microservice,DEBUG=true,CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,https://www.alconsultingltd.com" \
           --update-secrets=DATABASE_URL=DATABASE_URL:latest,JWT_SECRET_KEY=JWT_SECRET_KEY:latest,JWT_ALGORITHM=JWT_ALGORITHM:latest,GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID:latest
 
 options:
