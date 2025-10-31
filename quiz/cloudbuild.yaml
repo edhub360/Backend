@@ -2,13 +2,13 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args: [
       'build', 
-      '-t', 'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/quiz-repo/quiz-service:${SHORT_SHA}-${BUILD_ID}', 
+      '-t', 'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/quiz-repo/quiz-backend:${SHORT_SHA}-${BUILD_ID}', 
       './quiz'
         ]
   - name: 'gcr.io/cloud-builders/docker'
     args: [
       'push', 
-      'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/quiz-repo/quiz-service:${SHORT_SHA}-${BUILD_ID}'
+      'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/quiz-repo/quiz-backend:${SHORT_SHA}-${BUILD_ID}'
         ]
   - name: 'gcr.io/cloud-builders/gcloud'
     entrypoint: 'bash'
@@ -16,9 +16,9 @@ steps:
       - '-c'
       - |
         export DATABASE_URL=$(gcloud secrets versions access latest --secret="DATABASE_URL")
-        gcloud run deploy quiz-service \
+        gcloud run deploy quiz-backend \
           --region=us-central1 \
-          --image=us-central1-docker.pkg.dev/arctic-sentry-467317-s7/quiz-repo/quiz-service:${SHORT_SHA}-${BUILD_ID} \
+          --image=us-central1-docker.pkg.dev/arctic-sentry-467317-s7/quiz-repo/quiz-backend:${SHORT_SHA}-${BUILD_ID} \
           --platform=managed \
           --allow-unauthenticated \
           --port=8080 \
@@ -28,4 +28,4 @@ options:
   defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET
 
 images:
-  - 'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/quiz-repo/quiz-service:${SHORT_SHA}-${BUILD_ID}'
+  - 'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/quiz-repo/quiz-backend:${SHORT_SHA}-${BUILD_ID}'
