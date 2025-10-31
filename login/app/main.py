@@ -29,7 +29,7 @@ async def lifespan(app: FastAPI):
     """Application lifespan manager."""
     # Startup
     logger.info("Starting up Auth Microservice...")
-    await init_db()
+    #await init_db()
     logger.info("Database initialized")
     yield
     # Shutdown
@@ -53,9 +53,9 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
+    allow_origins=["https://alconsultingltd.com"],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
@@ -91,11 +91,11 @@ async def health_check():
     return {"status": "healthy", "service": settings.app_name}
 
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(
-        "app.main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=settings.debug
-    )
+#if __name__ == "__main__":
+#    import uvicorn
+#   uvicorn.run(
+#        "app.main:app",
+#        host="0.0.0.0",
+#        port=8000,
+#        reload=settings.debug
+#    )
