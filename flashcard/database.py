@@ -6,26 +6,7 @@ import urllib.parse
 
 Base = declarative_base()
 
-# --- Environment variables ---
-DB_USER = os.getenv("DB_USER")
-DB_NAME = os.getenv("DB_NAME")
-DB_PASS = os.getenv("DB_PASS") # From Secret Manager
-DB_PASS = urllib.parse.quote_plus(DB_PASS)
-CLOUD_SQL_CONNECTION_NAME = os.getenv("CLOUD_SQL_CONNECTION_NAME")
-USE_CLOUD_SQL_SOCKET = os.getenv("USE_CLOUD_SQL_SOCKET", "true").lower() == "true"
-
-# --- DATABASE URL ---
-if USE_CLOUD_SQL_SOCKET and CLOUD_SQL_CONNECTION_NAME:
-    # Cloud Run / GCP: use Unix socket
-    DATABASE_URL = (
-        f"postgresql+asyncpg://{DB_USER}:{DB_PASS}"
-        f"@/{DB_NAME}?host=/cloudsql/{CLOUD_SQL_CONNECTION_NAME}"
-    )
-else:
-    # fallback (local dev or proxy)
-    DB_HOST = os.getenv("DB_HOST", "127.0.0.1")
-    DB_PORT = os.getenv("DB_PORT", "5432")
-    DATABASE_URL = f"postgresql+asyncpg://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+DATABASE_URL = os.environ["DATABASE_URL"]
 
 # --- SQLAlchemy async engine ---
 engine: AsyncEngine = create_async_engine(
