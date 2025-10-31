@@ -10,7 +10,19 @@ steps:
       'push', 
       'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/quiz-repo/quiz-service:${SHORT_SHA}-${BUILD_ID}'
         ]
-
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        export DATABASE_URL=$(gcloud secrets versions access latest --secret="DATABASE_URL")
+        gcloud run deploy quiz-service \
+          --region=us-central1 \
+          --image=us-central1-docker.pkg.dev/arctic-sentry-467317-s7/quiz-repo/quiz-service:${SHORT_SHA}-${BUILD_ID} \
+          --platform=managed \
+          --allow-unauthenticated \
+          --port=8080 \
+          --set-env-vars=DATABASE_URL=$${DATABASE_URL}
 options:
   # logging: CLOUD_LOGGING_ONLY # This is commented out.
   defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET
