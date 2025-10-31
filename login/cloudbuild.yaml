@@ -13,7 +13,7 @@ steps:
       'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/login-repo/login-service:${SHORT_SHA}-${BUILD_ID}'
     ]
 
-  # 2. Deploy to Cloud Run using secrets from Secret Manager.
+  # 2. Deploy to Cloud Run using secrets from Secret Manager
   - name: 'gcr.io/cloud-builders/gcloud'
     entrypoint: 'bash'
     args:
