@@ -385,7 +385,7 @@ async def get_me(current_user: User = Depends(get_current_user)):
     """Get current user profile - protected endpoint example."""
     return UserResponse.from_orm(current_user)
 
-# ✅ NEW ENDPOINT - Activate Subscription
+#  NEW ENDPOINT - Activate Subscription
 @router.post("/activate-subscription")
 async def activate_subscription(
     db: AsyncSession = Depends(get_db),
@@ -393,15 +393,15 @@ async def activate_subscription(
 ):
     """Activate free trial subscription for first-time users."""
     print(f"\n{'='*60}")
-    print(f"📋 DEBUG: ACTIVATE SUBSCRIPTION endpoint called")
-    print(f"👤 DEBUG: User: {current_user.email}")
-    print(f"📊 DEBUG: Current subscription_tier: {current_user.subscription_tier}")
+    print(f" DEBUG: ACTIVATE SUBSCRIPTION endpoint called")
+    print(f" DEBUG: User: {current_user.email}")
+    print(f" DEBUG: Current subscription_tier: {current_user.subscription_tier}")
     print(f"{'='*60}\n")
     
     try:
         # Check if already has subscription
         if current_user.subscription_tier:
-            print(f"⚠️ DEBUG: Subscription already active")
+            print(f" DEBUG: Subscription already active")
             return {
                 "message": "Subscription already active",
                 "subscription_tier": current_user.subscription_tier,

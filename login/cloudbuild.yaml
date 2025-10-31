@@ -1,0 +1,40 @@
+steps:
+  # 1. Build and push Login backend
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'build', 
+      '-t', 'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/login-repo/login-service:${SHORT_SHA}-${BUILD_ID}', 
+      './login'
+    ]
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'push', 
+      'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/login-repo/login-service:${SHORT_SHA}-${BUILD_ID}'
+    ]
+
+  # 2. Deploy to Cloud Run using secrets from Secret Manager
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        export DATABASE_URL=$(gcloud secrets versions access latest --secret="DATABASE_URL")
+        export JWT_SECRET_KEY=$(gcloud secrets versions access latest --secret="JWT_SECRET_KEY")
+        export JWT_ALGORITHM=$(gcloud secrets versions access latest --secret="JWT_ALGORITHM")
+        export GOOGLE_CLIENT_ID=$(gcloud secrets versions access latest --secret="GOOGLE_CLIENT_ID")
+
+        gcloud run deploy login-service \
+          --region=us-central1 \
+          --image=us-central1-docker.pkg.dev/arctic-sentry-467317-s7/login-repo/login-service:${SHORT_SHA}-${BUILD_ID} \
+          --platform=managed \
+          --allow-unauthenticated \
+          --memory=1Gi --cpu=1 --timeout=300 --max-instances=10 --port=8080 \
+          --add-cloudsql-instances=arctic-sentry-467317-s7:us-central1:studenthub \
+          --set-env-vars=DATABASE_URL=$${DATABASE_URL},JWT_SECRET_KEY=$${JWT_SECRET_KEY},JWT_ALGORITHM=$${JWT_ALGORITHM},GOOGLE_CLIENT_ID=$${GOOGLE_CLIENT_ID},DB_ECHO=false,ACCESS_TOKEN_EXPIRE_MINUTES=15,REFRESH_TOKEN_EXPIRE_DAYS=30,BCRYPT_ROUNDS=12,RATE_LIMIT_REQUESTS=5,APP_NAME="Auth Microservice",DEBUG=true
+
+options:
+  defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET
+
+images:
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/login-repo/login-service:${SHORT_SHA}-${BUILD_ID}'

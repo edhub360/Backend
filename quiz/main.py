@@ -6,12 +6,11 @@ from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_session, engine
-from models import Base, User, Question, Quiz, Response
+from models import Base, User, Question, Quiz
 from schemas import (
     UserCreate, UserUpdate, UserOut,
     QuestionCreate, QuestionOut,
-    QuizCreate, QuizOut,
-    ResponseCreate, ResponseOut
+    QuizCreate, QuizOut
 )
 
 app = FastAPI(title="Quiz API (PostgreSQL + SQLAlchemy async)", version="2.0")
