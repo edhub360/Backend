@@ -5,7 +5,7 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy import select
 from typing import Optional
 from uuid import UUID
-
+from utils.auth import get_current_user, AuthUser
 from db import get_session
 from models import Source, Notebook
 from schemas import Source as SourceSchema
@@ -15,12 +15,6 @@ from services.embedding_service import store_embeddings_for_source
 
 router = APIRouter()
 
-def get_user_id(x_user_id: str = Header(...)):  # Fixed this line
-    """Extract user ID from header"""
-    if not x_user_id:
-        raise HTTPException(status_code=401, detail="X-User-Id header is required")
-    return x_user_id
-
 @router.post("/")
 async def add_source(
     notebook_id: UUID = Form(...),
@@ -29,17 +23,17 @@ async def add_source(
     website_url: Optional[str] = Form(None),
     youtube_url: Optional[str] = Form(None),
     metadata: Optional[str] = Form(None),
-    user_id: str = Depends(get_user_id),
+    user: AuthUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_session)
 ):
     """Add a new source to a notebook"""
     try:
-        print(f"DEBUG: Adding source - type: {type}, notebook_id: {notebook_id}, user_id: {user_id}")
+        print(f"DEBUG: Adding source - type: {type}, notebook_id: {notebook_id}, user_id: {user.user_id}")
         
         # Verify notebook exists and belongs to user
         notebook_query = select(Notebook).where(
             Notebook.id == notebook_id,
-            Notebook.user_id == user_id
+            Notebook.user_id == user.user_id
         )
         result = await session.execute(notebook_query)
         notebook = result.scalar_one_or_none()
@@ -180,17 +174,17 @@ async def add_source(
 @router.get("/{notebook_id}")
 async def get_sources(
     notebook_id: UUID,
-    user_id: str = Depends(get_user_id),
+    user: AuthUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_session)
 ):
     """Get all sources for a notebook"""
     try:
-        print(f"DEBUG: Getting sources for notebook {notebook_id}, user {user_id}")
+        print(f"DEBUG: Getting sources for notebook {notebook_id}, user {user.user_id}")
         
         # Verify notebook exists and belongs to user
         notebook_query = select(Notebook).where(
             Notebook.id == notebook_id,
-            Notebook.user_id == user_id
+            Notebook.user_id == user.user_id
         )
         result = await session.execute(notebook_query)
         notebook = result.scalar_one_or_none()
@@ -231,12 +225,12 @@ async def get_sources(
 @router.get("/detail/{source_id}")
 async def get_source_detail(
     source_id: UUID,
-    user_id: str = Depends(get_user_id),
+    user: AuthUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_session)
 ):
     """Get detailed information about a specific source"""
     try:
-        print(f"DEBUG: Getting source detail for {source_id}, user {user_id}")
+        print(f"DEBUG: Getting source detail for {source_id}, user {user.user_id}")
         
         # Get source with notebook info
         query = select(Source).options(selectinload(Source.notebook)).where(Source.id == source_id)
@@ -247,7 +241,7 @@ async def get_source_detail(
             raise HTTPException(status_code=404, detail="Source not found")
         
         # Verify user owns the notebook
-        if source.notebook.user_id != user_id:
+        if source.notebook.user_id != user.user_id:
             raise HTTPException(status_code=404, detail="Source not found")
         
         # Count embeddings for this source
@@ -282,12 +276,12 @@ async def get_source_detail(
 @router.delete("/{source_id}")
 async def delete_source(
     source_id: UUID,
-    user_id: str = Depends(get_user_id),
+    user: AuthUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_session)
 ):
     """Delete a source and its embeddings"""
     try:
-        print(f"DEBUG: Deleting source {source_id}, user {user_id}")
+        print(f"DEBUG: Deleting source {source_id}, user {user.user_id}")
         
         # Get source with notebook info
         query = select(Source).options(selectinload(Source.notebook)).where(Source.id == source_id)
@@ -298,7 +292,7 @@ async def delete_source(
             raise HTTPException(status_code=404, detail="Source not found")
         
         # Verify user owns the notebook
-        if source.notebook.user_id != user_id:
+        if source.notebook.user_id != user.user_id:
             raise HTTPException(status_code=404, detail="Source not found")
         
         # Delete the source (embeddings will be deleted automatically due to CASCADE)
@@ -322,12 +316,12 @@ async def update_source(
     type: Optional[str] = Form(None),
     website_url: Optional[str] = Form(None),
     youtube_url: Optional[str] = Form(None),
-    user_id: str = Depends(get_user_id),
+    user: AuthUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_session)
 ):
     """Update a source (limited fields)"""
     try:
-        print(f"DEBUG: Updating source {source_id}, user {user_id}")
+        print(f"DEBUG: Updating source {source_id}, user {user.user_id}")
         
         # Get source with notebook info
         query = select(Source).options(selectinload(Source.notebook)).where(Source.id == source_id)
@@ -338,7 +332,7 @@ async def update_source(
             raise HTTPException(status_code=404, detail="Source not found")
         
         # Verify user owns the notebook
-        if source.notebook.user_id != user_id:
+        if source.notebook.user_id != user.user_id:
             raise HTTPException(status_code=404, detail="Source not found")
         
         # Update allowed fields

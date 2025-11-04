@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Dict, Any
 from uuid import UUID
 import logging
+from utils.auth import get_current_user, AuthUser
 
 from db import get_session
 from utils.auth import get_current_user_id
@@ -25,8 +26,8 @@ gemini_service = GeminiService()
 async def chat_with_notebook(
     notebook_id: UUID,
     chat_request: ChatRequest,
-    request: Request,
-    session: AsyncSession = Depends(get_session)
+    session: AsyncSession = Depends(get_session),
+    user: AuthUser = Depends(get_current_user)
 ):
     """
     Chat with notebook content using RAG (Retrieval-Augmented Generation).
@@ -39,7 +40,7 @@ async def chat_with_notebook(
     """
     try:
         # Get user ID for session management
-        user_id = get_current_user_id(request)
+        user_id = user.user_id
         session_id = f"{user_id}_{notebook_id}"
         
         logger.info(f"Processing chat request for notebook {notebook_id}, user {user_id}")
@@ -128,11 +129,11 @@ async def chat_with_notebook(
 @router.get("/{notebook_id}/history", response_model=List[ChatMessage])
 async def get_chat_history(
     notebook_id: UUID,
-    request: Request
+    user: AuthUser = Depends(get_current_user),
 ):
     """Get chat history for a specific notebook session."""
     try:
-        user_id = get_current_user_id(request)
+        user_id = user.user_id
         session_id = f"{user_id}_{notebook_id}"
         
         history = session_memory.get_history(session_id)
@@ -147,11 +148,11 @@ async def get_chat_history(
 @router.delete("/{notebook_id}/history")
 async def clear_chat_history(
     notebook_id: UUID,
-    request: Request
+    user: AuthUser = Depends(get_current_user),
 ):
     """Clear chat history for a specific notebook session."""
     try:
-        user_id = get_current_user_id(request)
+        user_id = user.user_id
         session_id = f"{user_id}_{notebook_id}"
         
         session_memory.clear_history(session_id)
