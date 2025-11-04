@@ -23,6 +23,8 @@ steps:
         export LOGIN_SERVICE_URL=$(gcloud secrets versions access latest --secret="LOGIN_SERVICE_URL")
         export GCS_BUCKET=$(gcloud secrets versions access latest --secret="GCS_BUCKET")
         export GEMINI_API_KEY=$(gcloud secrets versions access latest --secret="GEMINI_API_KEY")
+        export JWT_SECRET_KEY=$(gcloud secrets versions access latest --secret="JWT_SECRET_KEY")
+        export JWT_ALGORITHM=$(gcloud secrets versions access latest --secret="JWT_ALGORITHM")
 
         gcloud run deploy notebook-service \
           --region=us-central1 \
@@ -31,7 +33,7 @@ steps:
           --allow-unauthenticated \
           --memory=1Gi --cpu=1 --timeout=300 --max-instances=10 --port=8080 \
           --add-cloudsql-instances=arctic-sentry-467317-s7:us-central1:studenthub \
-          --set-env-vars=DATABASE_URL=$${DATABASE_URL},LOGIN_SERVICE_URL=$${LOGIN_SERVICE_URL},GCS_BUCKET=$${GCS_BUCKET},GEMINI_API_KEY=$${GEMINI_API_KEY}
+          --set-env-vars=DATABASE_URL=$${DATABASE_URL},LOGIN_SERVICE_URL=$${LOGIN_SERVICE_URL},GCS_BUCKET=$${GCS_BUCKET},GEMINI_API_KEY=$${GEMINI_API_KEY},JWT_SECRET_KEY=$${JWT_SECRET_KEY},JWT_ALGORITHM=$${JWT_ALGORITHM}
 
 options:
   defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET
