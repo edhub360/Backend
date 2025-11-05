@@ -93,6 +93,7 @@ async def generate_tokens(db: AsyncSession, user: User) -> Dict[str, Any]:
     # Create access token
     access_token_data = {
         "sub": str(user.user_id),
+        "user_id": str(user.user_id),
         "email": user.email,
         "name": user.name
     }
