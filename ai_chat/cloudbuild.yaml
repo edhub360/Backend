@@ -24,7 +24,7 @@ steps:
           --platform=managed \
           --allow-unauthenticated \
           --port=8080 \
-          --set-env-vars=GEMINI_API_KEY=$${APIKEY_EDHUB360}
+          --set-env-vars=GEMINI_API_KEY=$${GEMINI_API_KEY}
 
 options:
   defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET
