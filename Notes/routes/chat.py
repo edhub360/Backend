@@ -6,7 +6,6 @@ import logging
 from utils.auth import get_current_user, AuthUser
 
 from db import get_session
-from utils.auth import get_current_user_id
 from services.gemini_service import GeminiService
 from services.embedding_service import get_relevant_chunks_for_notebook
 from utils.session_memory import SessionMemory
