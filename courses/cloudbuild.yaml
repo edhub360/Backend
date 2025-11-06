@@ -1,0 +1,31 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'build',
+      '-t', 'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/courses-repo/courses-backend:${SHORT_SHA}-${BUILD_ID}',
+      './courses'
+    ]
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'push',
+      'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/courses-repo/courses-backend:${SHORT_SHA}-${BUILD_ID}'
+    ]
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        export DATABASE_URL=$(gcloud secrets versions access latest --secret="DATABASE_URL")
+        gcloud run deploy courses-backend \
+          --region=us-central1 \
+          --image=us-central1-docker.pkg.dev/arctic-sentry-467317-s7/courses-repo/courses-backend:${SHORT_SHA}-${BUILD_ID} \
+          --platform=managed \
+          --allow-unauthenticated \
+          --port=8080 \
+          --set-env-vars=DATABASE_URL=$${DATABASE_URL},ASSETS_BASE_URL=https://storage.googleapis.com/arctic-sentry-467317-s7-studenthub-data,PAGE_DEFAULT_LIMIT=10,MAX_PAGE_LIMIT=100,LOG_LEVEL=INFO
+
+options:
+  defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET
+
+images:
+  - 'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/courses-repo/courses-backend:${SHORT_SHA}-${BUILD_ID}'
