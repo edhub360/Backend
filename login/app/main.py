@@ -53,7 +53,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://alconsultingltd.com","https://www.alconsultingltd.com", "http://localhost:5173"],
+    allow_origins=["https://staging.alconsultingltd.com"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
