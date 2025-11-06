@@ -11,7 +11,7 @@ app = FastAPI(title="NotebookLM Backend", version="1.0.0")
 # CORS config as needed
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # limit in production!
+    allow_origins=["https://staging.alconsultingltd.com"],  # limit in production!
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
