@@ -17,14 +17,16 @@ steps:
     args:
       - '-c'
       - |
-        export GEMINI_API_KEY=$(gcloud secrets versions access latest --secret="APIKEY_EDHUB360")
+        export JWT_SECRET_KEY=$(gcloud secrets versions access latest --secret="JWT_SECRET_KEY")
+        export JWT_ALGORITHM=$(gcloud secrets versions access latest --secret="JWT_ALGORITHM")
+        export GEMINI_API_KEY=$(gcloud secrets versions access latest --secret="GEMINI_API_KEY")
         gcloud run deploy ai-chat-service \
           --region=us-central1 \
           --image=us-central1-docker.pkg.dev/arctic-sentry-467317-s7/ai-chat-repo/ai-chat-service:${SHORT_SHA}-${BUILD_ID} \
           --platform=managed \
           --allow-unauthenticated \
           --port=8080 \
-          --set-env-vars=GEMINI_API_KEY=$${GEMINI_API_KEY}
+          --set-env-vars=GEMINI_API_KEY=$${GEMINI_API_KEY},JWT_SECRET_KEY=$${JWT_SECRET_KEY},JWT_ALGORITHM=$${JWT_ALGORITHM}
 
 options:
   defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET
