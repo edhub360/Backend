@@ -22,7 +22,7 @@ steps:
         export DATABASE_URL=$(gcloud secrets versions access latest --secret="DATABASE_URL")
         export LOGIN_SERVICE_URL=$(gcloud secrets versions access latest --secret="LOGIN_SERVICE_URL")
         export GCS_BUCKET=$(gcloud secrets versions access latest --secret="GCS_BUCKET")
-        export GEMINI_API_KEY=$(gcloud secrets versions access latest --secret="GEMINI_API_KEY")
+        export GEMINI_API_KEY=$(gcloud secrets versions access latest --secret="APIKEY_EDHUB360")
         export JWT_SECRET_KEY=$(gcloud secrets versions access latest --secret="JWT_SECRET_KEY")
         export JWT_ALGORITHM=$(gcloud secrets versions access latest --secret="JWT_ALGORITHM")
 
