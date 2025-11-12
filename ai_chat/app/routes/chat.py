@@ -5,7 +5,7 @@ from app.utils.faiss_handler import get_faiss_store
 from app.utils.gemini_handler import get_gemini_handler
 from app.utils.auth import get_current_user, AuthUser
 from app.utils.session_memory import session_memory
-from app.utils.moderation import check_content_safety, moderate_generated_content 
+from app.utils.moderation import contains_harmful_content 
 
 router = APIRouter()
 
@@ -13,12 +13,12 @@ router = APIRouter()
 async def chat(request: ChatRequest, user: AuthUser = Depends(get_current_user)):
     """Handle chat requests with general or RAG mode."""
     # Guardrail: pre-check user query for harmful content
-    # Pre-check user input
-    if not check_content_safety(request.query):
+    # Pre-check: Block on user query before calling Gemini
+    if contains_harmful_content(request.query):
         return ChatResponse(
-            answer="Your query contains content that violates our usage policies and cannot be processed.",
+            answer="Your request cannot be processed due to inappropriate content.",
             mode=request.mode,
-            retrieved_chunks=None,
+            retrieved_chunks=None
         )
     try:
         session_id = request.session_id or str(user.user_id)
@@ -34,9 +34,11 @@ async def chat(request: ChatRequest, user: AuthUser = Depends(get_current_user))
         if request.mode == ChatMode.GENERAL:
             # In general mode, use all previous messages as context
             context = " ".join(m.content for m in history)
-            raw_answer = gemini_handler.generate_response(context)
+            answer = gemini_handler.generate_response(context)
             
-            safe, answer = moderate_generated_content(raw_answer)
+            # Post-check: Block on LLM output
+            if contains_harmful_content(answer):
+                answer = "Sorry, I cannot provide a response due to content policy."
             # Store assistant's answer in history
             session_memory.append_message(session_id, 'assistant', answer)
             
