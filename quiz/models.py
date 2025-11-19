@@ -38,7 +38,7 @@ class Quiz(Base):
     subject_tag: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     estimated_time: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     tags: Mapped[Optional[list]] = mapped_column(JSONB, nullable=True)
-    metadata: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    quiz_metadata: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=text("CURRENT_TIMESTAMP"))
     
     # Relationships
