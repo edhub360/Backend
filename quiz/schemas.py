@@ -33,7 +33,7 @@ class QuizBase(BaseModel):
     subject_tag: Optional[str] = None
     estimated_time: Optional[int] = None
     tags: Optional[List[str]] = None
-    metadata: Optional[Dict[str, Any]] = None
+    quiz_metadata: Optional[Dict[str, Any]] = None
 
 class QuizCreate(QuizBase):
     user_id: str
