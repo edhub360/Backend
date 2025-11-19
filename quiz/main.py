@@ -18,8 +18,7 @@ app = FastAPI(title="Quiz API (PostgreSQL + SQLAlchemy async)", version="2.0")
 # CORS for React apps (tighten in prod)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000",
-                   "https://app.edhub360.com"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
