@@ -2,6 +2,31 @@ from datetime import datetime
 from typing import Optional, List, Any, Dict
 from pydantic import BaseModel, Field, EmailStr
 
+# ---------- Users ----------
+class UserBase(BaseModel):
+    email: EmailStr
+    name: Optional[str] = None
+    language: Optional[str] = None
+    subscription_tier: Optional[str] = None
+    study_goals: Optional[Dict[str, Any]] = None
+    device_info: Optional[Dict[str, Any]] = None
+
+class UserCreate(UserBase):
+    pass
+
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    language: Optional[str] = None
+    subscription_tier: Optional[str] = None
+    study_goals: Optional[Dict[str, Any]] = None
+    device_info: Optional[Dict[str, Any]] = None
+
+class UserOut(UserBase):
+    user_id: str
+    created_at: datetime
+    class Config:
+        from_attributes = True
+
 # ---------- Questions ----------
 class QuestionBase(BaseModel):
     user_id: Optional[str] = None
