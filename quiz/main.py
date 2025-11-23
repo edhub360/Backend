@@ -1,19 +1,21 @@
 from typing import List, Optional
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import select, update, delete
-from sqlalchemy.orm import selectinload  # Import this for eager loading
+from sqlalchemy import select, update, delete, func, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_session, engine
-from models import Base, User, Question, Quiz
+from models import Base, User, QuizQuestion, Quiz, QuizAttempt
 from schemas import (
     UserCreate, UserUpdate, UserOut,
     QuestionCreate, QuestionOut,
-    QuizCreate, QuizOut
+    QuizCreate, QuizOut,  # Legacy
+    QuizListItem, QuizDetail, QuizQuestionResponse,
+    QuizAttemptCreate, QuizAttemptResponse,
+    UserQuizHistory, QuizStatistics
 )
 
-app = FastAPI(title="Quiz API (PostgreSQL + SQLAlchemy async)", version="2.0")
+app = FastAPI(title="Quiz API (PostgreSQL + SQLAlchemy async)", version="3.0")
 
 # CORS Configuration
 app.add_middleware(
@@ -26,7 +28,7 @@ app.add_middleware(
 
 @app.get("/")
 async def root():
-    return {"status": "ok", "message": "Quiz API is running", "db": "postgresql", "orm": "sqlalchemy-async"}
+    return {"status": "ok", "db": "postgresql", "orm": "sqlalchemy-async", "version": "3.0"}
 
 # ---------------- Health Check ----------------
 @app.get("/healthz")
@@ -86,120 +88,178 @@ async def delete_user(user_id: str, session: AsyncSession = Depends(get_session)
     await session.commit()
     return
 
-# ============================================
-# QUIZ ENDPOINTS
-# ============================================
+# ---------------- Quizzes (NEW API) ----------------
 
-@app.post("/quizzes", response_model=QuizOut, status_code=status.HTTP_201_CREATED)
-async def create_quiz(payload: QuizCreate, session: AsyncSession = Depends(get_session)):
-    """Create a new quiz"""
-    quiz = Quiz(**payload.model_dump())
+@app.get("/quizzes", response_model=List[QuizListItem])
+async def list_quizzes(session: AsyncSession = Depends(get_session)):
+    """Get all active quizzes (global, no user_id needed)"""
+    query = text("""
+        SELECT 
+            q.quiz_id,
+            q.title,
+            q.description,
+            q.subject_tag,
+            q.difficulty_level,
+            q.estimated_time,
+            q.is_active,
+            COUNT(qu.question_id) as total_questions
+        FROM stud_hub_schema.quizzes q
+        LEFT JOIN stud_hub_schema.questions qu ON q.quiz_id = qu.quiz_id
+        WHERE q.is_active = true
+        GROUP BY q.quiz_id
+        ORDER BY q.created_at DESC
+    """)
+    
+    result = await session.execute(query)
+    rows = result.fetchall()
+    
+    return [
+        QuizListItem(
+            quiz_id=str(row.quiz_id),
+            title=row.title or f"Quiz #{str(row.quiz_id)[:8]}",
+            description=row.description,
+            subject_tag=row.subject_tag,
+            difficulty_level=row.difficulty_level,
+            estimated_time=row.estimated_time,
+            total_questions=row.total_questions or 0,
+            is_active=row.is_active
+        )
+        for row in rows
+    ]
+
+@app.get("/quizzes/{quiz_id}", response_model=QuizDetail)
+async def get_quiz_detail(quiz_id: str, session: AsyncSession = Depends(get_session)):
+    """Get quiz with all questions"""
+    # Get quiz
+    quiz = await session.get(Quiz, quiz_id)
+    if not quiz or not quiz.is_active:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+    
+    # Get questions
+    stmt = select(QuizQuestion).where(QuizQuestion.quiz_id == quiz_id).order_by(QuizQuestion.created_at)
+    result = await session.execute(stmt)
+    questions = result.scalars().all()
+    
+    return QuizDetail(
+        quiz_id=str(quiz.quiz_id),
+        title=quiz.title or f"Quiz #{quiz_id[:8]}",
+        description=quiz.description,
+        subject_tag=quiz.subject_tag,
+        difficulty_level=quiz.difficulty_level,
+        estimated_time=quiz.estimated_time,
+        questions=[
+            QuizQuestionResponse(
+                question_id=str(q.question_id),
+                question_text=q.question_text or "",
+                correct_answer=q.correct_answer or "",
+                incorrect_answers=q.incorrect_answers or [],
+                explanation=q.explanation,
+                difficulty=q.difficulty
+            )
+            for q in questions
+        ]
+    )
+
+@app.post("/quiz-attempts", response_model=QuizAttemptResponse, status_code=status.HTTP_201_CREATED)
+async def submit_quiz_attempt(payload: QuizAttemptCreate, session: AsyncSession = Depends(get_session)):
+    """Submit a quiz attempt and save results"""
+    # Verify user exists
+    user = await session.get(User, payload.user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Verify quiz exists
+    quiz = await session.get(Quiz, payload.quiz_id)
+    if not quiz:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+    
+    # Create attempt
+    attempt = QuizAttempt(
+        user_id=payload.user_id,
+        quiz_id=payload.quiz_id,
+        score=payload.score,
+        total_questions=payload.total_questions,
+        score_percentage=payload.score_percentage,
+        time_taken=payload.time_taken,
+        answers=[a.model_dump() for a in payload.answers] if payload.answers else None
+    )
+    
+    session.add(attempt)
+    await session.commit()
+    await session.refresh(attempt)
+    
+    return QuizAttemptResponse(
+        attempt_id=str(attempt.attempt_id),
+        user_id=str(attempt.user_id),
+        quiz_id=str(attempt.quiz_id),
+        score=attempt.score,
+        total_questions=attempt.total_questions,
+        score_percentage=attempt.score_percentage,
+        time_taken=attempt.time_taken,
+        completed_at=attempt.completed_at
+    )
+
+@app.get("/users/{user_id}/quiz-attempts", response_model=List[UserQuizHistory])
+async def get_user_quiz_history(user_id: str, limit: int = 50, session: AsyncSession = Depends(get_session)):
+    """Get user's quiz attempt history"""
+    query = text("""
+        SELECT * FROM stud_hub_schema.user_quiz_history
+        WHERE user_id = :user_id
+        ORDER BY completed_at DESC
+        LIMIT :limit
+    """)
+    
+    result = await session.execute(query, {"user_id": user_id, "limit": limit})
+    rows = result.fetchall()
+    
+    return [
+        UserQuizHistory(
+            attempt_id=str(row.attempt_id),
+            quiz_id=str(row.quiz_id),
+            quiz_title=row.quiz_title,
+            subject_tag=row.subject_tag,
+            difficulty_level=row.difficulty_level,
+            score=row.score,
+            total_questions=row.total_questions,
+            score_percentage=row.score_percentage,
+            time_taken=row.time_taken,
+            completed_at=row.completed_at
+        )
+        for row in rows
+    ]
+
+@app.get("/quiz-statistics", response_model=List[QuizStatistics])
+async def get_quiz_statistics(session: AsyncSession = Depends(get_session)):
+    """Get aggregated quiz performance statistics"""
+    query = text("SELECT * FROM stud_hub_schema.quiz_statistics")
+    result = await session.execute(query)
+    rows = result.fetchall()
+    
+    return [
+        QuizStatistics(
+            quiz_id=str(row.quiz_id),
+            title=row.title,
+            total_users_attempted=row.total_users_attempted or 0,
+            total_attempts=row.total_attempts or 0,
+            average_score=float(row.average_score) if row.average_score else None,
+            highest_score=float(row.highest_score) if row.highest_score else None,
+            lowest_score=float(row.lowest_score) if row.lowest_score else None,
+            average_time=float(row.average_time) if row.average_time else None
+        )
+        for row in rows
+    ]
+
+# ---------------- Legacy Quiz Endpoints (Deprecated) ----------------
+@app.post("/quizzes/legacy", response_model=QuizOut, status_code=status.HTTP_201_CREATED)
+async def create_quiz_legacy(payload: QuizCreate, session: AsyncSession = Depends(get_session)):
+    """Legacy endpoint - use POST /quiz-attempts instead"""
+    quiz = Quiz(
+        user_id=payload.user_id,
+        questions=[q.model_dump() for q in payload.questions] if payload.questions else None,
+        score=payload.score,
+        time_taken=payload.time_taken,
+    )
     session.add(quiz)
     await session.commit()
     await session.refresh(quiz)
     return quiz
-
-@app.get("/quizzes/user/{user_id}", response_model=List[QuizOut])
-async def get_user_quizzes(user_id: str, session: AsyncSession = Depends(get_session)):
-    """Get all quizzes for a specific user with their questions (eager loaded)"""
-    stmt = (
-        select(Quiz)
-        .options(selectinload(Quiz.questions))  # Eagerly load questions
-        .where(Quiz.user_id == user_id)
-        .order_by(Quiz.created_at.desc())
-    )
-    result = await session.execute(stmt)
-    quizzes = result.scalars().all()
-    return quizzes
-
-@app.get("/quizzes", response_model=List[QuizOut])
-async def list_quizzes(
-    user_id: Optional[str] = None, 
-    limit: int = 100, 
-    session: AsyncSession = Depends(get_session)
-):
-    """List all quizzes (optionally filtered by user_id)"""
-    stmt = select(Quiz).options(selectinload(Quiz.questions)).limit(limit)
-    if user_id:
-        stmt = stmt.where(Quiz.user_id == user_id)
-    result = await session.execute(stmt)
-    return result.scalars().all()
-
-@app.get("/quizzes/{quiz_id}", response_model=QuizOut)
-async def get_quiz(quiz_id: str, session: AsyncSession = Depends(get_session)):
-    """Get a specific quiz with its questions"""
-    stmt = (
-        select(Quiz)
-        .options(selectinload(Quiz.questions))
-        .where(Quiz.quiz_id == quiz_id)
-    )
-    result = await session.execute(stmt)
-    quiz = result.scalar_one_or_none()
-    
-    if not quiz:
-        raise HTTPException(status_code=404, detail="Quiz not found")
-    return quiz
-
-@app.delete("/quizzes/{quiz_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_quiz(quiz_id: str, session: AsyncSession = Depends(get_session)):
-    """Delete a quiz (cascades to questions)"""
-    obj = await session.get(Quiz, quiz_id)
-    if not obj:
-        raise HTTPException(status_code=404, detail="Quiz not found")
-    await session.delete(obj)
-    await session.commit()
-    return
-
-# ============================================
-# QUESTION ENDPOINTS
-# ============================================
-
-@app.post("/questions", response_model=QuestionOut, status_code=status.HTTP_201_CREATED)
-async def create_question(payload: QuestionCreate, session: AsyncSession = Depends(get_session)):
-    """Create a new question for a quiz"""
-    question = Question(**payload.model_dump())
-    session.add(question)
-    await session.commit()
-    await session.refresh(question)
-    return question
-
-@app.get("/quizzes/{quiz_id}/questions", response_model=List[QuestionOut])
-async def get_quiz_questions(quiz_id: str, session: AsyncSession = Depends(get_session)):
-    """Get all questions for a specific quiz"""
-    stmt = select(Question).where(Question.quiz_id == quiz_id).order_by(Question.created_at)
-    result = await session.execute(stmt)
-    return result.scalars().all()
-
-@app.get("/questions", response_model=List[QuestionOut])
-async def list_questions(
-    user_id: Optional[str] = None, 
-    quiz_id: Optional[str] = None,
-    limit: int = 100, 
-    session: AsyncSession = Depends(get_session)
-):
-    """List all questions (optionally filtered by user_id or quiz_id)"""
-    stmt = select(Question).limit(limit)
-    if user_id:
-        stmt = stmt.where(Question.user_id == user_id)
-    if quiz_id:
-        stmt = stmt.where(Question.quiz_id == quiz_id)
-    result = await session.execute(stmt)
-    return result.scalars().all()
-
-@app.get("/questions/{question_id}", response_model=QuestionOut)
-async def get_question(question_id: str, session: AsyncSession = Depends(get_session)):
-    """Get a specific question"""
-    obj = await session.get(Question, question_id)
-    if not obj:
-        raise HTTPException(status_code=404, detail="Question not found")
-    return obj
-
-@app.delete("/questions/{question_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_question(question_id: str, session: AsyncSession = Depends(get_session)):
-    """Delete a specific question"""
-    obj = await session.get(Question, question_id)
-    if not obj:
-        raise HTTPException(status_code=404, detail="Question not found")
-    await session.delete(obj)
-    await session.commit()
-    return
