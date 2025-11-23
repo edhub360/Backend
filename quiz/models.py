@@ -1,3 +1,4 @@
+# models.py
 from datetime import datetime
 from typing import Optional, List
 
@@ -15,7 +16,7 @@ class Base(DeclarativeBase):
 class User(Base):
     __tablename__ = "users"
     __table_args__ = {"schema": "stud_hub_schema"}
-    
+
     user_id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid4()))
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
@@ -25,8 +26,7 @@ class User(Base):
     device_info: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=text("now()"))
 
-    # relationships
-    questions: Mapped[List["Question"]] = relationship(back_populates="user", cascade="all,delete-orphan")
+    # relationships - FIXED: Changed "Question" to "QuizQuestion"
     quiz_attempts: Mapped[List["QuizAttempt"]] = relationship(back_populates="user", cascade="all,delete-orphan")
 
 
@@ -34,16 +34,15 @@ class User(Base):
 class Quiz(Base):
     __tablename__ = "quizzes"
     __table_args__ = {"schema": "stud_hub_schema"}
-    
+
     quiz_id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid4()))
     title: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     subject_tag: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     difficulty_level: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
-    estimated_time: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # in minutes
+    estimated_time: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     tags: Mapped[Optional[list]] = mapped_column(ARRAY(Text), nullable=True)
     quiz_metadata: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
-    created_by: Mapped[Optional[str]] = mapped_column(UUID(as_uuid=False), nullable=True)  # admin user_id
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=text("now()"))
 
@@ -56,10 +55,10 @@ class Quiz(Base):
 class QuizQuestion(Base):
     __tablename__ = "questions"
     __table_args__ = {"schema": "stud_hub_schema"}
-    
+
     question_id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid4()))
     quiz_id: Mapped[str] = mapped_column(ForeignKey("stud_hub_schema.quizzes.quiz_id", ondelete="CASCADE"), nullable=False)
-    user_id: Mapped[Optional[str]] = mapped_column(ForeignKey("stud_hub_schema.users.user_id", ondelete="SET NULL"), nullable=True)
+    user_id: Mapped[Optional[str]] = mapped_column(UUID(as_uuid=False), nullable=True)
     input_type: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
     raw_input: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     subject_tag: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
@@ -72,7 +71,6 @@ class QuizQuestion(Base):
 
     # relationships
     quiz: Mapped["Quiz"] = relationship(back_populates="questions")
-    user: Mapped[Optional["User"]] = relationship(back_populates="questions")
 
 
 # ---------------- Quiz Attempts (User Results) ----------------
@@ -86,13 +84,10 @@ class QuizAttempt(Base):
     score: Mapped[int] = mapped_column(Integer, nullable=False)
     total_questions: Mapped[int] = mapped_column(Integer, nullable=False)
     score_percentage: Mapped[float] = mapped_column(Float, nullable=False)
-    time_taken: Mapped[int] = mapped_column(Integer, nullable=False)  # in seconds
-    answers: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)  # Store detailed answers
+    time_taken: Mapped[int] = mapped_column(Integer, nullable=False)
+    answers: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
     completed_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=text("now()"))
 
     # relationships
     user: Mapped["User"] = relationship(back_populates="quiz_attempts")
     quiz: Mapped["Quiz"] = relationship(back_populates="quiz_attempts")
-
-
-
