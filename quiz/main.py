@@ -6,7 +6,7 @@ from sqlalchemy import select, update, delete, func, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_session, engine
-from models import Base, User, QuizQuestion, Quiz, QuizAttempt
+from models import Base, User, QuizQuestion, Quiz, QuizAttempt  # FIXED: Changed Question to QuizQuestion
 from schemas import (
     UserCreate, UserUpdate, UserOut,
     QuestionCreate, QuestionOut,
@@ -128,7 +128,7 @@ async def get_quiz_detail(quiz_id: str, session: AsyncSession = Depends(get_sess
     if not quiz or not quiz.is_active:
         raise HTTPException(status_code=404, detail="Quiz not found")
     
-    # Get questions
+    # Get questions - FIXED: Changed Question to QuizQuestion
     stmt = select(QuizQuestion).where(QuizQuestion.quiz_id == quiz_id).order_by(QuizQuestion.created_at)
     result = await session.execute(stmt)
     questions = result.scalars().all()
