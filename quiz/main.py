@@ -1,4 +1,3 @@
-# main.py
 from typing import List, Optional
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,10 +17,10 @@ from schemas import (
 
 app = FastAPI(title="Quiz API (PostgreSQL + SQLAlchemy async)", version="3.0")
 
-# CORS for React apps (tighten in prod)
+# CORS Configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # Change to specific origins in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -31,7 +30,7 @@ app.add_middleware(
 async def root():
     return {"status": "ok", "db": "postgresql", "orm": "sqlalchemy-async", "version": "3.0"}
 
-# ---------------- Health ----------------
+# ---------------- Health Check ----------------
 @app.get("/healthz")
 async def healthz(session: AsyncSession = Depends(get_session)):
     try:
@@ -40,9 +39,13 @@ async def healthz(session: AsyncSession = Depends(get_session)):
     except Exception as e:
         return {"status": "failed", "error": str(e)}
 
-# ---------------- Users ----------------
+# ============================================
+# USER ENDPOINTS
+# ============================================
+
 @app.post("/users", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 async def create_user(payload: UserCreate, session: AsyncSession = Depends(get_session)):
+    """Create a new user"""
     user = User(**payload.model_dump())
     session.add(user)
     await session.commit()
@@ -51,11 +54,13 @@ async def create_user(payload: UserCreate, session: AsyncSession = Depends(get_s
 
 @app.get("/users", response_model=List[UserOut])
 async def list_users(limit: int = 100, session: AsyncSession = Depends(get_session)):
+    """List all users"""
     result = await session.execute(select(User).limit(limit))
     return result.scalars().all()
 
 @app.get("/users/{user_id}", response_model=UserOut)
 async def get_user(user_id: str, session: AsyncSession = Depends(get_session)):
+    """Get user by ID"""
     obj = await session.get(User, user_id)
     if not obj:
         raise HTTPException(status_code=404, detail="User not found")
@@ -63,6 +68,7 @@ async def get_user(user_id: str, session: AsyncSession = Depends(get_session)):
 
 @app.patch("/users/{user_id}", response_model=UserOut)
 async def update_user(user_id: str, payload: UserUpdate, session: AsyncSession = Depends(get_session)):
+    """Update user details"""
     obj = await session.get(User, user_id)
     if not obj:
         raise HTTPException(status_code=404, detail="User not found")
@@ -74,6 +80,7 @@ async def update_user(user_id: str, payload: UserUpdate, session: AsyncSession =
 
 @app.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(user_id: str, session: AsyncSession = Depends(get_session)):
+    """Delete a user"""
     obj = await session.get(User, user_id)
     if not obj:
         raise HTTPException(status_code=404, detail="User not found")

@@ -1,4 +1,3 @@
-# schemas.py
 from datetime import datetime
 from typing import Optional, List, Any, Dict
 from pydantic import BaseModel, Field, EmailStr
@@ -42,10 +41,14 @@ class QuestionBase(BaseModel):
     raw_input: Optional[str] = None
     subject_tag: Optional[str] = None
     difficulty: Optional[str] = None
+    question_text: str
+    correct_answer: str
+    incorrect_answers: List[str]
+    explanation: Optional[str] = None
 
 
 class QuestionCreate(QuestionBase):
-    pass
+    quiz_id: str
 
 
 class QuestionOut(QuestionBase):
