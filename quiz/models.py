@@ -1,4 +1,3 @@
-# models.py
 from datetime import datetime
 from typing import Optional, List
 
@@ -16,7 +15,7 @@ class Base(DeclarativeBase):
 class User(Base):
     __tablename__ = "users"
     __table_args__ = {"schema": "stud_hub_schema"}
-
+    
     user_id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid4()))
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
@@ -35,7 +34,7 @@ class User(Base):
 class Quiz(Base):
     __tablename__ = "quizzes"
     __table_args__ = {"schema": "stud_hub_schema"}
-
+    
     quiz_id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid4()))
     title: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
@@ -57,7 +56,7 @@ class Quiz(Base):
 class QuizQuestion(Base):
     __tablename__ = "questions"
     __table_args__ = {"schema": "stud_hub_schema"}
-
+    
     question_id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid4()))
     quiz_id: Mapped[str] = mapped_column(ForeignKey("stud_hub_schema.quizzes.quiz_id", ondelete="CASCADE"), nullable=False)
     user_id: Mapped[Optional[str]] = mapped_column(ForeignKey("stud_hub_schema.users.user_id", ondelete="SET NULL"), nullable=True)
