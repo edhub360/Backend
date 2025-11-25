@@ -11,8 +11,7 @@ app = FastAPI(title="Course Service API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://edhub360.github.io",
-        "http://localhost:5174"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -20,7 +19,7 @@ app.add_middleware(
 
 app.include_router(courses_router, prefix="/courses", tags=["courses"])
 
-@app.middleware("http")
+@app.middleware("https")
 async def log_requests(request: Request, call_next):
     logger.info(f"Incoming request {request.method} {request.url}")
     response = await call_next(request)
