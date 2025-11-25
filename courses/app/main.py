@@ -3,10 +3,19 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from app.utils.logging import setup_logging
 from app.routes.courses import router as courses_router
+from fastapi.middleware.cors import CORSMiddleware
 
 logger = setup_logging()
 
 app = FastAPI(title="Course Service API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(courses_router, prefix="/courses", tags=["courses"])
 
