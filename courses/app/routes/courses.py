@@ -41,6 +41,9 @@ async def list_courses_endpoint(
         )
         for x in courses
     ]
+    # Move last item to first, rest shifted down
+    if items:
+        items = [items[-1]] + items[:-1]
     return PaginatedCourses(total=total, page=page, limit=limit, items=items)
 
 @router.get("/{course_id}", response_model=CourseDetail)
