@@ -11,7 +11,8 @@ app = FastAPI(title="Course Service API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["https://edhub360.github.io/StudentHub/",
+        "http://localhost:5174/StudentHub/"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
