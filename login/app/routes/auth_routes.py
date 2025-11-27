@@ -141,7 +141,7 @@ async def google_signin(
         
         # Generate tokens
         tokens = await generate_tokens(db, user)
-        is_first_login = not user.subscriptiontier 
+        is_first_login = not user.subscription_tier 
         
         logger.info(f"Google sign-in successful for user: {user.email}")
         return TokenResponse(**tokens, is_first_login=is_first_login)
@@ -238,7 +238,7 @@ async def login(
         
         # Generate tokens
         tokens = await generate_tokens(db, user)
-        is_first_login = not user.subscriptiontier 
+        is_first_login = not user.subscription_tier 
         
         logger.info(f"Login successful for user: {user.email}")
         return TokenResponse(**tokens, is_first_login=is_first_login)
