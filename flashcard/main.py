@@ -4,6 +4,8 @@ from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
+from models import FlashcardAnalytics
+from schemas import FlashcardAnalyticsCreate, FlashcardAnalyticsOut
 
 from database import get_session
 from models import Quiz, QuizQuestion
@@ -133,6 +135,36 @@ async def get_flashcard_deck_detail(
         "total_cards": len(cards),
         "cards": cards
     }
+
+
+
+@app.post("/flashcard-analytics", response_model=FlashcardAnalyticsOut, status_code=status.HTTP_201_CREATED)
+async def log_flashcard_analytics(
+    payload: FlashcardAnalyticsCreate,
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Store flashcard review analytics (card_id, user_id, card_reviewed, time_taken)
+    """
+    analytics = FlashcardAnalytics(
+        question_id=payload.card_id,
+        user_id=payload.user_id,
+        card_reviewed=payload.card_reviewed,
+        time_taken=payload.time_taken
+    )
+    session.add(analytics)
+    await session.commit()
+    await session.refresh(analytics)
+
+    # Adapt to response model
+    return FlashcardAnalyticsOut(
+        analytics_id=analytics.analytics_id,
+        card_id=analytics.question_id,
+        user_id=analytics.user_id,
+        card_reviewed=analytics.card_reviewed,
+        time_taken=analytics.time_taken,
+        reviewed_at=analytics.reviewed_at
+    )
 
 
 # ========== ERROR HANDLERS ==========
