@@ -96,7 +96,7 @@ async def generate_tokens(db: AsyncSession, user: User) -> Dict[str, Any]:
         "user_id": str(user.user_id),
         "email": user.email,
         "name": user.name,
-        "subscriptiontier": user.subscriptiontier or None
+        "subscription_tier": user.subscription_tier or None
     }
     access_token = create_access_token(access_token_data)
     
@@ -419,6 +419,7 @@ async def activate_subscription(
         
         print(f" DEBUG: Committing to database...")
         await db.commit()
+        await db.refresh(current_user)
         
         print(f" DEBUG: Free trial activated successfully!")
         logger.info(f" Free trial activated for user: {current_user.email}")
