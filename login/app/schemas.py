@@ -66,6 +66,7 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     expires_in: int
     user: UserResponse
+    is_first_login: bool = False
 
 
 class RefreshTokenRequest(BaseModel):

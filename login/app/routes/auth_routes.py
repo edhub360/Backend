@@ -95,7 +95,8 @@ async def generate_tokens(db: AsyncSession, user: User) -> Dict[str, Any]:
         "sub": str(user.user_id),
         "user_id": str(user.user_id),
         "email": user.email,
-        "name": user.name
+        "name": user.name,
+        "subscriptiontier": user.subscriptiontier or None
     }
     access_token = create_access_token(access_token_data)
     
@@ -140,9 +141,10 @@ async def google_signin(
         
         # Generate tokens
         tokens = await generate_tokens(db, user)
+        is_first_login = not user.subscriptiontier 
         
         logger.info(f"Google sign-in successful for user: {user.email}")
-        return TokenResponse(**tokens)
+        return TokenResponse(**tokens, is_first_login=is_first_login)
         
     except HTTPException:
         raise
@@ -180,9 +182,10 @@ async def register(
         
         # Generate tokens
         tokens = await generate_tokens(db, user)
+        is_first_login = True  # New user
         
         logger.info(f"User registration successful for: {user.email}")
-        return TokenResponse(**tokens)
+        return TokenResponse(**tokens, is_first_login=is_first_login)
         
     except HTTPException:
         raise
@@ -235,9 +238,10 @@ async def login(
         
         # Generate tokens
         tokens = await generate_tokens(db, user)
+        is_first_login = not user.subscriptiontier 
         
         logger.info(f"Login successful for user: {user.email}")
-        return TokenResponse(**tokens)
+        return TokenResponse(**tokens, is_first_login=is_first_login)
         
     except HTTPException:
         raise
