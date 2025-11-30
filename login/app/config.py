@@ -1,5 +1,5 @@
 """Configuration management using Pydantic settings."""
-from pydantic import Field
+from pydantic import Field, EmailStr, AnyHttpUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List
 
