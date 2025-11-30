@@ -40,5 +40,17 @@ class Settings(BaseSettings):
     app_name: str = Field(default="Auth Microservice", description="Application name")
     debug: bool = Field(default=False, description="Enable debug mode")
 
+    # Frontend base URL for building reset links
+    frontend_base_url: AnyHttpUrl = Field(
+        ..., description="Base URL of frontend app for password reset links"
+    )
+
+    # SMTP / email settings for sending real reset emails
+    smtp_host: str = Field(..., description="SMTP server host")
+    smtp_port: int = Field(default=587, description="SMTP server port")
+    smtp_username: str = Field(..., description="SMTP username/login")
+    smtp_password: str = Field(..., description="SMTP password or app password")
+    smtp_from_email: EmailStr = Field(..., description="From email address")
+    smtp_from_name: str = Field(default="EdHub360", description="From name in emails")
 
 settings = Settings()
