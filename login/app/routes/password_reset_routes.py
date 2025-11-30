@@ -15,7 +15,7 @@ from app.auth import hash_password
 from app.utils import generate_secure_token, hash_token
 from app.config import settings
 from app.email_utils import send_reset_password_email
-from app.rate_limit import limiter  # or wherever you expose Limiter
+from app.routes.auth_routes import limiter  # or wherever you expose Limiter
 
 logger = logging.getLogger(__name__)
 
