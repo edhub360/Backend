@@ -109,14 +109,14 @@ class FlashcardDeckDetail(BaseModel):
         from_attributes = True
 
 class FlashcardAnalyticsCreate(BaseModel):
-    card_id: str
+    deck_id: str
     user_id: str
     card_reviewed: bool = True
     time_taken: float
 
 class FlashcardAnalyticsOut(BaseModel):
     analytics_id: str
-    card_id: str
+    deck_id: str
     user_id: str
     card_reviewed: bool
     time_taken: float

@@ -55,7 +55,7 @@ class FlashcardAnalytics(Base):
     __table_args__ = {"schema": "stud_hub_schema"}
 
     analytics_id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid4()))
-    question_id: Mapped[str] = mapped_column(ForeignKey("stud_hub_schema.questions.question_id"), nullable=False)
+    deck_id: Mapped[str] = mapped_column(String, ForeignKey("stud_hub_schema.quizzes.quiz_id", ondelete="CASCADE"), nullable=False)
     user_id: Mapped[str] = mapped_column(String(64), nullable=False)
     card_reviewed: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     time_taken: Mapped[float] = mapped_column(Float, nullable=False)

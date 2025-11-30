@@ -12,6 +12,8 @@ from slowapi.errors import RateLimitExceeded
 from app.config import settings
 from app.db import init_db
 from app.routes.auth_routes import router as auth_router
+from app.routes.password_reset_routes import password_reset_router
+
 
 # Configure logging
 logging.basicConfig(
@@ -73,7 +75,11 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # Include routers
 app.include_router(auth_router)
-
+app.include_router(
+    password_reset_router,
+    prefix="/auth",          # keeps /auth/forgot-password and /auth/reset-password
+    tags=["authentication"],
+)
 
 @app.get("/")
 async def root():

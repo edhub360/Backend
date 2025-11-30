@@ -138,19 +138,19 @@ async def get_flashcard_deck_detail(
 
 
 
-@app.post("/flashcard-analytics", response_model=FlashcardAnalyticsOut, status_code=status.HTTP_201_CREATED)
+@app.post("/flashcard-analytics", response_model=FlashcardAnalyticsOut, status_code=status.HTTP_201_CREATED,)
 async def log_flashcard_analytics(
     payload: FlashcardAnalyticsCreate,
-    session: AsyncSession = Depends(get_session)
+    session: AsyncSession = Depends(get_session),
 ):
     """
-    Store flashcard review analytics (card_id, user_id, card_reviewed, time_taken)
+    Store flashcard review analytics (deck_id, user_id, card_reviewed, time_taken)
     """
     analytics = FlashcardAnalytics(
-        question_id=payload.card_id,
+        deck_id=payload.deck_id,
         user_id=payload.user_id,
         card_reviewed=payload.card_reviewed,
-        time_taken=payload.time_taken
+        time_taken=payload.time_taken,
     )
     session.add(analytics)
     await session.commit()
@@ -159,13 +159,12 @@ async def log_flashcard_analytics(
     # Adapt to response model
     return FlashcardAnalyticsOut(
         analytics_id=analytics.analytics_id,
-        card_id=analytics.question_id,
+        deck_id=analytics.deck_id,
         user_id=analytics.user_id,
         card_reviewed=analytics.card_reviewed,
         time_taken=analytics.time_taken,
-        reviewed_at=analytics.reviewed_at
+        reviewed_at=analytics.reviewed_at,
     )
-
 
 # ========== ERROR HANDLERS ==========
 @app.exception_handler(404)
