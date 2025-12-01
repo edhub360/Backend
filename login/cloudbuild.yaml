@@ -33,7 +33,7 @@ steps:
           --allow-unauthenticated \
           --memory=1Gi --cpu=1 --timeout=300 --max-instances=10 --port=8080 \
           --add-cloudsql-instances=arctic-sentry-467317-s7:us-central1:studenthub \
-          --set-env-vars=DATABASE_URL=$${DATABASE_URL},JWT_SECRET_KEY=$${JWT_SECRET_KEY},JWT_ALGORITHM=$${JWT_ALGORITHM},GOOGLE_CLIENT_ID=$${GOOGLE_CLIENT_ID},DB_ECHO=false,ACCESS_TOKEN_EXPIRE_MINUTES=15,REFRESH_TOKEN_EXPIRE_DAYS=30,BCRYPT_ROUNDS=12,RATE_LIMIT_REQUESTS=5,APP_NAME="Auth Microservice",DEBUG=true,SMTP_HOST=smtp.gmail.com,SMTP_PORT=587,SMTP_USERNAME=edhub360help@gmail.com,SMTP_PASSWORD=${SMTP_PASSWORD},SMTP_FROM_EMAIL=edhub360help@gmail.com,SMTP_FROM_NAME="EdHub360",FRONTEND_BASE_URL=https://app.edhub360.com
+          --set-env-vars=DATABASE_URL=$${DATABASE_URL},JWT_SECRET_KEY=$${JWT_SECRET_KEY},JWT_ALGORITHM=$${JWT_ALGORITHM},GOOGLE_CLIENT_ID=$${GOOGLE_CLIENT_ID},DB_ECHO=false,ACCESS_TOKEN_EXPIRE_MINUTES=15,REFRESH_TOKEN_EXPIRE_DAYS=30,BCRYPT_ROUNDS=12,RATE_LIMIT_REQUESTS=5,APP_NAME="Auth Microservice",DEBUG=true,SMTP_HOST=smtp.gmail.com,SMTP_PORT=587,SMTP_USERNAME=edhub360help@gmail.com,SMTP_PASSWORD=$${SMTP_PASSWORD},SMTP_FROM_EMAIL=edhub360help@gmail.com,SMTP_FROM_NAME="EdHub360",FRONTEND_BASE_URL=https://app.edhub360.com
 
 options:
   defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET
