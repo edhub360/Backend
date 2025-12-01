@@ -54,9 +54,23 @@ class FlashcardAnalytics(Base):
     __tablename__ = "flashcard_analytics"
     __table_args__ = {"schema": "stud_hub_schema"}
 
-    analytics_id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=lambda: str(uuid4()))
-    deck_id: Mapped[str] = mapped_column(String, ForeignKey("stud_hub_schema.quizzes.quiz_id", ondelete="CASCADE"), nullable=False)
+    # DB: analytics_id UUID PRIMARY KEY DEFAULT gen_random_uuid()
+    analytics_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
+    )
+
+    # DB: deck_id UUID REFERENCES stud_hub_schema.quizzes(quiz_id)
+    deck_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        ForeignKey("stud_hub_schema.quizzes.quiz_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+
     user_id: Mapped[str] = mapped_column(String(64), nullable=False)
     card_reviewed: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     time_taken: Mapped[float] = mapped_column(Float, nullable=False)
-    reviewed_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=text("now()"))
+    reviewed_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP, server_default=text("now()")
+    )
