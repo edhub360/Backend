@@ -64,8 +64,9 @@ async def forgot_password(
         db.add(reset_token)
         await db.commit()
 
-        # Build reset URL for frontend
-        reset_url = f"{settings.frontend_base_url}/reset-password?token={raw_token}"
+        # Build reset URL for frontend (normalize trailing slash)
+        base_url = settings.frontend_base_url.rstrip("/")
+        reset_url = f"{base_url}/reset-password?token={raw_token}"
 
         # Send real email
         send_reset_password_email(user.email, reset_url)
