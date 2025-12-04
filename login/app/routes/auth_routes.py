@@ -11,9 +11,10 @@ from sqlalchemy import select
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+from app.utils import generate_secure_token, hash_token
 
 from app.db import get_db
-from app.models import User, AuthCredential, RefreshToken
+from app.models import User, AuthCredential, RefreshToken, PasswordResetToken
 from app.schemas import (
     GoogleSignInRequest, EmailRegisterRequest, EmailLoginRequest,
     TokenResponse, RefreshTokenRequest, LogoutRequest, UserResponse
@@ -22,7 +23,6 @@ from app.auth import (
     verify_google_token, hash_password, verify_password,
     create_access_token, create_refresh_token, decode_jwt_token
 )
-from app.utils import hash_token
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -86,6 +86,24 @@ async def create_refresh_token_db(
     db.add(refresh_token)
     await db.flush()
     return refresh_token
+
+
+from datetime import datetime, timedelta, timezone
+
+async def create_password_reset_token_db(
+    db: AsyncSession,
+    user_id: UUID,
+    token_hash: str,
+) -> PasswordResetToken:
+    expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
+    prt = PasswordResetToken(
+        user_id=user_id,
+        token_hash=token_hash,
+        expires_at=expires_at,
+    )
+    db.add(prt)
+    await db.flush()
+    return prt
 
 
 async def generate_tokens(db: AsyncSession, user: User) -> Dict[str, Any]:

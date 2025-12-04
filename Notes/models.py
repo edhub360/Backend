@@ -15,14 +15,20 @@ class Notebook(Base):
     title = Column(String, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    sources = relationship("Source", back_populates="notebook")
+    # add cascade + passive_deletes
+    sources = relationship(
+        "Source",
+        back_populates="notebook",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
 class Source(Base):
     __tablename__ = "sources"
     __table_args__ = {'schema': 'stud_hub_schema'}  # Add this line
     
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()"))
-    notebook_id = Column(UUID(as_uuid=True), ForeignKey("stud_hub_schema.notebooks.id"), nullable=False)  # Update ForeignKey
+    notebook_id = Column(UUID(as_uuid=True), ForeignKey("stud_hub_schema.notebooks.id", ondelete="CASCADE"), nullable=False)  # Update ForeignKey
     type = Column(String, nullable=False)  # 'file', 'website', 'youtube'
     filename = Column(String, nullable=True)
     file_url = Column(String, nullable=True)
