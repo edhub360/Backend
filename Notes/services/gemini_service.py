@@ -71,14 +71,37 @@ class GeminiService:
                 generation_config=generation_config
             )
             
-            if not response or not response.text:
-                raise ValueError("Empty response from Gemini API")
-            
-            generated_text = response.text.strip()
-            logger.info(f"Successfully generated response ({len(generated_text)} chars)")
-            
-            return generated_text
-            
+            if not response or not getattr(response, "candidates", None):
+                raise ValueError("Empty response from Gemini API (no candidates)")
+
+            candidate = response.candidates[0]
+            finish_reason = getattr(candidate, "finish_reason", None)
+            token_count = getattr(candidate, "token_count", None)
+            logger.info(f"Gemini finish_reason={finish_reason}, token_count={token_count}")
+
+            # Safely extract text from parts
+            parts = getattr(getattr(candidate, "content", None), "parts", []) or []
+            text = "".join(
+                getattr(p, "text", "") for p in parts if hasattr(p, "text")
+            ).strip()
+
+            if not text:
+                # Handle common no-text cases explicitly
+                if finish_reason and finish_reason.name == "MAX_TOKENS":
+                    raise ValueError(
+                        "Gemini returned no text because max_output_tokens was reached. "
+                        "Try increasing max_tokens or reducing context size."
+                    )
+                if finish_reason and finish_reason.name == "SAFETY":
+                    raise ValueError(
+                        "Gemini blocked the response due to safety filters. "
+                        "Try rephrasing the question."
+                    )
+                raise ValueError("Gemini returned a candidate with no text parts.")
+
+            logger.info(f"Successfully generated response ({len(text)} chars)")
+            return text
+
         except Exception as e:
             logger.error(f"Error generating Gemini response: {str(e)}")
             raise Exception(f"Failed to generate AI response: {str(e)}")
