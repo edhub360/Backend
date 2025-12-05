@@ -45,11 +45,18 @@ async def embed_text(text: str) -> List[float]:
     try:
         logger.info(f"Generating embedding for text: {text[:100]}...")
         result = genai.embed_content(
-            model="models/text-embedding-004",
+            model="models/text-embedding-001",
             content=text,
             task_type="semantic_similarity"
         )
-        embedding_vector = result['embedding']
+        # Newer SDKs may expose .embedding instead of dict-style
+        embedding_vector = (
+            result["embedding"]
+            if isinstance(result, dict)
+            else getattr(result, "embedding", None)
+        )
+        if embedding_vector is None:
+            raise ValueError("Gemini embedding response missing 'embedding' field")
         logger.info(f"Successfully generated embedding with dimension: {len(embedding_vector)}")
         return embedding_vector
     except Exception as e:
