@@ -181,20 +181,21 @@ async def get_relevant_chunks_for_notebook(
     notebook_id: str,
     user_query: str,
     top_n: int = 5,
-    user_id: str = None
+    user_id: str = None,
 ) -> List[Dict[str, Any]]:
     """Get relevant chunks for a specific notebook using semantic search."""
     try:
         logger.info(f"Searching notebook {notebook_id} for: '{user_query}'")
-        
+
+        # Get embedding as Python list[float]
         query_vector = await embed_text(user_query)
 
-        # NEW: bind the embedding as a SQL parameter instead of "'[...]'::vector"
-        # we will use this placeholder in func.cosine_distance below
-        embedding_param = literal_column(":query_embedding")
+        # Let pgvector handle binding/casting: this creates a bound parameter
+        distance_expr = Embedding.vector.cosine_distance(query_vector)
+        similarity_expr = (1 - distance_expr).label("similarity_score")
 
         if user_id:
-            # Query with user_id filter - join all three tables
+            # With user filter
             query = (
                 select(
                     Embedding.id,
@@ -202,9 +203,7 @@ async def get_relevant_chunks_for_notebook(
                     Embedding.source_id,
                     Source.filename.label("source_name"),
                     Source.type.label("source_type"),
-                    (1 - func.cosine_distance(Embedding.vector, embedding_param)).label(
-                        "similarity_score"
-                    ),
+                    similarity_expr,
                 )
                 .select_from(
                     Embedding.__table__
@@ -219,7 +218,7 @@ async def get_relevant_chunks_for_notebook(
                 )
             )
         else:
-            # Query without user_id filter - join only Embedding and Source
+            # Without user filter
             query = (
                 select(
                     Embedding.id,
@@ -227,26 +226,20 @@ async def get_relevant_chunks_for_notebook(
                     Embedding.source_id,
                     Source.filename.label("source_name"),
                     Source.type.label("source_type"),
-                    (1 - func.cosine_distance(Embedding.vector, embedding_param)).label(
-                        "similarity_score"
-                    ),
+                    similarity_expr,
                 )
                 .select_from(Embedding.__table__.join(Source.__table__))
                 .where(Source.notebook_id == notebook_id)
             )
 
-        # CHANGED: order_by uses the same embedding_param
-        query = query.order_by(
-            func.cosine_distance(Embedding.vector, embedding_param)
-        ).limit(top_n)
+        # Order by cosine distance, limit
+        query = query.order_by(distance_expr).limit(top_n)
 
-        # NEW: pass the actual vector as a bound parameter
-        result = await session.execute(
-            query.params(query_embedding=query_vector)
-        )
+        # No manual params needed; query_vector is bound automatically
+        result = await session.execute(query)
         rows = result.fetchall()
 
-        chunks = []
+        chunks: List[Dict[str, Any]] = []
         for row in rows:
             chunks.append(
                 {
@@ -259,7 +252,9 @@ async def get_relevant_chunks_for_notebook(
                 }
             )
 
-        logger.info(f"Retrieved {len(chunks)} relevant chunks for notebook {notebook_id}")
+        logger.info(
+            f"Retrieved {len(chunks)} relevant chunks for notebook {notebook_id}"
+        )
         return chunks
 
     except Exception as e:
@@ -268,6 +263,7 @@ async def get_relevant_chunks_for_notebook(
             status_code=500,
             detail=f"Failed to retrieve relevant chunks: {str(e)}",
         )
+
 
 
 async def get_embedding_stats(session: AsyncSession) -> Dict[str, Any]:
