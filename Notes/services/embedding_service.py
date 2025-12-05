@@ -175,6 +175,8 @@ async def semantic_search(data: SemanticSearchRequest, session: AsyncSession) ->
 
 
 from sqlalchemy import select, func, and_, literal_column
+from sqlalchemy import select, and_, bindparam
+from pgvector.sqlalchemy import Vector
 
 async def get_relevant_chunks_for_notebook(
     session: AsyncSession,
@@ -187,15 +189,21 @@ async def get_relevant_chunks_for_notebook(
     try:
         logger.info(f"Searching notebook {notebook_id} for: '{user_query}'")
 
-        # Get embedding as Python list[float]
+        # 1) Embed query as Python list[float]
         query_vector = await embed_text(user_query)
 
-        # Let pgvector handle binding/casting: this creates a bound parameter
-        distance_expr = Embedding.vector.cosine_distance(query_vector)
+        # 2) Bind it as a pgvector-typed parameter
+        embedding_param = bindparam(
+            "query_embedding",
+            value=query_vector,
+            type_=Vector(768),
+        )
+
+        # 3) Use pgvector operator via SQLAlchemy
+        distance_expr = Embedding.vector.cosine_distance(embedding_param)
         similarity_expr = (1 - distance_expr).label("similarity_score")
 
         if user_id:
-            # With user filter
             query = (
                 select(
                     Embedding.id,
@@ -218,7 +226,6 @@ async def get_relevant_chunks_for_notebook(
                 )
             )
         else:
-            # Without user filter
             query = (
                 select(
                     Embedding.id,
@@ -232,10 +239,10 @@ async def get_relevant_chunks_for_notebook(
                 .where(Source.notebook_id == notebook_id)
             )
 
-        # Order by cosine distance, limit
+        # 4) Order by distance and limit
         query = query.order_by(distance_expr).limit(top_n)
 
-        # No manual params needed; query_vector is bound automatically
+        # 5) Execute – parameter already bound via bindparam
         result = await session.execute(query)
         rows = result.fetchall()
 
@@ -252,9 +259,7 @@ async def get_relevant_chunks_for_notebook(
                 }
             )
 
-        logger.info(
-            f"Retrieved {len(chunks)} relevant chunks for notebook {notebook_id}"
-        )
+        logger.info(f"Retrieved {len(chunks)} relevant chunks for notebook {notebook_id}")
         return chunks
 
     except Exception as e:
