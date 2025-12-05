@@ -174,36 +174,36 @@ async def semantic_search(data: SemanticSearchRequest, session: AsyncSession) ->
         raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
 
 
-from sqlalchemy import select, func, and_, literal_column
-from sqlalchemy import select, and_, bindparam
-from pgvector.sqlalchemy import Vector
+from sqlalchemy import select, and_, func, literal_column
+from fastapi import HTTPException
 
 async def get_relevant_chunks_for_notebook(
     session: AsyncSession,
     notebook_id: str,
     user_query: str,
     top_n: int = 5,
-    user_id: str = None,
+    user_id: str | None = None,
 ) -> List[Dict[str, Any]]:
     """Get relevant chunks for a specific notebook using semantic search."""
     try:
         logger.info(f"Searching notebook {notebook_id} for: '{user_query}'")
 
-        # 1) Embed query as Python list[float]
+        # 1) Get embedding as list[float]
         query_vector = await embed_text(user_query)
+        logger.info(f"Generated query embedding with dimension: {len(query_vector)}")
 
-        # 2) Bind it as a pgvector-typed parameter
-        embedding_param = bindparam(
-            "query_embedding",
-            value=query_vector,
-            type_=Vector(768),
-        )
+        # 2) Build pgvector literal exactly like semantic_search
+        #    query_vector is e.g. [-0.08, 0.02, ...]; str() gives "[..., ...]"
+        vector_str = str(query_vector)
+        vector_literal = literal_column(f"'{vector_str}'::vector")
 
-        # 3) Use pgvector operator via SQLAlchemy
-        distance_expr = Embedding.vector.cosine_distance(embedding_param)
-        similarity_expr = (1 - distance_expr).label("similarity_score")
+        # 3) Base select + similarity expression
+        similarity_expr = (
+            1 - func.cosine_distance(Embedding.vector, vector_literal)
+        ).label("similarity_score")
 
         if user_id:
+            # With user filter: join embeddings → sources → notebooks
             query = (
                 select(
                     Embedding.id,
@@ -226,6 +226,7 @@ async def get_relevant_chunks_for_notebook(
                 )
             )
         else:
+            # Without user filter: just embeddings → sources
             query = (
                 select(
                     Embedding.id,
@@ -240,9 +241,11 @@ async def get_relevant_chunks_for_notebook(
             )
 
         # 4) Order by distance and limit
-        query = query.order_by(distance_expr).limit(top_n)
+        query = query.order_by(
+            func.cosine_distance(Embedding.vector, vector_literal)
+        ).limit(top_n)
 
-        # 5) Execute – parameter already bound via bindparam
+        # 5) Execute and build response
         result = await session.execute(query)
         rows = result.fetchall()
 
@@ -259,7 +262,9 @@ async def get_relevant_chunks_for_notebook(
                 }
             )
 
-        logger.info(f"Retrieved {len(chunks)} relevant chunks for notebook {notebook_id}")
+        logger.info(
+            f"Retrieved {len(chunks)} relevant chunks for notebook {notebook_id}"
+        )
         return chunks
 
     except Exception as e:
@@ -268,7 +273,6 @@ async def get_relevant_chunks_for_notebook(
             status_code=500,
             detail=f"Failed to retrieve relevant chunks: {str(e)}",
         )
-
 
 
 async def get_embedding_stats(session: AsyncSession) -> Dict[str, Any]:
