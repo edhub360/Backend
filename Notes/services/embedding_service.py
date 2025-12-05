@@ -188,68 +188,86 @@ async def get_relevant_chunks_for_notebook(
         logger.info(f"Searching notebook {notebook_id} for: '{user_query}'")
         
         query_vector = await embed_text(user_query)
-        
-        # Create vector literal - same as working semantic_search
-        vector_literal = literal_column(f"'{str(query_vector)}'::vector")
-        
+
+        # NEW: bind the embedding as a SQL parameter instead of "'[...]'::vector"
+        # we will use this placeholder in func.cosine_distance below
+        embedding_param = literal_column(":query_embedding")
+
         if user_id:
             # Query with user_id filter - join all three tables
-            query = select(
-                Embedding.id,
-                Embedding.chunk,
-                Embedding.source_id,
-                Source.filename.label('source_name'),
-                Source.type.label('source_type'),
-                (1 - func.cosine_distance(Embedding.vector, vector_literal)).label('similarity_score')
-            ).select_from(
-                Embedding.__table__.join(Source.__table__)
-                .join(Notebook.__table__)
-            ).where(
-                and_(
-                    Source.notebook_id == notebook_id,
-                    Notebook.user_id == user_id
+            query = (
+                select(
+                    Embedding.id,
+                    Embedding.chunk,
+                    Embedding.source_id,
+                    Source.filename.label("source_name"),
+                    Source.type.label("source_type"),
+                    (1 - func.cosine_distance(Embedding.vector, embedding_param)).label(
+                        "similarity_score"
+                    ),
+                )
+                .select_from(
+                    Embedding.__table__
+                    .join(Source.__table__)
+                    .join(Notebook.__table__)
+                )
+                .where(
+                    and_(
+                        Source.notebook_id == notebook_id,
+                        Notebook.user_id == user_id,
+                    )
                 )
             )
         else:
             # Query without user_id filter - join only Embedding and Source
-            query = select(
-                Embedding.id,
-                Embedding.chunk,
-                Embedding.source_id,
-                Source.filename.label('source_name'),
-                Source.type.label('source_type'),
-                (1 - func.cosine_distance(Embedding.vector, vector_literal)).label('similarity_score')
-            ).select_from(
-                Embedding.__table__.join(Source.__table__)
-            ).where(
-                Source.notebook_id == notebook_id
+            query = (
+                select(
+                    Embedding.id,
+                    Embedding.chunk,
+                    Embedding.source_id,
+                    Source.filename.label("source_name"),
+                    Source.type.label("source_type"),
+                    (1 - func.cosine_distance(Embedding.vector, embedding_param)).label(
+                        "similarity_score"
+                    ),
+                )
+                .select_from(Embedding.__table__.join(Source.__table__))
+                .where(Source.notebook_id == notebook_id)
             )
-        
-        # Add ordering and limit - use same vector_literal
+
+        # CHANGED: order_by uses the same embedding_param
         query = query.order_by(
-            func.cosine_distance(Embedding.vector, vector_literal)
+            func.cosine_distance(Embedding.vector, embedding_param)
         ).limit(top_n)
-        
-        result = await session.execute(query)
+
+        # NEW: pass the actual vector as a bound parameter
+        result = await session.execute(
+            query.params(query_embedding=query_vector)
+        )
         rows = result.fetchall()
-        
+
         chunks = []
         for row in rows:
-            chunks.append({
-                "id": str(row.id),
-                "chunk": row.chunk,
-                "source_id": str(row.source_id),
-                "source_name": row.source_name or "Unknown",
-                "source_type": row.source_type or "file",
-                "score": round(row.similarity_score, 4)
-            })
-        
+            chunks.append(
+                {
+                    "id": str(row.id),
+                    "chunk": row.chunk,
+                    "source_id": str(row.source_id),
+                    "source_name": row.source_name or "Unknown",
+                    "source_type": row.source_type or "file",
+                    "score": round(row.similarity_score, 4),
+                }
+            )
+
         logger.info(f"Retrieved {len(chunks)} relevant chunks for notebook {notebook_id}")
         return chunks
-        
+
     except Exception as e:
         logger.error(f"Error retrieving chunks for notebook {notebook_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve relevant chunks: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to retrieve relevant chunks: {str(e)}",
+        )
 
 
 async def get_embedding_stats(session: AsyncSession) -> Dict[str, Any]:
