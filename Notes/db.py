@@ -24,6 +24,9 @@ engine = create_async_engine(
 def set_search_path(dbapi_connection, connection_record):
     cursor = dbapi_connection.cursor()
     cursor.execute("SET search_path TO stud_hub_schema, public")
+    cursor.execute("SHOW search_path")
+    current = cursor.fetchone()
+    print("DB search_path:", current[0])
     cursor.close()
 
 AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
