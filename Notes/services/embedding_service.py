@@ -44,24 +44,45 @@ async def embed_text(text: str) -> List[float]:
     """Generate embeddings using Gemini API."""
     try:
         logger.info(f"Generating embedding for text: {text[:100]}...")
+
         result = genai.embed_content(
-            model="models/text-embedding-001",
+            model="models/gemini-embedding-001",  # CHANGED
             content=text,
-            task_type="semantic_similarity"
+            task_type="semantic_similarity",      # or appropriate task
+            output_dimensionality=768,           # keep DB at 768 dims
         )
-        # Newer SDKs may expose .embedding instead of dict-style
-        embedding_vector = (
-            result["embedding"]
-            if isinstance(result, dict)
-            else getattr(result, "embedding", None)
+
+        # Handle both dict-style and attribute-style responses
+        embedding_vector = None
+
+        if isinstance(result, dict):
+            if "embedding" in result:
+                emb = result["embedding"]
+                embedding_vector = emb.get("values", emb) if isinstance(emb, dict) else emb
+            elif "embeddings" in result and result["embeddings"]:
+                emb = result["embeddings"][0]
+                embedding_vector = emb.get("values", emb)
+        else:
+            if hasattr(result, "embedding"):
+                emb = result.embedding
+                embedding_vector = getattr(emb, "values", emb)
+            elif hasattr(result, "embeddings") and result.embeddings:
+                emb = result.embeddings[0]
+                embedding_vector = getattr(emb, "values", emb)
+
+        if not embedding_vector:
+            raise ValueError("Gemini embedding response missing embedding values")
+
+        logger.info(
+            f"Successfully generated embedding with dimension: {len(embedding_vector)}"
         )
-        if embedding_vector is None:
-            raise ValueError("Gemini embedding response missing 'embedding' field")
-        logger.info(f"Successfully generated embedding with dimension: {len(embedding_vector)}")
         return embedding_vector
+
     except Exception as e:
         logger.error(f"Error generating embedding: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to generate embedding: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to generate embedding: {str(e)}"
+        )
 
 async def embed_texts_batch(texts: List[str]) -> List[List[float]]:
     """Generate embeddings for multiple texts in batch."""
