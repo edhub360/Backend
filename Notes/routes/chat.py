@@ -4,6 +4,8 @@ from typing import List, Dict, Any
 from uuid import UUID
 import logging
 from utils.auth import get_current_user, AuthUser
+from models import Source
+from sqlalchemy import select  # if not already imported here
 
 from db import get_session
 from services.gemini_service import GeminiService
@@ -104,6 +106,34 @@ async def chat_with_notebook(
             for chunk in relevant_chunks
         ]
         
+        # Step 5.1: Build source_links mapping for frontend
+        source_links: dict[str, str] = {}
+
+        # Collect unique source_ids from relevant_chunks
+        source_ids = {chunk["source_id"] for chunk in relevant_chunks}
+
+        if source_ids:
+            result = await session.execute(
+                select(Source).where(Source.id.in_(list(source_ids)))
+            )
+            sources = result.scalars().all()
+            sources_by_id = {str(src.id): src for src in sources}
+
+            # Create deterministic labels: source1, source2, ...
+            for idx, source_id in enumerate(source_ids, start=1):
+                label = f"source{idx}"
+                src = sources_by_id.get(str(source_id))
+                if not src:
+                    continue
+
+                # Prefer file_url, else website/youtube
+                url = src.file_url or src.website_url or src.youtube_url
+                if not url:
+                    continue
+
+                source_links[label] = url
+
+
         # Step 6: Get updated chat history
         updated_history = session_memory.get_history(session_id)
         
@@ -113,7 +143,8 @@ async def chat_with_notebook(
             context_used=context_used,
             history=updated_history,
             notebook_id=str(notebook_id),
-            total_chunks_found=len(relevant_chunks)
+            total_chunks_found=len(relevant_chunks),
+            source_links=source_links or None,
         )
         
         logger.info(f"Successfully processed chat request for notebook {notebook_id}")
