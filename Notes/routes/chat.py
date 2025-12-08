@@ -75,6 +75,8 @@ async def chat_with_notebook(
         chat_history = session_memory.get_history(session_id)
         logger.info(f"Retrieved chat history with {len(chat_history)} messages")
         
+        max_tokens = chat_request.max_tokens or 512
+        max_tokens = min(max_tokens, 1024)  # hard cap
         # Step 3: Generate response using Gemini with context
         logger.info("Step 2: Generating response with Gemini AI...")
         try:
@@ -82,7 +84,7 @@ async def chat_with_notebook(
                 user_query=chat_request.user_query,
                 context_chunks=relevant_chunks,
                 chat_history=chat_history,
-                max_tokens=chat_request.max_tokens
+                max_tokens=max_tokens
             )
             
             logger.info(f"Generated response: {ai_response[:100]}...")
