@@ -45,7 +45,7 @@ class Embedding(Base):
     __table_args__ = {'schema': 'stud_hub_schema'}  # Add this line
     
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()"))
-    source_id = Column(UUID(as_uuid=True), ForeignKey("stud_hub_schema.sources.id"), nullable=False)  # Update ForeignKey
+    source_id = Column(UUID(as_uuid=True), ForeignKey("stud_hub_schema.sources.id", ondelete="CASCADE"), nullable=False)  # Update ForeignKey
     chunk = Column(Text, nullable=False)
     vector = Column(Vector(768), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

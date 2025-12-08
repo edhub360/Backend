@@ -76,3 +76,4 @@ class ChatResponse(BaseModel):
     history: List[ChatMessage]
     notebook_id: str
     total_chunks_found: int
+    source_links: dict[str, str] | None = None 
