@@ -56,8 +56,8 @@ class SemanticSearchResponse(BaseModel):
 
 class ChatRequest(BaseModel):
     user_query: str
-    max_context_chunks: Optional[int] = 5
-    max_tokens: Optional[int] = 1024
+    max_context_chunks: Optional[int] = 3
+    max_tokens: Optional[int] = 512
 
 class ChatMessage(BaseModel):
     role: str  # "user" or "assistant"
