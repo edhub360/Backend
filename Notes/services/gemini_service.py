@@ -51,14 +51,24 @@ class GeminiService:
             # Build chat history context
             history_context = self._build_history_context(chat_history or [])
             
+            # Limit context size to keep total prompt within safe bounds
+            MAX_CONTEXT_CHARS = 10000
+
+            if len(context_text) > MAX_CONTEXT_CHARS:
+                logger.info(
+                    f"Truncating context_text from {len(context_text)} to {MAX_CONTEXT_CHARS} chars"
+                )
+                context_text = context_text[:MAX_CONTEXT_CHARS]
+
             # Create comprehensive prompt
             prompt = self._create_rag_prompt(user_query, context_text, history_context)
             
             logger.info(f"Sending prompt to Gemini (length: {len(prompt)} chars)")
-            
+            # Use a safe upper bound for output tokens, independent of user max_tokens
+            safe_max_output_tokens = 2048  
             # Configure generation parameters
             generation_config = genai.types.GenerationConfig(
-                max_output_tokens=max_tokens or 1024,
+                max_output_tokens=min(safe_max_output_tokens, (max_tokens or safe_max_output_tokens)),
                 temperature=0.7,
                 top_p=0.8,
                 top_k=40
