@@ -56,7 +56,7 @@ class SemanticSearchResponse(BaseModel):
 
 class ChatRequest(BaseModel):
     user_query: str
-    max_context_chunks: Optional[int] = 3
+    max_context_chunks: Optional[int] = 5
     max_tokens: Optional[int] = 512
 
 class ChatMessage(BaseModel):
@@ -76,4 +76,3 @@ class ChatResponse(BaseModel):
     history: List[ChatMessage]
     notebook_id: str
     total_chunks_found: int
-    source_links: dict[str, str] | None = None 

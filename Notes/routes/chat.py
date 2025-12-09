@@ -4,7 +4,7 @@ from typing import List, Dict, Any
 from uuid import UUID
 import logging
 from utils.auth import get_current_user, AuthUser
-from models import Source
+#from models import Source
 from sqlalchemy import select  # if not already imported here
 
 from db import get_session
@@ -146,7 +146,6 @@ async def chat_with_notebook(
             history=updated_history,
             notebook_id=str(notebook_id),
             total_chunks_found=len(relevant_chunks),
-            source_links=source_links or None,
         )
         
         logger.info(f"Successfully processed chat request for notebook {notebook_id}")
