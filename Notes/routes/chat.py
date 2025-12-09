@@ -4,8 +4,6 @@ from typing import List, Dict, Any
 from uuid import UUID
 import logging
 from utils.auth import get_current_user, AuthUser
-#from models import Source
-from sqlalchemy import select  # if not already imported here
 
 from db import get_session
 from services.gemini_service import GeminiService
