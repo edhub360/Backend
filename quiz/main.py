@@ -16,7 +16,7 @@ from schemas import (
     UserQuizHistory, QuizStatistics, QuizDashboardSummary
 )
 
-from .study_stats import update_user_study_stats
+from study_stats import update_user_study_stats
 app = FastAPI(title="Quiz API (PostgreSQL + SQLAlchemy async)", version="3.0")
 
 # CORS Configuration
