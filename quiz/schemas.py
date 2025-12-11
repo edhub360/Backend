@@ -200,3 +200,13 @@ class QuizOut(QuizBase):
     
     class Config:
         from_attributes = True
+
+# ---------- Dashboard summary (per user) ----------
+class QuizDashboardSummary(BaseModel):
+    """High-level stats for the dashboard cards driven by quiz data"""
+    user_id: str
+    averageScorePercent: float
+    studyTimeSecondsToday: int
+    totalStudySeconds: int
+    currentStreakDays: int
+

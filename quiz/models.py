@@ -2,7 +2,7 @@
 from datetime import datetime
 from typing import Optional, List
 
-from sqlalchemy import String, Integer, Float, Text, TIMESTAMP, ForeignKey, text, Boolean, ARRAY
+from sqlalchemy import String, Integer, Float, Text, TIMESTAMP, ForeignKey, text, Boolean, ARRAY, BigInteger, Date
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from uuid import uuid4
@@ -91,3 +91,14 @@ class QuizAttempt(Base):
     # relationships
     user: Mapped["User"] = relationship(back_populates="quiz_attempts")
     quiz: Mapped["Quiz"] = relationship(back_populates="quiz_attempts")
+
+# ---------------- User Study Statistics from quiz ----------------
+class UserStudyStats(Base):
+    __tablename__ = "user_study_stats"
+    __table_args__ = {"schema": "stud_hub_schema"}
+
+    user_id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True)
+    total_study_seconds: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
+    current_streak_days: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    longest_streak_days: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    last_study_date: Mapped[Optional[datetime.date]] = mapped_column(Date, nullable=True)
