@@ -3,7 +3,7 @@ from datetime import timedelta, date
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .models import UserStudyStats
+from models import UserStudyStats
 
 
 async def update_user_study_stats(
