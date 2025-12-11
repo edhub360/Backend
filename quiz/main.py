@@ -1,3 +1,4 @@
+from datetime import timezone
 from typing import List, Optional
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -5,16 +6,17 @@ from sqlalchemy import select, update, delete, func, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_session, engine
-from models import Base, User, QuizQuestion, Quiz, QuizAttempt  # FIXED: Changed Question to QuizQuestion
+from models import Base, User, QuizQuestion, Quiz, QuizAttempt, UserStudyStats  # FIXED: Changed Question to QuizQuestion
 from schemas import (
     UserCreate, UserUpdate, UserOut,
     QuestionCreate, QuestionOut,
     QuizCreate, QuizOut,  # Legacy
     QuizListItem, QuizDetail, QuizQuestionResponse,
     QuizAttemptCreate, QuizAttemptResponse,
-    UserQuizHistory, QuizStatistics
+    UserQuizHistory, QuizStatistics, QuizDashboardSummary
 )
 
+from .study_stats import update_user_study_stats
 app = FastAPI(title="Quiz API (PostgreSQL + SQLAlchemy async)", version="3.0")
 
 # CORS Configuration
@@ -183,8 +185,19 @@ async def submit_quiz_attempt(payload: QuizAttemptCreate, session: AsyncSession 
         time_taken=payload.time_taken,
         answers=[a.model_dump() for a in payload.answers] if payload.answers else None
     )
-    
     session.add(attempt)
+    await session.flush()  # get completed_at filled by DB default
+
+    # Derive study_date from completed_at (UTC for now)
+    study_date = attempt.completed_at.astimezone(timezone.utc).date()
+
+    await update_user_study_stats(
+        db=session,
+        user_id=attempt.user_id,
+        time_taken_seconds=attempt.time_taken,
+        study_date=study_date,
+    )
+    
     await session.commit()
     await session.refresh(attempt)
     
@@ -263,3 +276,62 @@ async def create_quiz_legacy(payload: QuizCreate, session: AsyncSession = Depend
     await session.commit()
     await session.refresh(quiz)
     return quiz
+
+
+
+@app.get("/dashboard/summary", response_model=QuizDashboardSummary)
+async def get_quiz_dashboard_summary(user_id: str, session: AsyncSession = Depends(get_session)):
+    # 1) Ensure user exists (reuse logic from submit_quiz_attempt)
+    user = await session.get(User, user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    # 2) Average score across all attempts
+    avg_stmt = (
+        select(func.coalesce(func.avg(QuizAttempt.score_percentage), 0.0))
+        .where(QuizAttempt.user_id == user_id)
+    )
+
+    # 3) Study time today from quiz_attempts (UTC day for now)
+    start_today = func.date_trunc("day", func.now())
+    end_today = start_today + func.interval("1 day")
+
+    today_stmt = (
+        select(func.coalesce(func.sum(QuizAttempt.time_taken), 0))
+        .where(QuizAttempt.user_id == user_id)
+        .where(QuizAttempt.completed_at >= start_today)
+        .where(QuizAttempt.completed_at < end_today)
+    )
+
+    # 4) Total time + streak from user_study_stats
+    stats_stmt = (
+        select(
+            UserStudyStats.total_study_seconds,
+            UserStudyStats.current_streak_days,
+        )
+        .where(UserStudyStats.user_id == user_id)
+    )
+
+    avg_res = await session.execute(avg_stmt)
+    today_res = await session.execute(today_stmt)
+    stats_res = await session.execute(stats_stmt)
+
+    avg_percent = float(avg_res.scalar_one() or 0.0)
+    study_today = int(today_res.scalar_one() or 0)
+
+    stats_row = stats_res.one_or_none()
+    if stats_row:
+        total_study_seconds, current_streak_days = stats_row
+    else:
+        total_study_seconds, current_streak_days = 0, 0
+
+    return QuizDashboardSummary(
+        user_id=user_id,
+        averageScorePercent=round(avg_percent, 2),
+        studyTimeSecondsToday=study_today,
+        totalStudySeconds=int(total_study_seconds or 0),
+        currentStreakDays=int(current_streak_days or 0),
+    )
