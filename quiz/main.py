@@ -279,9 +279,14 @@ async def create_quiz_legacy(payload: QuizCreate, session: AsyncSession = Depend
 
 
 
+from datetime import datetime, timedelta, timezone
+from sqlalchemy import select, func
+
 @app.get("/dashboard/summary", response_model=QuizDashboardSummary)
-async def get_quiz_dashboard_summary(user_id: str, session: AsyncSession = Depends(get_session)):
-    # 1) Ensure user exists (reuse logic from submit_quiz_attempt)
+async def get_quiz_dashboard_summary(
+    user_id: str,
+    session: AsyncSession = Depends(get_session),
+):
     user = await session.get(User, user_id)
     if not user:
         raise HTTPException(
@@ -289,15 +294,16 @@ async def get_quiz_dashboard_summary(user_id: str, session: AsyncSession = Depen
             detail="User not found",
         )
 
-    # 2) Average score across all attempts
+    # 2) Average score
     avg_stmt = (
         select(func.coalesce(func.avg(QuizAttempt.score_percentage), 0.0))
         .where(QuizAttempt.user_id == user_id)
     )
 
-    # 3) Study time today from quiz_attempts (UTC day for now)
-    start_today = func.date_trunc("day", func.now())
-    end_today = start_today + func.interval("1 day")
+    # 3) Study time today – compute start/end in Python
+    now = datetime.now(timezone.utc)
+    start_today = datetime(now.year, now.month, now.day, tzinfo=timezone.utc)
+    end_today = start_today + timedelta(days=1)
 
     today_stmt = (
         select(func.coalesce(func.sum(QuizAttempt.time_taken), 0))
@@ -306,7 +312,7 @@ async def get_quiz_dashboard_summary(user_id: str, session: AsyncSession = Depen
         .where(QuizAttempt.completed_at < end_today)
     )
 
-    # 4) Total time + streak from user_study_stats
+    # 4) Total time + streak
     stats_stmt = (
         select(
             UserStudyStats.total_study_seconds,
