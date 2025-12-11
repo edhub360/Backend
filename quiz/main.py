@@ -301,8 +301,9 @@ async def get_quiz_dashboard_summary(
     )
 
     # 3) Study time today – compute start/end in Python
-    now = datetime.now(timezone.utc)
-    start_today = datetime(now.year, now.month, now.day, tzinfo=timezone.utc)
+    # no timezone=... here – naive UTC
+    now = datetime.utcnow()
+    start_today = datetime(now.year, now.month, now.day)
     end_today = start_today + timedelta(days=1)
 
     today_stmt = (
