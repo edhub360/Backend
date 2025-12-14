@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, status, UploadFile, File
 from app.models.schemas import ChatRequest, ChatResponse, RetrievedChunk, ChatMode
 from app.utils.embeddings import embed_query
 from app.utils.faiss_handler import get_faiss_store
@@ -93,6 +93,51 @@ async def chat(request: ChatRequest, user: AuthUser = Depends(get_current_user))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing chat request: {str(e)}")
 
+@router.post("/solve-image", response_model=ChatResponse)
+async def solve_image_question(
+    file: UploadFile = File(...),
+    subject: str | None = None,
+    mode: str | None = "steps",
+    current_user=Depends(get_current_user),
+):
+    """
+    Accept a screenshot/photo of a question and return an AI‑generated solution.
+
+    - `subject` is optional (e.g., "math", "physics")
+    - `mode` can be "steps" or "final"
+    """
+    if file.content_type not in {"image/png", "image/jpeg", "image/jpg"}:
+        raise HTTPException(
+            status_code=400,
+            detail="Only PNG and JPEG image uploads are supported for now.",
+        )
+
+    try:
+        image_bytes = await file.read()
+        if not image_bytes:
+            raise HTTPException(status_code=400, detail="Empty file uploaded.")
+
+        gemini = get_gemini_handler()
+        answer_text = await gemini.generate_image_answer(
+            image_bytes,
+            subject=subject,
+            mode=mode,
+        )
+
+        # Reuse your existing ChatResponse model: set answer in `response`
+        return ChatResponse(
+            mode="image",
+            query=file.filename,
+            response=answer_text,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error while solving image question: {str(e)}",
+        )
+    
 @router.get("/modes")
 async def get_chat_modes():
     """Get available chat modes."""
