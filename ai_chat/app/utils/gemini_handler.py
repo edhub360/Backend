@@ -43,6 +43,55 @@ Please provide a comprehensive and helpful answer."""
             
         except Exception as e:
             return f"Sorry, I encountered an error while processing your request: {str(e)}"
+        
+    async def generate_image_answer(
+        self,
+        image_bytes: bytes,
+        *,
+        subject: str | None = None,
+        mode: str | None = "steps",
+    ) -> str:
+        """
+        Use Gemini vision to read a question from a screenshot/image
+        and return a clear solution.
+
+        mode:
+          - "steps": brief step‑by‑step explanation + final answer
+          - "final": only the final answer in 1–2 sentences
+        """
+        try:
+            # Build instruction based on mode
+            if mode == "final":
+                instruction = (
+                    "You are a homework helper. Look at the image and answer the "
+                    "question directly in 1–2 concise sentences, without long steps."
+                )
+            else:
+                instruction = (
+                    "You are a homework helper. Look at the image and solve the "
+                    "question step by step. Then clearly state the final answer."
+                )
+
+            if subject:
+                instruction += f" The subject is {subject}."
+
+            # Gemini image‑understanding call: one image + instruction text
+            response = self.model.generate_content(
+                [
+                    {"role": "user", "parts": [
+                        {"text": instruction},
+                        {"inline_data": {
+                            "mime_type": "image/png",
+                            "data": image_bytes,
+                        }},
+                    ]}
+                ]
+            )
+
+            return response.text or "I could not generate an answer from the image."
+        except Exception as e:
+            return f"Sorry, I encountered an error while processing the image: {str(e)}"
+
 
 # Global handler instance
 _gemini_handler: Optional[GeminiHandler] = None
