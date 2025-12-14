@@ -126,9 +126,10 @@ async def solve_image_question(
 
         # Reuse your existing ChatResponse model: set answer in `response`
         return ChatResponse(
-            mode="image",
-            query=file.filename,
-            response=answer_text,
+            answer=answer_text,
+            mode=ChatMode.GENERAL,          # or ChatMode.RAG, but must be one of these
+            retrieved_chunks=None,
+            token_count=None,
         )
     except HTTPException:
         raise
