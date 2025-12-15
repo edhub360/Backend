@@ -13,7 +13,7 @@ from schemas import (
     QuizCreate, QuizOut,  # Legacy
     QuizListItem, QuizDetail, QuizQuestionResponse,
     QuizAttemptCreate, QuizAttemptResponse,
-    UserQuizHistory, QuizStatistics, QuizDashboardSummary
+    UserQuizHistory, QuizStatistics, QuizDashboardSummary, WeeklyActivityDay, WeeklyActivityResponse
 )
 
 from study_stats import update_user_study_stats
@@ -279,7 +279,7 @@ async def create_quiz_legacy(payload: QuizCreate, session: AsyncSession = Depend
 
 
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, date
 from sqlalchemy import select, func
 
 @app.get("/dashboard/summary", response_model=QuizDashboardSummary)
@@ -342,3 +342,52 @@ async def get_quiz_dashboard_summary(
         totalStudySeconds=int(total_study_seconds or 0),
         currentStreakDays=int(current_streak_days or 0),
     )
+
+@app.get("/dashboard/weekly-activity", response_model=WeeklyActivityResponse)
+async def get_weekly_activity(user_id: str, session: AsyncSession = Depends(get_session)):
+    user = await session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # last 7 full days, inclusive of today
+    today = datetime.utcnow().date()
+    start_date = today - timedelta(days=6)
+
+    date_group = func.date_trunc("day", QuizAttempt.completed_at).label("day")
+
+    stmt = (
+        select(
+            date_group,
+            func.coalesce(func.sum(QuizAttempt.time_taken), 0).label("study_time"),
+            func.count(QuizAttempt.id).label("quizzes_completed"),
+        )
+        .where(
+            QuizAttempt.user_id == user_id,
+            QuizAttempt.completed_at >= start_date,
+        )
+        .group_by(date_group)
+        .order_by(date_group)
+    )
+
+    res = await session.execute(stmt)
+    rows = res.all()
+
+    # index by date for easy fill
+    by_date: dict[date, tuple[int, int]] = {}
+    for day_dt, study_time, quizzes_completed in rows:
+        d = day_dt.date()
+        by_date[d] = (int(study_time or 0), int(quizzes_completed or 0))
+
+    days: list[WeeklyActivityDay] = []
+    for i in range(7):
+        d = start_date + timedelta(days=i)
+        study_time, quizzes_completed = by_date.get(d, (0, 0))
+        days.append(
+            WeeklyActivityDay(
+                date=d,
+                studyTimeSeconds=study_time,
+                quizzesCompleted=quizzes_completed,
+            )
+        )
+
+    return WeeklyActivityResponse(user_id=user_id, days=days)
