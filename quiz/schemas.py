@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta, date
 from typing import Optional, List, Any, Dict
 from pydantic import BaseModel, Field, EmailStr
 from uuid import UUID
@@ -209,4 +209,14 @@ class QuizDashboardSummary(BaseModel):
     studyTimeSecondsToday: int
     totalStudySeconds: int
     currentStreakDays: int
+
+class WeeklyActivityDay(BaseModel):
+    date: date
+    studyTimeSeconds: int
+    quizzesCompleted: int
+
+class WeeklyActivityResponse(BaseModel):
+    user_id: str
+    days: list[WeeklyActivityDay]
+
 
