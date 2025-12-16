@@ -359,7 +359,7 @@ async def get_weekly_activity(user_id: str, session: AsyncSession = Depends(get_
         select(
             date_group,
             func.coalesce(func.sum(QuizAttempt.time_taken), 0).label("study_time"),
-            func.count(QuizAttempt.id).label("quizzes_completed"),
+            func.count(QuizAttempt.attempt_id).label("quizzes_completed"),
         )
         .where(
             QuizAttempt.user_id == user_id,
