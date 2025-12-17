@@ -1,0 +1,41 @@
+steps:
+  # 1. Build Study Plan backend image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'build',
+      '-t', 'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/study-planner-repo/study-planner-service:${SHORT_SHA}-${BUILD_ID}',
+      './StudyPlan'
+    ]
+
+  # 2. Push Study Plan image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'push',
+      'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/study-planner-repo/study-planner-service:${SHORT_SHA}-${BUILD_ID}'
+    ]
+
+  # 3. Deploy Study Plan to Cloud Run (with secrets)
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        export DATABASE_URL=$(gcloud secrets versions access latest --secret="DATABASE_URL")
+        export LOGIN_SERVICE_URL=$(gcloud secrets versions access latest --secret="LOGIN_SERVICE_URL")
+        export JWT_SECRET_KEY=$(gcloud secrets versions access latest --secret="JWT_SECRET_KEY")
+        export JWT_ALGORITHM=$(gcloud secrets versions access latest --secret="JWT_ALGORITHM")
+
+        gcloud run deploy study-plan-service \
+          --region=us-central1 \
+          --image=us-central1-docker.pkg.dev/arctic-sentry-467317-s7/study-planner-repo/study-planner-service:${SHORT_SHA}-${BUILD_ID} \
+          --platform=managed \
+          --allow-unauthenticated \
+          --memory=512Mi --cpu=1 --timeout=300 --max-instances=10 --port=8080 \
+          --add-cloudsql-instances=arctic-sentry-467317-s7:us-central1:studenthub \
+          --set-env-vars=DATABASE_URL=$${DATABASE_URL},LOGIN_SERVICE_URL=$${LOGIN_SERVICE_URL},JWT_SECRET_KEY=$${JWT_SECRET_KEY},JWT_ALGORITHM=$${JWT_ALGORITHM}
+
+options:
+  defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET
+
+images:
+  - 'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/study-planner-repo/study-planner-service:${SHORT_SHA}-${BUILD_ID}'
