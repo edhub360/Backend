@@ -3,6 +3,7 @@ from uuid import UUID
 from fastapi import HTTPException, status
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.term import Term
 from app.models.study_item import StudyItem
@@ -21,6 +22,7 @@ from app.schemas.summary import PlanSummary, TermSummary
 async def list_terms(db: AsyncSession, user_id: UUID) -> list[Term]:
     stmt = (
         select(Term)
+        .options(selectinload(Term.study_items))
         .where(Term.user_id == user_id, Term.is_archived.is_(False))
         .order_by(Term.position_index)
     )
@@ -40,12 +42,27 @@ async def create_term(db: AsyncSession, user_id: UUID, data: TermCreate) -> Term
     db.add(term)
     await db.commit()
     await db.refresh(term)
-    return term
+
+    # Eager load study_items to avoid lazy loading during response serialization
+    stmt = (
+        select(Term)
+        .options(selectinload(Term.study_items))
+        .where(Term.id == term.id)
+    )
+    result = await db.scalars(stmt)
+    return result.one()
+
 
 
 async def _get_term_or_404(db: AsyncSession, user_id: UUID, term_id: UUID) -> Term:
-    term = await db.get(Term, term_id)
-    if not term or term.user_id != user_id:
+    stmt = (
+        select(Term)
+        .options(selectinload(Term.study_items))
+        .where(Term.id == term_id, Term.user_id == user_id)
+    )
+    result = await db.scalars(stmt)
+    term = result.first()
+    if not term:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Term not found")
     return term
 
