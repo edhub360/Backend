@@ -12,6 +12,7 @@ pydantic==2.9.2
 pydantic-settings==2.6.1  # env-based config [web:108]
 
 # Auth / security
+PyJWT==2.9.0  
 python-jose[cryptography]==3.3.0  # JWT encode/decode [web:72]
 passlib[bcrypt]==1.7.4            # if you later need password hashing [web:95]
 
