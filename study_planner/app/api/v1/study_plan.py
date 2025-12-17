@@ -1,5 +1,5 @@
-from typing import Any
-
+from typing import Any, List
+from pydantic import BaseModel
 from fastapi import APIRouter, status
 
 from app.api.deps import DBSessionDep, CurrentUserDep
@@ -158,8 +158,14 @@ def delete_item(
 
 # ---------- Reorder & Summary ----------
 
+class ReorderItem(BaseModel):
+    item_id: str
+    term_id: str
+    position_index: int
+
+
 class ReorderPayload(BaseModel):
-    items: list[dict]  # { item_id, term_id, position_index }
+    items: List[ReorderItem]
 
 
 @router.post("/items/reorder", status_code=status.HTTP_204_NO_CONTENT)
@@ -168,7 +174,11 @@ def reorder_items(
     db: DBSessionDep,
     current_user: CurrentUserDep,
 ):
-    svc.reorder_items(db, current_user.id, payload.items)
+    svc.reorder_items(
+        db,
+        current_user.id,
+        [item.model_dump() for item in payload.items],
+    )
     return None
 
 
