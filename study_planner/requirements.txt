@@ -1,0 +1,21 @@
+# Web framework & ASGI server
+fastapi==0.115.5
+uvicorn[standard]==0.32.0
+
+# Database / ORM
+SQLAlchemy==2.0.36
+psycopg2-binary==2.9.10
+
+# Settings & validation
+pydantic==2.9.2
+pydantic-settings==2.6.1  # env-based config [web:108]
+
+# Auth / security
+python-jose[cryptography]==3.3.0  # JWT encode/decode [web:72]
+passlib[bcrypt]==1.7.4            # if you later need password hashing [web:95]
+
+# HTTP client (optional but common for calling other services)
+httpx==0.27.2
+
+# Utilities
+python-multipart==0.0.17  # form/file uploads support [web:96]
