@@ -47,10 +47,15 @@ class StudyItem(Base):
     title = Column(String(255), nullable=False)
     units = Column(Integer, nullable=False, default=3)
     status = Column(
-        Enum(*STUDY_STATUS_ENUM, name="study_status_enum"),
-        nullable=False,
-        default="planned",
-    )
+    Enum(
+        *STUDY_STATUS_ENUM,
+        name="study_status_enum",
+        schema="stud_hub_schema",   # tell SQLAlchemy which schema
+        create_type=False,          # do NOT try to CREATE TYPE
+    ),
+    nullable=False,
+    default="planned",
+)
     position_index = Column(Integer, nullable=False, default=0)
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
