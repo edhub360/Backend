@@ -30,20 +30,22 @@ async def list_terms(db: AsyncSession, user_id: UUID) -> list[Term]:
     return list(result.unique())
 
 
-async def create_term(db: AsyncSession, user_id: UUID, data: TermCreate) -> Term:
-    term = Term(
+async def create_item(db: AsyncSession, user_id: UUID, data: StudyItemCreate) -> StudyItem:
+    item = StudyItem(
         user_id=user_id,
-        name=data.name,
-        start_date=data.start_date,
-        end_date=data.end_date,
+        term_id=data.term_id,
+        requirement_category_id=data.requirement_category_id,
+        course_code=data.course_code,
+        title=data.title,
+        units=data.units,
+        status=data.status,
         position_index=data.position_index,
-        is_archived=data.is_archived,
+        notes=data.notes,
     )
-    db.add(term)
+    db.add(item)
     await db.commit()
-    await db.refresh(term)
+    await db.refresh(item)
 
-    # Eager load study_items to avoid lazy loading during response serialization
     result = await db.scalars(
         select(StudyItem)
         .options(selectinload(StudyItem.requirement_category))
