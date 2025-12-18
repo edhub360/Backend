@@ -39,7 +39,7 @@ class StudyItemUpdate(BaseModel):
 class StudyItemRead(BaseModel):
     id: UUID
     term_id: UUID
-    requirement_category: Optional[RequirementCategoryRead]
+    requirement_category_id: Optional[UUID]   # <- use ID, not relationship
     course_code: str
     title: str
     units: int
@@ -51,3 +51,4 @@ class StudyItemRead(BaseModel):
 
     class Config:
         from_attributes = True
+
