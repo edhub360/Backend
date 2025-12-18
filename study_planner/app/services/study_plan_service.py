@@ -44,12 +44,11 @@ async def create_term(db: AsyncSession, user_id: UUID, data: TermCreate) -> Term
     await db.refresh(term)
 
     # Eager load study_items to avoid lazy loading during response serialization
-    stmt = (
-        select(Term)
-        .options(selectinload(Term.study_items))
-        .where(Term.id == term.id)
+    result = await db.scalars(
+        select(StudyItem)
+        .options(selectinload(StudyItem.requirement_category))
+        .where(StudyItem.id == item.id)
     )
-    result = await db.scalars(stmt)
     return result.one()
 
 
