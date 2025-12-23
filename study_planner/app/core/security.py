@@ -17,16 +17,23 @@ class CurrentUser(BaseModel):
 bearer_scheme = HTTPBearer(auto_error=False)
 
 
+import logging
+
 def decode_token(token: str) -> dict:
     settings = get_settings()
     try:
-        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
-    except jwt.PyJWTError:
+        payload = jwt.decode(
+            token,
+            settings.JWT_SECRET_KEY,
+            algorithms=[settings.JWT_ALGORITHM],
+        )
+        return payload
+    except Exception as exc:
+        logging.exception("JWT decode failed: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
         )
-    return payload
 
 
 def get_current_user(
