@@ -138,6 +138,16 @@ async def delete_requirement(db: AsyncSession, user_id: UUID, rc_id: UUID) -> No
 
 # ---------- Study Items ----------
 
+async def list_all_items_for_user(db: AsyncSession, user_id: UUID) -> list[StudyItem]:
+    stmt = (
+        select(StudyItem)
+        .where(StudyItem.user_id == user_id)
+        .order_by(StudyItem.term_id, StudyItem.position_index, StudyItem.course_code)
+    )
+    result = await db.scalars(stmt)
+    return result.all()
+
+
 async def _get_item_or_404(
     db: AsyncSession, user_id: UUID, item_id: UUID
 ) -> StudyItem:
