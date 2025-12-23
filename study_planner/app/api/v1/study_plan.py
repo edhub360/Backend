@@ -104,6 +104,14 @@ async def delete_requirement(
 
 # ---------- Study Items ----------
 
+@router.get("/items", response_model=list[StudyItemRead])
+async def list_all_items(
+    db: DBSessionDep,
+    current_user: CurrentUserDep,
+):
+    return await svc.list_all_items_for_user(db, current_user.id)
+
+
 @router.get("/terms/{term_id}/items", response_model=list[StudyItemRead])
 async def list_items_for_term(
     term_id: str,
