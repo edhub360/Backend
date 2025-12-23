@@ -9,7 +9,6 @@ settings = get_settings()
 
 app = FastAPI(title=settings.PROJECT_NAME)
 
-settings = get_settings()
 logging.info(
     "STUDY-PLAN SETTINGS: JWT_ALGORITHM=%s, JWT_SECRET_KEY_PREFIX=%s",
     settings.JWT_ALGORITHM,
