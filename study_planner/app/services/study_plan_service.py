@@ -139,13 +139,15 @@ async def delete_requirement(db: AsyncSession, user_id: UUID, rc_id: UUID) -> No
 # ---------- Study Items ----------
 
 async def list_all_items_for_user(db: AsyncSession, user_id: UUID) -> list[StudyItem]:
+    """Uses term_name directly - NO JOINs needed"""
     stmt = (
         select(StudyItem)
         .where(StudyItem.user_id == user_id)
-        .order_by(StudyItem.term_id, StudyItem.position_index, StudyItem.course_code)
+        .order_by(StudyItem.term_name, StudyItem.position_index, StudyItem.course_code)  # ✅ term_name
     )
     result = await db.scalars(stmt)
     return result.all()
+
 
 
 async def _get_item_or_404(
@@ -170,14 +172,25 @@ async def list_items_for_term(
     return list(result.unique())
 
 
-async def create_item(
-    db: AsyncSession, user_id: UUID, data: StudyItemCreate
-) -> StudyItem:
-    _ = await _get_term_or_404(db, user_id, data.term_id)
+async def create_item(db: AsyncSession, user_id: UUID, data: StudyItemCreate) -> StudyItem:
+    # Validate term (ID OR name)
+    if data.term_id:
+        await _get_term_or_404(db, user_id, data.term_id)
+        term_name = None  # Will auto-populate from DB
+    elif data.term_name:
+        term = await db.scalar(select(Term).where(Term.user_id == user_id, Term.name == data.term_name))
+        if not term:
+            raise HTTPException(404, f"Term '{data.term_name}' not found")
+        term_name = data.term_name
+    else:
+        raise HTTPException(400, "term_id or term_name required")
+    
     item = StudyItem(
         user_id=user_id,
-        term_id=data.term_id,
+        term_id=data.term_id,  # Keep FK
+        term_name=term_name,   # ✅ NEW
         requirement_category_id=data.requirement_category_id,
+        requirement_category_name=data.requirement_category_name,  # ✅ NEW
         course_code=data.course_code,
         title=data.title,
         units=data.units,
@@ -191,13 +204,18 @@ async def create_item(
     return item
 
 
-async def update_item(
-    db: AsyncSession, user_id: UUID, item_id: UUID, data: StudyItemUpdate
-) -> StudyItem:
+async def update_item(db: AsyncSession, user_id: UUID, item_id: UUID, data: StudyItemUpdate) -> StudyItem:
     item = await _get_item_or_404(db, user_id, item_id)
     payload = data.model_dump(exclude_unset=True)
+    
+    # Validate term change
     if "term_id" in payload:
-        _ = await _get_term_or_404(db, user_id, payload["term_id"])
+        await _get_term_or_404(db, user_id, payload["term_id"])
+    if "term_name" in payload:
+        term = await db.scalar(select(Term).where(Term.user_id == user_id, Term.name == payload["term_name"]))
+        if not term:
+            raise HTTPException(404, f"Term '{payload['term_name']}' not found")
+    
     for field, value in payload.items():
         setattr(item, field, value)
     await db.commit()
@@ -241,33 +259,31 @@ async def reorder_items(
 
 
 async def compute_summary(db: AsyncSession, user_id: UUID) -> PlanSummary:
+    """No JOIN - uses denormalized term_name"""
     stmt = (
         select(
-            StudyItem.term_id,
-            Term.name,
+            StudyItem.term_name,  # ✅ Direct column
             func.count(StudyItem.id),
             func.coalesce(func.sum(StudyItem.units), 0),
         )
-        .join(Term, Term.id == StudyItem.term_id)
         .where(StudyItem.user_id == user_id)
-        .group_by(StudyItem.term_id, Term.name)
-        .order_by(Term.position_index)
+        .group_by(StudyItem.term_name)
+        .order_by(StudyItem.term_name)  # ✅ Alphabetical
     )
-
     result = await db.execute(stmt)
-
+    
     per_term: list[TermSummary] = []
     overall_units = 0
-
-    for term_id, term_name, count_items, total_units in result:
+    for term_name, count_items, total_units in result:
         per_term.append(
             TermSummary(
-                term_id=term_id,
+                term_id=None,  # Not needed
                 term_name=term_name,
                 course_count=count_items,
                 total_units=total_units,
             )
         )
         overall_units += total_units
-
+    
     return PlanSummary(per_term=per_term, overall_total_units=overall_units)
+
