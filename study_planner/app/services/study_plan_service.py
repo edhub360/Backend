@@ -138,25 +138,23 @@ async def delete_requirement(db: AsyncSession, user_id: UUID, rc_id: UUID) -> No
 
 # ---------- Study Items ----------
 
+# study_plan_service.py - list_all_items_for_user
 async def list_all_items_for_user(db: AsyncSession, user_id: UUID) -> list[StudyItem]:
-    """Uses term_name directly - NO JOINs needed"""
     stmt = (
         select(StudyItem)
-        .where(StudyItem.user_id == user_id)
-        .order_by(StudyItem.term_name, StudyItem.position_index, StudyItem.course_code)  # ✅ term_name
+        .where(StudyItem.user_id == user_id)  # ✅ FIXED
+        .order_by(StudyItem.term_name, StudyItem.position_index)
     )
     result = await db.scalars(stmt)
     return result.all()
 
-
-
-async def _get_item_or_404(
-    db: AsyncSession, user_id: UUID, item_id: UUID
-) -> StudyItem:
+# _get_item_or_404
+async def _get_item_or_404(db: AsyncSession, user_id: UUID, item_id: UUID) -> StudyItem:
     item = await db.get(StudyItem, item_id)
-    if not item or item.user_id != user_id:
+    if not item or item.user_id != user_id:  # ✅ FIXED
         raise HTTPException(status_code=404, detail="Item not found")
     return item
+
 
 
 async def list_items_for_term(
