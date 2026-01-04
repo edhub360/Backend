@@ -1,4 +1,4 @@
-from app.db.base_class import Base
+from app.db.base import Base
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum
 from sqlalchemy.dialects.postgresql import UUID
 from uuid import uuid4
