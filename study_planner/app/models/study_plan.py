@@ -1,4 +1,4 @@
-from app.db.base_class import Base  # Use base.py
+from app.db.base import Base  # Use base.py
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
