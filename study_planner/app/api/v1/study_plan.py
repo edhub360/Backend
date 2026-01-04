@@ -1,4 +1,5 @@
 from typing import List
+from uuid import UUID
 from fastapi import APIRouter, Depends, status, HTTPException
 from app.api.deps import DBSessionDep, CurrentUserDep
 from app.schemas.study_plan import (

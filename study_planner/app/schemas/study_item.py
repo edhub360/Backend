@@ -17,6 +17,13 @@ class StudyItemBase(BaseModel):
 class StudyItemCreate(StudyItemBase):
     pass
 
+class StudyItemUpdate(StudyItemBase): 
+    course_code: Optional[str] = None
+    title: Optional[str] = None
+    # ... all optional for partial updates
+    class Config:
+        from_attributes = True
+
 class StudyItemRead(StudyItemBase):
     item_id: UUID
     user_id: UUID
