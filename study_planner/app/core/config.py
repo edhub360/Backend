@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str
     JWT_SECRET_KEY: str
     JWT_ALGORITHM: str
-
+    ADMIN_USER_ID: str = "96665584-8a26-48fb-9d3d-c6041fc3baa2"  # Admin for predefined plans
     class Config:
         env_file = ".env"  # optional: keep for local dev only
 
