@@ -6,6 +6,7 @@ from sqlalchemy.orm import selectinload
 from app.core.config import get_settings
 from app.models.study_plan import StudyPlan
 from app.models.study_item import StudyItem
+from app.models.user import User
 from app.schemas.study_plan import (
     StudyPlanCreate, StudyPlanUpdate, StudyPlanRead
 )

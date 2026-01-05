@@ -5,6 +5,7 @@ from sqlalchemy.orm import relationship
 from uuid import uuid4
 from datetime import datetime
 
+
 class StudyPlan(Base):
     __tablename__ = "study_plans"
     __table_args__ = {"schema": "stud_hub_schema"}
@@ -21,3 +22,4 @@ class StudyPlan(Base):
 
     # Relationships
     study_items = relationship("StudyItem", back_populates="study_plan")
+
