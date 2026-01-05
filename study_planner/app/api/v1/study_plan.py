@@ -13,48 +13,48 @@ from app.services import study_plan_service as svc
 router = APIRouter(prefix="/study-plan", tags=["study-plan"])
 
 ## Study Plans ##
-router.post("/", response_model=StudyPlanRead, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=StudyPlanRead, status_code=status.HTTP_201_CREATED)
 async def create_plan(data: StudyPlanCreate, db: DBSessionDep, current_user: CurrentUserDep):
     return await svc.create_study_plan(db, current_user.id, data)
 
-router.get("/", response_model=List[StudyPlanRead])
+@router.get("/", response_model=List[StudyPlanRead])
 async def list_plans(db: DBSessionDep, current_user: CurrentUserDep):
     return await svc.list_study_plans(db, current_user.id)
 
-router.get("/{plan_id}", response_model=StudyPlanRead)
+@router.get("/{plan_id}", response_model=StudyPlanRead)
 async def get_plan(plan_id: str, db: DBSessionDep, current_user: CurrentUserDep):
     return await svc.get_study_plan_or_404(db, current_user.id, UUID(plan_id))
 
-router.patch("/{plan_id}", response_model=StudyPlanRead)
+@router.patch("/{plan_id}", response_model=StudyPlanRead)
 async def update_plan(plan_id: str, data: StudyPlanUpdate, db: DBSessionDep, current_user: CurrentUserDep):
     return await svc.update_study_plan(db, current_user.id, UUID(plan_id), data)
 
-router.delete("/{plan_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{plan_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_plan(plan_id: str, db: DBSessionDep, current_user: CurrentUserDep):
     await svc.delete_study_plan(db, current_user.id, UUID(plan_id))
 
 ## Study Items (flat) ##
-router.post("/items", response_model=StudyItemRead, status_code=status.HTTP_201_CREATED)
+@router.post("/items", response_model=StudyItemRead, status_code=status.HTTP_201_CREATED)
 async def create_item(data: StudyItemCreate, db: DBSessionDep, current_user: CurrentUserDep):
     return await svc.create_study_item(db, current_user.id, data)
 
-router.get("/items", response_model=List[StudyItemRead])
+@router.get("/items", response_model=List[StudyItemRead])
 async def list_items(db: DBSessionDep, current_user: CurrentUserDep):
     return await svc.list_study_items(db, current_user.id)
 
-router.get("/items/{item_id}", response_model=StudyItemRead)
+@router.get("/items/{item_id}", response_model=StudyItemRead)
 async def get_item(item_id: str, db: DBSessionDep, current_user: CurrentUserDep):
     return await svc.get_study_item_or_404(db, current_user.id, UUID(item_id))
 
-router.patch("/items/{item_id}", response_model=StudyItemRead)
+@router.patch("/items/{item_id}", response_model=StudyItemRead)
 async def update_item(item_id: str, data: StudyItemUpdate, db: DBSessionDep, current_user: CurrentUserDep):
     return await svc.update_study_item(db, current_user.id, UUID(item_id), data)
 
-router.delete("/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_item(item_id: str, db: DBSessionDep, current_user: CurrentUserDep):
     await svc.delete_study_item(db, current_user.id, UUID(item_id))
 
 ## Summary ##
-router.get("/summary", response_model=dict)
+@router.get("/summary", response_model=dict)
 async def get_summary(db: DBSessionDep, current_user: CurrentUserDep):
     return await svc.compute_summary(db, current_user.id)
