@@ -33,3 +33,4 @@ class StudyItemRead(StudyItemBase):
 
     class Config:
         from_attributes = True
+
