@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     BACKEND_CORS_ORIGINS: list[str] = [
         "http://localhost:5173",
         "http://localhost:3000",
-        "https://edhub360.github.io",
+        "https://edhub360.github.io/StudentHub/",
         "https://app.edhub360.com",
     ]
 
