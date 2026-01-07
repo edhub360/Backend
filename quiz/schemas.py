@@ -58,6 +58,15 @@ class QuestionOut(QuestionBase):
     class Config:
         from_attributes = True
 
+class QuizQuestionCreate(BaseModel):
+    """Question data for quiz creation"""
+    question_text: str
+    correct_answer: str
+    incorrect_answers: List[str] = []
+    explanation: Optional[str] = None
+    difficulty: Optional[str] = None
+    subject_tag: Optional[str] = None
+
 
 # ---------- Quiz Questions (for individual quiz questions) ----------
 class QuizQuestionResponse(BaseModel):
@@ -109,6 +118,7 @@ class QuizCreate(BaseModel):
     estimated_time: Optional[int] = None
     tags: Optional[List[str]] = None
     is_active: bool = True
+    questions: List[QuizQuestionCreate] 
 
 
 # ---------- Quiz Attempts (User Results) ----------

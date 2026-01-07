@@ -92,6 +92,66 @@ async def delete_user(user_id: str, session: AsyncSession = Depends(get_session)
 
 # ---------------- Quizzes (NEW API) ----------------
 
+@app.post("/quizzes", response_model=QuizDetail, status_code=status.HTTP_201_CREATED)
+async def create_quiz(payload: QuizCreate, session: AsyncSession = Depends(get_session)):
+    """Create quiz with questions (admin endpoint)"""
+    
+    # 1. Create quiz first
+    quiz = Quiz(
+        title=payload.title,
+        description=payload.description,
+        subject_tag=payload.subject_tag,
+        difficulty_level=payload.difficulty_level,
+        estimated_time=payload.estimated_time,
+        tags=payload.tags,
+        is_active=payload.is_active
+    )
+    session.add(quiz)
+    await session.flush()  # Generate quiz_id before questions
+
+    # 2. Create questions with FK to quiz
+    questions = [
+        QuizQuestion(
+            quiz_id=quiz.quiz_id,
+            question_text=q.question_text,
+            correct_answer=q.correct_answer,
+            incorrect_answers=q.incorrect_answers,
+            explanation=q.explanation,
+            difficulty=q.difficulty,
+            subject_tag=q.subject_tag
+        )
+        for q in payload.questions
+    ]
+    session.add_all(questions)
+    
+    await session.commit()
+    await session.refresh(quiz)
+    
+    # 3. Return full quiz detail
+    stmt = select(QuizQuestion).where(QuizQuestion.quiz_id == quiz.quiz_id)
+    result = await session.execute(stmt)
+    quiz.questions = result.scalars().all()
+    
+    return QuizDetail(
+        quiz_id=str(quiz.quiz_id),
+        title=quiz.title,
+        description=quiz.description,
+        subject_tag=quiz.subject_tag,
+        difficulty_level=quiz.difficulty_level,
+        estimated_time=quiz.estimated_time,
+        questions=[
+            QuizQuestionResponse(
+                question_id=str(q.question_id),
+                question_text=q.question_text,
+                correct_answer=q.correct_answer,
+                incorrect_answers=q.incorrect_answers,
+                explanation=q.explanation,
+                difficulty=q.difficulty
+            ) for q in quiz.questions
+        ]
+    )
+
+
 @app.get("/quizzes", response_model=List[QuizListItem])
 async def list_quizzes(session: AsyncSession = Depends(get_session)):
     """Get all active quizzes (global, no user_id needed)"""
