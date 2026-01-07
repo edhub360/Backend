@@ -29,7 +29,7 @@ class StudyItemRead(StudyItemBase):
     user_id: UUID
     created_at: Optional[datetime]
     updated_at: Optional[datetime]
-    study_plan: Optional[StudyPlanRead] = None
+    study_plan_id: Optional[UUID] = None
 
     class Config:
         from_attributes = True
