@@ -33,6 +33,7 @@ async def update_plan(plan_id: str, data: StudyPlanUpdate, db: DBSessionDep, cur
 async def delete_plan(plan_id: str, db: DBSessionDep, current_user: CurrentUserDep):
     await svc.delete_study_plan(db, current_user.id, UUID(plan_id))
 
+
 ## Study Items (flat) ##
 @router.post("/items", response_model=StudyItemRead, status_code=status.HTTP_201_CREATED)
 async def create_item(data: StudyItemCreate, db: DBSessionDep, current_user: CurrentUserDep):
@@ -53,6 +54,17 @@ async def update_item(item_id: str, data: StudyItemUpdate, db: DBSessionDep, cur
 @router.delete("/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_item(item_id: str, db: DBSessionDep, current_user: CurrentUserDep):
     await svc.delete_study_item(db, current_user.id, UUID(item_id))
+
+## Study Items by Plan ##
+@router.get("/{plan_id}/items", response_model=List[StudyItemRead])
+async def get_items_by_plan(
+    plan_id: str, 
+    db: DBSessionDep, 
+    current_user: CurrentUserDep
+):
+    """Get all study items for a specific study plan"""
+    return await svc.get_study_items_by_plan_id(db, current_user.id, UUID(plan_id))
+
 
 ## Summary ##
 @router.get("/summary", response_model=dict)
