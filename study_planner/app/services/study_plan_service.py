@@ -107,6 +107,27 @@ async def create_study_item(db: AsyncSession, current_user_id: UUID, data: Study
     await db.refresh(item)
     return item
 
+## Study Items by Plan ##
+async def get_study_items_by_plan_id(
+    db: AsyncSession, 
+    current_user_id: UUID, 
+    plan_id: UUID
+) -> List[StudyItem]:
+    """Get study items filtered by studyplanid foreign key with user visibility check."""
+    
+    # Verify plan exists and is visible to user
+    plan = await get_study_plan_or_404(db, current_user_id, plan_id)
+    
+    # Get items for this specific plan
+    stmt = (
+        select(StudyItem)
+        .where(StudyItem.study_plan_id == plan_id)
+        .order_by(StudyItem.position_index, StudyItem.term_name)
+    )
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
 async def get_study_item_or_404(db: AsyncSession, current_user_id: UUID, item_id: UUID) -> StudyItem:
     """Get item if owned or in visible plan."""
     # First check direct ownership
