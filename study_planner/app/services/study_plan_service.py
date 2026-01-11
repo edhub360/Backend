@@ -81,7 +81,7 @@ async def create_from_predefined(
             term_name=orig_item.term_name,
             course_category=orig_item.course_category,
             course_id=orig_item.course_id,       # null initially
-            duration=orig_item.duration or 0
+            #duration=orig_item.duration or 0
         )
         db.add(new_item)
     
