@@ -1,6 +1,6 @@
 from uuid import UUID
 from fastapi import HTTPException, status
-from sqlalchemy import select, or_, desc
+from sqlalchemy import select, or_, desc, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from app.core.config import get_settings
@@ -33,6 +33,63 @@ async def create_study_plan(db: AsyncSession, current_user_id: UUID, data: Study
     await db.commit()
     await db.refresh(plan, attribute_names=["study_items"])
     return plan
+
+async def get_study_plan_by_id(db: AsyncSession, plan_id: UUID) -> StudyPlan | None:
+    """Get study plan by ID (no user visibility check)."""
+    stmt = (
+        select(StudyPlan)
+        .options(selectinload(StudyPlan.study_items))
+        .where(StudyPlan.id == plan_id)
+    )
+    result = await db.execute(stmt)
+    return result.scalar_one_or_none()
+
+
+async def create_from_predefined(
+    db: AsyncSession, 
+    current_user_id: UUID, 
+    plan_data: StudyPlanCreate, 
+    predefined_plan_id: UUID
+) -> StudyPlan:
+    """Create user study plan by copying from predefined plan."""
+    
+    # 1. Fetch predefined plan + its study items
+    predefined_plan = await get_study_plan_by_id(db, predefined_plan_id)
+    if not predefined_plan or not predefined_plan.is_predefined:
+        raise HTTPException(status_code=404, detail="Predefined plan not found")
+    
+    # 2. Create new user plan (name/description override)
+    user_plan = StudyPlan(
+        user_id=current_user_id,
+        name=plan_data.name,
+        description=plan_data.description,
+        is_predefined=False  # User's copy is never predefined
+    )
+    db.add(user_plan)
+    await db.commit()
+    await db.refresh(user_plan)
+    
+    # 3. Copy ALL study items from predefined → new plan
+    for orig_item in predefined_plan.study_items:
+        new_item = StudyItem(
+            study_plan_id=user_plan.id,          #  New plan ID
+            user_id=current_user_id,             #  Current user
+            course_code=orig_item.course_code,
+            title=orig_item.title,
+            status=orig_item.status,             # 'planned' by default
+            position_index=orig_item.position_index,
+            term_name=orig_item.term_name,
+            course_category=orig_item.course_category,
+            course_id=orig_item.course_id,       # null initially
+            duration=orig_item.duration or 0
+        )
+        db.add(new_item)
+    
+    await db.commit()
+    await db.refresh(user_plan, attribute_names=["study_items"])
+    
+    return user_plan
+
 
 async def list_study_plans(db: AsyncSession, current_user_id: UUID) -> List[StudyPlan]:
     """List predefined (admin) + user's plans; predefined first."""
