@@ -17,6 +17,19 @@ router = APIRouter(prefix="/study-plan", tags=["study-plan"])
 async def create_plan(data: StudyPlanCreate, db: DBSessionDep, current_user: CurrentUserDep):
     return await svc.create_study_plan(db, current_user.id, data)
 
+## Add this NEW endpoint (after create_plan):
+@router.post("/{plan_id}/from-predefined", response_model=StudyPlanRead, status_code=status.HTTP_201_CREATED)
+async def create_from_predefined_plan(
+    plan_id: str,
+    data: StudyPlanCreate,  # Only name + description needed
+    db: DBSessionDep, 
+    current_user: CurrentUserDep
+):
+    """Copy predefined study plan → create user copy with custom name/desc."""
+    return await svc.create_from_predefined(
+        db, current_user.id, data, UUID(plan_id)
+    )
+
 @router.get("/", response_model=List[StudyPlanRead])
 async def list_plans(db: DBSessionDep, current_user: CurrentUserDep):
     return await svc.list_study_plans(db, current_user.id)
