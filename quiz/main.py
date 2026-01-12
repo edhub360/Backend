@@ -21,6 +21,7 @@ from google.cloud import storage
 import pandas as pd
 import io
 import ast  # For parsing incorrect_answers lists
+import json
 
 app = FastAPI(title="Quiz API (PostgreSQL + SQLAlchemy async)", version="3.0")
 
@@ -177,7 +178,7 @@ async def bulk_import_from_bucket(
             "subject_tag": row['subject_tag'],
             "difficulty_level": row['difficulty_level'],
             "estimated_time": row['estimated_time'],
-            "tags": [row['tags']],  # ← String → JSONB list ["Technology"]
+            "tags": json.dumps([row['tags']]),  # ← String → JSONB list ["Technology"]
             "is_active": True
         }
         for _, row in quiz_df.iterrows()
@@ -205,7 +206,7 @@ async def bulk_import_from_bucket(
                 "quiz_id": quiz_map[title],
                 "question_text": row['question_text'],
                 "correct_answer": row['correct_answer'],
-                "incorrect_answers": incorrect_list,  # List for jsonb/text[]
+                "incorrect_answers": json.dumps(incorrect_list),  # List for jsonb/text[]
                 "explanation": row['explanation'],
                 "difficulty": row['difficulty'],
                 "subject_tag": row['subject_tag']
