@@ -6,3 +6,6 @@ pydantic==2.7.0
 python-multipart==0.0.9
 pydantic[email]
 email-validator
+google-cloud-storage==2.16.0
+pandas==2.2.2
+sqlalchemy[asyncio]==2.0.35  # If missing
