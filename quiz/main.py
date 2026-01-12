@@ -151,6 +151,70 @@ async def create_quiz(payload: QuizCreate, session: AsyncSession = Depends(get_s
         ]
     )
 
+@app.post("/quizzes/bulk-import-from-bucket")
+async def bulk_import_from_bucket(
+    quiz_csv_path: str = "quiz_bulk.csv",
+    questions_csv_path: str = "questions_bulk.csv",
+    session: AsyncSession = Depends(get_session)
+):
+    from google.cloud import storage
+    import pandas as pd
+    import io
+    import ast  # For parsing incorrect_answers lists
+
+    client = storage.Client()
+    bucket = client.bucket("arctic-sentry-467317-s7-studenthub-data")
+
+    # 1. Quizzes: exact columns match your CSV headers perfectly
+    blob = bucket.blob(quiz_csv_path)
+    quiz_df = pd.read_csv(io.BytesIO(blob.download_as_bytes()))
+    quiz_mappings = [
+        {
+            "title": row['title'],
+            "description": row['description'],
+            "subject_tag": row['subject_tag'],
+            "difficulty_level": row['difficulty_level'],
+            "estimated_time": row['estimated_time'],
+            "tags": row['tags'],
+            "is_active": True  # Default
+        }
+        for _, row in quiz_df.iterrows()
+    ]
+    await session.run_sync(lambda s: s.bulk_insert_mappings(Quiz, quiz_mappings))
+    await session.commit()
+
+    # 2. Questions: map quiz_title -> quiz_id, parse JSON-like incorrect_answers
+    q_blob = bucket.blob(questions_csv_path)
+    questions_df = pd.read_csv(io.BytesIO(q_blob.download_as_bytes()))
+    stmt = select(Quiz.quiz_id, Quiz.title)
+    result = await session.execute(stmt)
+    quiz_map = {row.title: row.quiz_id for row in result.unique()}
+
+    question_mappings = []
+    for _, row in questions_df.iterrows():
+        if row['quiz_title'] in quiz_map:
+            # Parse incorrect_answers string like "[\"opt1\", \"opt2\"]" to list
+            incorrect_str = row['incorrect_answers'].strip()
+            incorrect_list = ast.literal_eval(incorrect_str) if incorrect_str.startswith('[') else []
+            question_mappings.append({
+                "quiz_id": quiz_map[row['quiz_title']],
+                "question_text": row['question_text'],
+                "correct_answer": row['correct_answer'],
+                "incorrect_answers": incorrect_list,
+                "explanation": row['explanation'],
+                "difficulty": row['difficulty'],
+                "subject_tag": row['subject_tag']
+            })
+
+    await session.run_sync(lambda s: s.bulk_insert_mappings(QuizQuestion, question_mappings))
+    await session.commit()
+
+    return {
+        "quizzes_loaded": len(quiz_mappings),  # Fix: len(quiz_mappings)
+        "questions_loaded": len(question_mappings),
+        "unmatched_quizzes": len([q for q in questions_df['quiz_title'].unique() if q not in quiz_map])
+    }
+
 
 @app.get("/quizzes", response_model=List[QuizListItem])
 async def list_quizzes(session: AsyncSession = Depends(get_session)):
