@@ -17,6 +17,11 @@ from schemas import (
 )
 
 from study_stats import update_user_study_stats
+from google.cloud import storage
+import pandas as pd
+import io
+import ast  # For parsing incorrect_answers lists
+
 app = FastAPI(title="Quiz API (PostgreSQL + SQLAlchemy async)", version="3.0")
 
 # CORS Configuration
@@ -157,10 +162,7 @@ async def bulk_import_from_bucket(
     questions_csv_path: str = "questions_bulk.csv",
     session: AsyncSession = Depends(get_session)
 ):
-    from google.cloud import storage
-    import pandas as pd
-    import io
-    import ast  # For parsing incorrect_answers lists
+    
 
     client = storage.Client()
     bucket = client.bucket("arctic-sentry-467317-s7-studenthub-data")
