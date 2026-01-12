@@ -177,8 +177,8 @@ async def bulk_import_from_bucket(
             "subject_tag": row['subject_tag'],
             "difficulty_level": row['difficulty_level'],
             "estimated_time": row['estimated_time'],
-            "tags": row['tags'],
-            "is_active": True  # Default
+            "tags": [row['tags']],  # ← String → JSONB list ["Technology"]
+            "is_active": True
         }
         for _, row in quiz_df.iterrows()
     ]
@@ -194,15 +194,18 @@ async def bulk_import_from_bucket(
 
     question_mappings = []
     for _, row in questions_df.iterrows():
-        if row['quiz_title'] in quiz_map:
-            # Parse incorrect_answers string like "[\"opt1\", \"opt2\"]" to list
-            incorrect_str = row['incorrect_answers'].strip()
-            incorrect_list = ast.literal_eval(incorrect_str) if incorrect_str.startswith('[') else []
+        title = row['quiz_title'].strip()
+        if title in quiz_map:
+            incorrect_str = str(row['incorrect_answers']).strip()
+            if incorrect_str.startswith('['):
+                incorrect_list = ast.literal_eval(incorrect_str)
+            else:
+                incorrect_list = incorrect_str.split(',') if ',' in incorrect_str else [incorrect_str]
             question_mappings.append({
-                "quiz_id": quiz_map[row['quiz_title']],
+                "quiz_id": quiz_map[title],
                 "question_text": row['question_text'],
                 "correct_answer": row['correct_answer'],
-                "incorrect_answers": incorrect_list,
+                "incorrect_answers": incorrect_list,  # List for jsonb/text[]
                 "explanation": row['explanation'],
                 "difficulty": row['difficulty'],
                 "subject_tag": row['subject_tag']
