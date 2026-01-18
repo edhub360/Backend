@@ -1,7 +1,7 @@
 # app/models/course.py (NEW FILE)
 from sqlalchemy import Column, String, Integer, Text, DateTime, func
 from sqlalchemy.dialects.postgresql import UUID
-from app.db.base_class import Base
+from app.db.base import Base
 
 class Course(Base):
     __tablename__ = "courses"  # Adjust schema if 'stud_hub.courses'
