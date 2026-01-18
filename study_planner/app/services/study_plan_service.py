@@ -7,12 +7,14 @@ from app.core.config import get_settings
 from app.models.study_plan import StudyPlan
 from app.models.study_item import StudyItem
 from app.models.user import User
+from app.models.courses import Course
 from app.schemas.study_plan import (
     StudyPlanCreate, StudyPlanUpdate, StudyPlanRead
 )
 from app.schemas.study_item import (
     StudyItemCreate, StudyItemUpdate, StudyItemRead
 )
+from app.schemas.courses import CourseRead
 from typing import List
 from datetime import datetime
 
@@ -43,6 +45,24 @@ async def get_study_plan_by_id(db: AsyncSession, plan_id: UUID) -> StudyPlan | N
     )
     result = await db.execute(stmt)
     return result.scalar_one_or_none()
+
+## NEW: Courses for Dropdown ##
+async def list_courses(db: AsyncSession, search: str = "") -> List[CourseRead]:
+    """Fetch courses from DB for study plan dropdown. Search title/code/category."""
+    stmt = select(Course).order_by(Course.course_title)
+    if search:
+        stmt = stmt.where(
+            or_(
+                Course.course_title.ilike(f"%{search}%"),
+                Course.course_code.ilike(f"%{search}%"),
+                Course.course_category.ilike(f"%{search}%")
+            )
+        )
+    stmt = stmt.limit(100)  # Dropdown perf
+    
+    result = await db.execute(stmt)
+    courses = result.scalars().all()
+    return [CourseRead.model_validate(course) for course in courses]  # Pydantic v2
 
 
 async def create_from_predefined(
