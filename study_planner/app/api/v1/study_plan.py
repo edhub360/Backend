@@ -51,10 +51,9 @@ async def delete_plan(plan_id: str, db: DBSessionDep, current_user: CurrentUserD
 @router.get("/courses", response_model=List[CourseRead])
 async def list_courses(
     db: DBSessionDep,
-    q: str = Query(None, description="Search title/code"),
-    current_user: CurrentUserDep = Depends(CurrentUserDep(required=False))  # Optional auth
+    q: str = Query(None, description="Search title/code/category")
 ):
-    """Fetch courses for dropdown in study plan UI."""
+    """Public courses for study plan UI dropdown."""
     return await svc.list_courses(db, q or "")
 
 ## Study Items (flat) ##
