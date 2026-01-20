@@ -48,7 +48,6 @@ async def get_study_plan_by_id(db: AsyncSession, plan_id: UUID) -> StudyPlan | N
 
 ## NEW: Courses for Dropdown ##
 async def list_courses(db: AsyncSession, search: str = "") -> List[CourseRead]:
-    """Fetch courses from DB for study plan dropdown. Search title/code/category."""
     stmt = select(Course).order_by(Course.course_title)
     if search:
         stmt = stmt.where(
@@ -58,11 +57,24 @@ async def list_courses(db: AsyncSession, search: str = "") -> List[CourseRead]:
                 Course.course_category.ilike(f"%{search}%")
             )
         )
-    stmt = stmt.limit(100)  # Dropdown perf
+    stmt = stmt.limit(100)
     
     result = await db.execute(stmt)
     courses = result.scalars().all()
-    return [CourseRead.model_validate(course) for course in courses]  # Pydantic v2
+    
+    # ✅ SAFE: Direct dict (no Pydantic conversion)
+    return [
+        {
+            "course_id": str(course.course_id),
+            "course_code": course.course_code or "",
+            "course_title": course.course_title,
+            "course_category": course.course_category or "",
+            "course_duration": course.course_duration or 3,
+            "course_credit": course.course_credit,
+            "course_desc": course.course_desc or "",
+        }
+        for course in courses
+    ]  # Pydantic v2
 
 
 async def create_from_predefined(
