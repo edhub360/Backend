@@ -18,6 +18,15 @@ router = APIRouter(prefix="/study-plan", tags=["study-plan"])
 async def create_plan(data: StudyPlanCreate, db: DBSessionDep, current_user: CurrentUserDep):
     return await svc.create_study_plan(db, current_user.id, data)
 
+## NEW: Courses Dropdown Endpoint (public-ish, user auth optional) ##
+@router.get("/courses", response_model=List[CourseRead])
+async def list_courses(
+    db: DBSessionDep,
+    q: str = Query(None, description="Search title/code/category")
+):
+    """Public courses for study plan UI dropdown."""
+    return await svc.list_courses(db, q or "")
+
 ## Add this NEW endpoint (after create_plan):
 @router.post("/{plan_id}/from-predefined", response_model=StudyPlanRead, status_code=status.HTTP_201_CREATED)
 async def create_from_predefined_plan(
@@ -47,14 +56,6 @@ async def update_plan(plan_id: str, data: StudyPlanUpdate, db: DBSessionDep, cur
 async def delete_plan(plan_id: str, db: DBSessionDep, current_user: CurrentUserDep):
     await svc.delete_study_plan(db, current_user.id, UUID(plan_id))
 
-## NEW: Courses Dropdown Endpoint (public-ish, user auth optional) ##
-@router.get("/courses", response_model=List[CourseRead])
-async def list_courses(
-    db: DBSessionDep,
-    q: str = Query(None, description="Search title/code/category")
-):
-    """Public courses for study plan UI dropdown."""
-    return await svc.list_courses(db, q or "")
 
 ## Study Items (flat) ##
 @router.post("/items", response_model=StudyItemRead, status_code=status.HTTP_201_CREATED)
