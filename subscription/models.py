@@ -3,7 +3,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
-from database import Base
+from db import Base
 import uuid
 
 class Plan(Base):
@@ -43,7 +43,7 @@ class Subscription(Base):
     __table_args__ = {"schema": "stud_hub_schema"}
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("stud_hub_schema.customers.id"), nullable=False)
+    customer_id = Column(UUID(as_uuid=True), ForeignKey("stud_hub_schema.customers.id"), nullable=False)
     plan_id = Column(UUID(as_uuid=True), ForeignKey("stud_hub_schema.plans.id"), nullable=False)
     status = Column(String(30), nullable=False)
     stripe_subscription_id = Column(String(100), unique=True, nullable=False)
