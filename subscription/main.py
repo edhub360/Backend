@@ -9,8 +9,8 @@ from typing import List
 
 from stripe_client import StripeClient
 from crud import *
-from schemas import *
-from database import get_db, engine
+from schema import *
+from db import get_db, engine
 from models import Base
 
 load_dotenv()
@@ -49,12 +49,13 @@ async def create_checkout_session(
     if not price:
         raise HTTPException(404, "Plan price not found")
     
-    # 3. Create checkout
+    # 3. Create checkout WITH METADATA
     url = StripeClient.create_checkout_session(
         customer.stripe_customer_id,
         price.stripe_price_id,
         "http://localhost:3000/success",
-        "http://localhost:3000/cancel"
+        "http://localhost:3000/cancel",
+        {"user_id": str(request.user_id)}  # ADD THIS LINE!
     )
     
     return CheckoutSessionResponse(url=url)
@@ -95,17 +96,33 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     except Exception:
         raise HTTPException(status_code=400, detail="Webhook signature failed")
     
+    print(f"🔔 Webhook Event: {event['type']}")  # ADD THIS
+    
     if event['type'] == 'checkout.session.completed':
+        print("✅ CHECKOUT SESSION COMPLETED TRIGGERED!")  # ADD THIS
+        
         session = event['data']['object']
+        print(f"📦 Session ID: {session.get('id')}")  # ADD THIS
+        print(f"💳 Subscription: {session.get('subscription')}")  # ADD THIS
+        print(f"👤 Metadata: {session.get('metadata')}")  # ADD THIS
+        
         parsed = StripeClient.parse_checkout_session(session)
+        print(f"🔍 Parsed: {parsed}")  # ADD THIS - CRITICAL!
         
         if parsed['subscription_id'] and parsed['user_id']:
+            print("✅ ENTERING IF BLOCK - Has sub_id + user_id")  # ADD THIS
+            
             user_id = UUID(parsed['user_id'])
             stripe_sub = StripeClient.retrieve_subscription(parsed['subscription_id'])
             plan_price_id = stripe_sub['items']['data'][0]['price']['id']
             
+            print(f"🔍 Looking for price: {plan_price_id}")
+            
             price = await get_plan_price_by_stripe_id(db, plan_price_id)
+            print(f"✅ Price found: {price}")
+            
             customer = await get_customer(db, user_id)
+            print(f"👤 Customer: {customer}")
             
             if price and customer:
                 await create_subscription(
@@ -116,13 +133,79 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
                     datetime.fromtimestamp(stripe_sub['current_period_start']),
                     datetime.fromtimestamp(stripe_sub['current_period_end'])
                 )
+                print("🎉 Subscription created!")
+
+            else:
+                print(f"❌ FAILED - price: {price}, customer: {customer}")  # ADD THIS
+        else:
+            print(f"❌ IF CONDITION FAILED - sub_id: {parsed.get('subscription_id')}, user_id: {parsed.get('user_id')}")  # ADD THIS
+    
+    #elif event['type'] == 'invoice.payment_succeeded':
+        #pass
     
     elif event['type'] == 'invoice.payment_succeeded':
-        # Handle renewal
-        pass
-    
+                # RENEWAL - UPDATE PERIOD
+        invoice = event['data']['object']
+                
+        if invoice.get('subscription'):
+            stripe_sub = StripeClient.retrieve_subscription(invoice['subscription'])
+            db_sub = await get_subscription_by_stripe_id(db, stripe_sub['id'])
+                    
+            if db_sub:
+                await update_subscription(
+                    db,
+                    db_sub.id,
+                    current_period_start=datetime.fromtimestamp(stripe_sub['current_period_start']),
+                    current_period_end=datetime.fromtimestamp(stripe_sub['current_period_end']),
+                    status='active'
+                )
+                print("🔄 Subscription renewed")
+            
+    elif event['type'] == 'customer.subscription.updated':
+                # CANCELLATION SCHEDULED OR STATUS CHANGE
+        subscription = event['data']['object']
+        db_sub = await get_subscription_by_stripe_id(db, subscription['id'])
+                
+        if db_sub:
+            if subscription['cancel_at_period_end']:
+                # Will cancel at period end
+                await update_subscription(
+                    db, 
+                    db_sub.id,
+                    status='active',
+                    cancel_at=datetime.fromtimestamp(subscription['cancel_at'])
+                )
+                print(f"📅 Subscription will cancel at period end")
+                    
+            elif subscription['status'] == 'canceled':
+                # Cancelled immediately
+                await update_subscription(
+                    db,
+                    db_sub.id,
+                    status='cancelled',
+                    cancelled_at=datetime.utcnow()
+                )
+                print("❌ Subscription cancelled immediately")
+            
+    elif event['type'] == 'customer.subscription.deleted':
+                # SUBSCRIPTION ENDED/DELETED
+        subscription = event['data']['object']
+        db_sub = await get_subscription_by_stripe_id(db, subscription['id'])
+                
+        if db_sub:
+            await update_subscription(
+                db,
+                db_sub.id,
+                status='cancelled',
+                ended_at=datetime.utcnow(),
+                cancelled_at=datetime.fromtimestamp(subscription['canceled_at']) if subscription.get('canceled_at') else None
+            )
+            print("🛑 Subscription ended/deleted")
+             
     return {"status": "ok"}
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+

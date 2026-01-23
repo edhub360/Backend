@@ -26,21 +26,30 @@ class StripeClient:
         price_id: str, 
         success_url: str, 
         cancel_url: str,
+        metadata: dict = None,  # ADD THIS
         mode: str = "subscription"
     ) -> str:
         """Create Stripe Checkout session"""
-        session = stripe.checkout.Session.create(
-            customer=customer_id,
-            mode=mode,
-            payment_method_types=["card"],
-            line_items=[{
+        
+        params = {
+            "customer": customer_id,
+            "mode": mode,
+            "payment_method_types": ["card"],
+            "line_items": [{
                 "price": price_id, 
                 "quantity": 1
             }],
-            success_url=success_url + "?session_id={CHECKOUT_SESSION_ID}",
-            cancel_url=cancel_url,
-        )
+            "success_url": success_url + "?session_id={CHECKOUT_SESSION_ID}",
+            "cancel_url": cancel_url,
+        }
+        
+        # ADD METADATA IF PROVIDED
+        if metadata:
+            params["metadata"] = metadata
+        
+        session = stripe.checkout.Session.create(**params)
         return session.url
+
 
     @staticmethod
     def cancel_subscription(sub_id: str, cancel_at_period_end: bool = True) -> None:
