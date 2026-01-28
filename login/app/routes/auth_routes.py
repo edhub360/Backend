@@ -409,53 +409,7 @@ async def get_me(current_user: User = Depends(get_current_user)):
     return UserResponse.from_orm(current_user)
 
 #  NEW ENDPOINT - Activate Subscription
-@router.post("/activate-subscription")
-async def activate_subscription(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """Activate free trial subscription for first-time users."""
-    print(f"\n{'='*60}")
-    print(f" DEBUG: ACTIVATE SUBSCRIPTION endpoint called")
-    print(f" DEBUG: User: {current_user.email}")
-    print(f" DEBUG: Current subscription_tier: {current_user.subscription_tier}")
-    print(f"{'='*60}\n")
-    
-    try:
-        # Check if already has subscription
-        if current_user.subscription_tier:
-            print(f" DEBUG: Subscription already active")
-            return {
-                "message": "Subscription already active",
-                "subscription_tier": current_user.subscription_tier,
-                "status": "already_active"
-            }
-        
-        print(f" DEBUG: Setting subscription_tier to 'free'...")
-        # Activate free trial
-        current_user.subscription_tier = 'free'
-        
-        print(f" DEBUG: Committing to database...")
-        await db.commit()
-        await db.refresh(current_user)
-        
-        print(f" DEBUG: Free trial activated successfully!")
-        logger.info(f" Free trial activated for user: {current_user.email}")
-        
-        return {
-            "message": "Free trial activated successfully",
-            "subscription_tier": "free",
-            "status": "activated"
-        }
-        
-    except Exception as e:
-        print(f" DEBUG: Activation error: {str(e)}")
-        await db.rollback()
-        logger.error(f" Subscription activation error: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to activate subscription"
-        )
+
 
 # Add rate limit handler
 #router.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)

@@ -11,11 +11,23 @@ from stripe_client import StripeClient
 from crud import *
 from schema import *
 from db import get_db, engine
-from models import Base
+from models import Base, User
+from auth import get_current_user
+
 
 load_dotenv()
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 app = FastAPI(title="Subscription Service (Async)")
+
+from fastapi.middleware.cors import CORSMiddleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 # Dev only - create tables
 import asyncio
@@ -59,6 +71,25 @@ async def create_checkout_session(
     )
     
     return CheckoutSessionResponse(url=url)
+
+
+@app.get("/plans", response_model=List[PlanOut])
+async def get_plans(db: AsyncSession = Depends(get_db)):
+    """Get all available subscription plans."""
+    return await get_all_plans(db)
+
+
+@app.get("/subscriptions/{user_id}", response_model=SubscriptionOut)
+async def get_subscription_by_user_id(
+    user_id: UUID, 
+    db: AsyncSession = Depends(get_db)
+):
+    """Get subscription by user ID."""
+    sub = await get_user_subscription(db, user_id)
+    if not sub:
+        raise HTTPException(404, "No active subscription")
+    return sub
+
 
 @app.get("/subscriptions/me", response_model=SubscriptionOut)
 async def get_my_subscription(
@@ -203,6 +234,53 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
             print("🛑 Subscription ended/deleted")
              
     return {"status": "ok"}
+
+@app.post("/activate-subscription")
+async def activate_subscription(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Activate free trial subscription for first-time users."""
+    print(f"\n{'='*60}")
+    print(f" DEBUG: ACTIVATE SUBSCRIPTION endpoint called")
+    print(f" DEBUG: User: {current_user.email}")
+    print(f" DEBUG: Current subscription_tier: {current_user.subscription_tier}")
+    print(f"{'='*60}\n")
+    
+    try:
+        # Check if already has subscription
+        if current_user.subscription_tier:
+            print(f" DEBUG: Subscription already active")
+            return {
+                "message": "Subscription already active",
+                "subscription_tier": current_user.subscription_tier,
+                "status": "already_active"
+            }
+        
+        print(f" DEBUG: Setting subscription_tier to 'free'...")
+        # Activate free trial
+        current_user.subscription_tier = 'free'
+        
+        print(f" DEBUG: Committing to database...")
+        await db.commit()
+        await db.refresh(current_user)
+        
+        print(f" DEBUG: Free trial activated successfully!")
+        
+        return {
+            "message": "Free trial activated successfully",
+            "subscription_tier": "free",
+            "status": "activated"
+        }
+        
+    except Exception as e:
+        print(f" DEBUG: Activation error: {str(e)}")
+        await db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to activate subscription"
+        )
+
 
 if __name__ == "__main__":
     import uvicorn

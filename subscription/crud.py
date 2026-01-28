@@ -12,6 +12,17 @@ async def get_customer(db: AsyncSession, user_id: UUID):
     )
     return result.scalar_one_or_none()
 
+
+async def get_all_plans(db: AsyncSession):
+    """Get all active plans with their prices."""
+    result = await db.execute(
+        select(Plan)
+        .options(selectinload(Plan.prices))
+        .where(Plan.is_active == True)
+    )
+    return result.scalars().all()
+
+
 from sqlalchemy import text
 
 async def create_customer(db: AsyncSession, user_id: UUID, stripe_customer_id: str):
