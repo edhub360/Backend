@@ -3,7 +3,9 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
 from db import Base
+
 import uuid
 
 class Plan(Base):
@@ -15,6 +17,9 @@ class Plan(Base):
     features_json = Column(JSON, nullable=False, default=dict)
     is_active = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    prices = relationship("PlanPrice", back_populates="plan", cascade="all, delete-orphan")
 
 class PlanPrice(Base):
     __tablename__ = "plan_prices"
@@ -28,6 +33,10 @@ class PlanPrice(Base):
     stripe_price_id = Column(String(100), unique=True, nullable=False)
     is_active = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    plan = relationship("Plan", back_populates="prices")
+
 
 class Customer(Base):
     __tablename__ = "customers"
@@ -82,3 +91,15 @@ class InvoiceLineItem(Base):
     amount = Column(Integer, nullable=False)
     period_start = Column(DateTime(timezone=True), nullable=False)
     period_end = Column(DateTime(timezone=True), nullable=False)
+
+
+class User(Base):
+    """User model for subscription updates."""
+    __tablename__ = "users"
+    __table_args__ = {"schema": "stud_hub_schema"}
+
+    user_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    email = Column(String, unique=True, nullable=False)
+    name = Column(String)
+    subscription_tier = Column(String)
+
