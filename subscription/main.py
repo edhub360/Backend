@@ -62,11 +62,12 @@ async def create_checkout_session(
         raise HTTPException(404, "Plan price not found")
     
     # 3. Create checkout WITH METADATA
+    frontend_url = "https://edhub360.github.io/StudentHub"
     url = StripeClient.create_checkout_session(
         customer.stripe_customer_id,
         price.stripe_price_id,
-        "http://localhost:3000/success",
-        "http://localhost:3000/cancel",
+        f"{frontend_url}/success",
+        f"{frontend_url}/cancel",
         {"user_id": str(request.user_id)}  # ADD THIS LINE!
     )
     
