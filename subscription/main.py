@@ -66,8 +66,8 @@ async def create_checkout_session(
     url = StripeClient.create_checkout_session(
         customer.stripe_customer_id,
         price.stripe_price_id,
-        f"{frontend_url}/success",
-        f"{frontend_url}/cancel",
+        f"{frontend_url}/#/success",
+        f"{frontend_url}/#/cancel",
         {"user_id": str(request.user_id)}  # ADD THIS LINE!
     )
     
