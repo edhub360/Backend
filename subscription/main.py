@@ -167,6 +167,16 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
                 )
                 print("🎉 Subscription created!")
 
+                # ✅ ADD THIS: Update user's subscription_tier
+                from sqlalchemy import text
+                await db.execute(
+                    text("UPDATE stud_hub_schema.users SET subscription_tier = :tier WHERE user_id = :user_id"),
+                    {"tier": str(price.plan_id), "user_id": str(user_id)}
+                )
+                await db.commit()
+                print(f"✅ User subscription_tier updated to: {price.plan_id}")
+
+
             else:
                 print(f"❌ FAILED - price: {price}, customer: {customer}")  # ADD THIS
         else:
@@ -217,7 +227,16 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
                     status='cancelled',
                     cancelled_at=datetime.utcnow()
                 )
-                print("❌ Subscription cancelled immediately")
+
+                # ✅ ADD THIS: Update user's subscription_tier to NULL when cancelled
+                from sqlalchemy import text
+                await db.execute(
+                    text("UPDATE stud_hub_schema.users SET subscription_tier = NULL WHERE user_id = (SELECT user_id FROM stud_hub_schema.customers WHERE id = :customer_id)"),
+                    {"customer_id": str(db_sub.customer_id)}
+                )
+                await db.commit()
+                print("❌ Subscription cancelled immediately, user tier reset")
+
             
     elif event['type'] == 'customer.subscription.deleted':
                 # SUBSCRIPTION ENDED/DELETED
@@ -232,7 +251,15 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
                 ended_at=datetime.utcnow(),
                 cancelled_at=datetime.fromtimestamp(subscription['canceled_at']) if subscription.get('canceled_at') else None
             )
-            print("🛑 Subscription ended/deleted")
+            
+            # ✅ ADD THIS: Update user's subscription_tier to NULL when deleted
+            from sqlalchemy import text
+            await db.execute(
+                text("UPDATE stud_hub_schema.users SET subscription_tier = NULL WHERE user_id = (SELECT user_id FROM stud_hub_schema.customers WHERE id = :customer_id)"),
+                {"customer_id": str(db_sub.customer_id)}
+            )
+            await db.commit()
+            print("🛑 Subscription ended/deleted, user tier reset")
              
     return {"status": "ok"}
 
