@@ -128,7 +128,7 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     except Exception:
         raise HTTPException(status_code=400, detail="Webhook signature failed")
     
-    print(f"🔔 Webhook Event: {event['type']}")  # ADD THIS
+    print(f"🔔 Webhook Event: {event['type']}")
     
     if event['type'] == 'checkout.session.completed':
         print("✅ CHECKOUT SESSION COMPLETED TRIGGERED!")  # ADD THIS
