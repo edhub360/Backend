@@ -12,6 +12,13 @@ async def get_customer(db: AsyncSession, user_id: UUID):
     )
     return result.scalar_one_or_none()
 
+async def get_plan(db: AsyncSession, plan_id: UUID):
+    """Get plan by ID"""
+    result = await db.execute(
+        select(Plan).where(Plan.id == plan_id)
+    )
+    return result.scalars().first()
+
 
 async def get_all_plans(db: AsyncSession):
     """Get all active plans with their prices."""
