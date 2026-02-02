@@ -145,7 +145,15 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
             print("✅ ENTERING IF BLOCK - Has sub_id + user_id")  # ADD THIS
             
             user_id = UUID(parsed['user_id'])
-            stripe_sub = StripeClient.retrieve_subscription(parsed['subscription_id'])
+            stripe_sub_id = parsed['subscription_id']
+            
+            # ✅ CHECK IF SUBSCRIPTION ALREADY EXISTS
+            existing_sub = await get_subscription_by_stripe_id(db, stripe_sub_id)
+            if existing_sub:
+                print(f"⚠️ Subscription already exists: {stripe_sub_id}")
+                return {"status": "ok", "message": "Subscription already exists"}
+            
+            stripe_sub = StripeClient.retrieve_subscription(stripe_sub_id)
             plan_price_id = stripe_sub['items']['data'][0]['price']['id']
             
             print(f"🔍 Looking for price: {plan_price_id}")
@@ -251,7 +259,7 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
                 ended_at=datetime.utcnow(),
                 cancelled_at=datetime.fromtimestamp(subscription['canceled_at']) if subscription.get('canceled_at') else None
             )
-            
+
             # ✅ ADD THIS: Update user's subscription_tier to NULL when deleted
             from sqlalchemy import text
             await db.execute(
