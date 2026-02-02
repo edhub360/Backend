@@ -175,14 +175,19 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
                 )
                 print("🎉 Subscription created!")
 
-                # ✅ ADD THIS: Update user's subscription_tier
-                from sqlalchemy import text
-                await db.execute(
-                    text("UPDATE stud_hub_schema.users SET subscription_tier = :tier WHERE user_id = :user_id"),
-                    {"tier": str(price.plan_id), "user_id": str(user_id)}
-                )
-                await db.commit()
-                print(f"✅ User subscription_tier updated to: {price.plan_id}")
+                # Update user's subscription_tier with plan name
+                plan = await get_plan(db, price.plan_id)
+                if plan:
+                    from sqlalchemy import text
+                    await db.execute(
+                        text("UPDATE stud_hub_schema.users SET subscription_tier = :tier WHERE user_id = :user_id"),
+                        {"tier": plan.name.lower(), "user_id": str(user_id)}  # Use plan name
+                    )
+                    await db.commit()
+                    print(f"✅ User subscription_tier updated to: {plan.name}")
+                else:
+                    print(f"❌ Plan not found: {price.plan_id}")
+
 
 
             else:
