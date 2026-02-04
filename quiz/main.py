@@ -259,38 +259,7 @@ async def list_quizzes(session: AsyncSession = Depends(get_session)):
         for row in rows
     ]
 
-@app.get("/quizzes/{quiz_id}", response_model=QuizDetail)
-async def get_quiz_detail(quiz_id: str, session: AsyncSession = Depends(get_session)):
-    """Get quiz with all questions"""
-    # Get quiz
-    quiz = await session.get(Quiz, quiz_id)
-    if not quiz or not quiz.is_active:
-        raise HTTPException(status_code=404, detail="Quiz not found")
-    
-    # Get questions - FIXED: Changed Question to QuizQuestion
-    stmt = select(QuizQuestion).where(QuizQuestion.quiz_id == quiz_id).order_by(QuizQuestion.created_at)
-    result = await session.execute(stmt)
-    questions = result.scalars().all()
-    
-    return QuizDetail(
-        quiz_id=str(quiz.quiz_id),
-        title=quiz.title or f"Quiz #{quiz_id[:8]}",
-        description=quiz.description,
-        subject_tag=quiz.subject_tag,
-        difficulty_level=quiz.difficulty_level,
-        estimated_time=quiz.estimated_time,
-        questions=[
-            QuizQuestionResponse(
-                question_id=str(q.question_id),
-                question_text=q.question_text or "",
-                correct_answer=q.correct_answer or "",
-                incorrect_answers=q.incorrect_answers or [],
-                explanation=q.explanation,
-                difficulty=q.difficulty
-            )
-            for q in questions
-        ]
-    )
+
 
 @app.get("/quizzes/{quiz_id}", response_model=QuizDetail)
 async def get_quiz_detail(
