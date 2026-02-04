@@ -311,7 +311,27 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
             print(f"🔄 Price updated from Stripe: {price['id']}")
         except Exception as e:
             print(f"❌ Failed to update price: {str(e)}")
-             
+
+    # ========== NEW: PRODUCT DELETED ==========
+    elif event['type'] == 'product.deleted':
+        product = event['data']['object']
+        
+        try:
+            await delete_plan_from_stripe(db, product['id'])
+            print(f"🗑️ Plan deleted from Stripe: {product['name']}")
+        except Exception as e:
+            print(f"❌ Failed to delete plan: {str(e)}")
+    
+    # ========== NEW: PRICE DELETED ==========
+    elif event['type'] == 'price.deleted':
+        price = event['data']['object']
+        
+        try:
+            await delete_plan_price_from_stripe(db, price['id'])
+            print(f"🗑️ Price deleted from Stripe: {price['id']}")
+        except Exception as e:
+            print(f"❌ Failed to delete price: {str(e)}")
+
     return {"status": "ok"}
 
 @app.post("/activate-subscription")
