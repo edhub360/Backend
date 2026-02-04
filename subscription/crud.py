@@ -236,3 +236,45 @@ async def update_plan_price_from_stripe(db: AsyncSession, stripe_price: dict):
     await db.commit()
     await db.refresh(plan_price)
     return plan_price
+
+async def delete_plan_from_stripe(db: AsyncSession, stripe_product_id: str):
+    """Soft delete plan when Stripe product is deleted"""
+    
+    result = await db.execute(
+        select(Plan).where(Plan.stripe_product_id == stripe_product_id)
+    )
+    plan = result.scalar_one_or_none()
+    
+    if not plan:
+        print(f"⚠️ Plan not found for product: {stripe_product_id}")
+        return
+    
+    # Soft delete - set is_active to False (don't actually delete)
+    plan.is_active = False
+    
+    await db.commit()
+    await db.refresh(plan)
+    print(f"✅ Plan soft-deleted: {plan.name}")
+    return plan
+
+
+async def delete_plan_price_from_stripe(db: AsyncSession, stripe_price_id: str):
+    """Soft delete plan_price when Stripe price is deleted"""
+    
+    result = await db.execute(
+        select(PlanPrice).where(PlanPrice.stripe_price_id == stripe_price_id)
+    )
+    plan_price = result.scalar_one_or_none()
+    
+    if not plan_price:
+        print(f"⚠️ Price not found: {stripe_price_id}")
+        return
+    
+    # Soft delete - set is_active to False
+    plan_price.is_active = False
+    
+    await db.commit()
+    await db.refresh(plan_price)
+    print(f"✅ Price soft-deleted: {stripe_price_id}")
+    return plan_price
+
