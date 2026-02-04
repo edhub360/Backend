@@ -16,6 +16,7 @@ class Plan(Base):
     name = Column(String(100), nullable=False)
     description = Column(String(500), nullable=True)
     features_json = Column(JSON, nullable=True, default=dict)
+    stripe_product_id = Column(String(255), unique=True, nullable=True)
     is_active = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 

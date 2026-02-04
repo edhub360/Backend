@@ -188,8 +188,6 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
                 else:
                     print(f"❌ Plan not found: {price.plan_id}")
 
-
-
             else:
                 print(f"❌ FAILED - price: {price}, customer: {customer}")  # ADD THIS
         else:
@@ -250,7 +248,7 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
                 await db.commit()
                 print("❌ Subscription cancelled immediately, user tier reset")
 
-            
+    # ========== SUBSCRIPTION DELETED ==========       
     elif event['type'] == 'customer.subscription.deleted':
                 # SUBSCRIPTION ENDED/DELETED
         subscription = event['data']['object']
@@ -273,6 +271,46 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
             )
             await db.commit()
             print("🛑 Subscription ended/deleted, user tier reset")
+
+    # ========== NEW: PRODUCT CREATED ==========
+    elif event['type'] == 'product.created':
+        product = event['data']['object']
+        
+        try:
+            await create_plan_from_stripe(db, product)
+            print(f"✅ Plan created from Stripe: {product['name']}")
+        except Exception as e:
+            print(f"❌ Failed to create plan: {str(e)}")
+    
+    # ========== NEW: PRODUCT UPDATED ==========
+    elif event['type'] == 'product.updated':
+        product = event['data']['object']
+        
+        try:
+            await update_plan_from_stripe(db, product)
+            print(f"🔄 Plan updated from Stripe: {product['name']}")
+        except Exception as e:
+            print(f"❌ Failed to update plan: {str(e)}")
+    
+    # ========== NEW: PRICE CREATED ==========
+    elif event['type'] == 'price.created':
+        price = event['data']['object']
+        
+        try:
+            await create_plan_price_from_stripe(db, price)
+            print(f"✅ Price created from Stripe: {price['id']}")
+        except Exception as e:
+            print(f"❌ Failed to create price: {str(e)}")
+    
+    # ========== NEW: PRICE UPDATED ==========
+    elif event['type'] == 'price.updated':
+        price = event['data']['object']
+        
+        try:
+            await update_plan_price_from_stripe(db, price)
+            print(f"🔄 Price updated from Stripe: {price['id']}")
+        except Exception as e:
+            print(f"❌ Failed to update price: {str(e)}")
              
     return {"status": "ok"}
 
