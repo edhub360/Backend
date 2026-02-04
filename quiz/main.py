@@ -292,6 +292,53 @@ async def get_quiz_detail(quiz_id: str, session: AsyncSession = Depends(get_sess
         ]
     )
 
+@app.get("/quizzes/{quiz_id}", response_model=QuizDetail)
+async def get_quiz_detail(
+    quiz_id: str, 
+    limit: Optional[int] = None,
+    session: AsyncSession = Depends(get_session)
+):
+    """Get quiz with all questions (or limited random sample)"""
+    # Get quiz
+    quiz = await session.get(Quiz, quiz_id)
+    if not quiz or not quiz.is_active:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+    
+    # Get questions - with optional random sampling
+    from sqlalchemy import func
+    
+    stmt = select(QuizQuestion).where(QuizQuestion.quiz_id == quiz_id)
+    
+    if limit and limit > 0:
+        # Random sampling using PostgreSQL's RANDOM()
+        stmt = stmt.order_by(func.random()).limit(limit)
+    else:
+        stmt = stmt.order_by(QuizQuestion.created_at)
+    
+    result = await session.execute(stmt)
+    questions = result.scalars().all()
+    
+    return QuizDetail(
+        quiz_id=str(quiz.quiz_id),
+        title=quiz.title or f"Quiz #{quiz_id[:8]}",
+        description=quiz.description,
+        subject_tag=quiz.subject_tag,
+        difficulty_level=quiz.difficulty_level,
+        estimated_time=quiz.estimated_time,
+        questions=[
+            QuizQuestionResponse(
+                question_id=str(q.question_id),
+                question_text=q.question_text or "",
+                correct_answer=q.correct_answer or "",
+                incorrect_answers=q.incorrect_answers or [],
+                explanation=q.explanation,
+                difficulty=q.difficulty
+            )
+            for q in questions
+        ]
+    )
+
+
 @app.post("/quiz-attempts", response_model=QuizAttemptResponse, status_code=status.HTTP_201_CREATED)
 async def submit_quiz_attempt(payload: QuizAttemptCreate, session: AsyncSession = Depends(get_session)):
     """Submit a quiz attempt and save results"""
