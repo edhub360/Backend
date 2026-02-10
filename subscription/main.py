@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import stripe
 from dotenv import load_dotenv
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from uuid import UUID
 from typing import List
 
@@ -73,11 +73,65 @@ async def create_checkout_session(
     
     return CheckoutSessionResponse(url=url)
 
+# ========== CACHE CONFIGURATION ==========
+PLANS_CACHE = None
+CACHE_EXPIRY = None
+CACHE_DURATION = timedelta(minutes=30)
+
+def invalidate_plans_cache():
+    """Clear plans cache when Stripe data changes"""
+    global PLANS_CACHE, CACHE_EXPIRY
+    PLANS_CACHE = None
+    CACHE_EXPIRY = None
+    print("🗑️ Plans cache invalidated")
+
+async def get_cached_plans(db: AsyncSession):
+    """Get plans from cache or DB"""
+    global PLANS_CACHE, CACHE_EXPIRY
+    
+    if PLANS_CACHE and CACHE_EXPIRY and datetime.now() < CACHE_EXPIRY:
+        print("📦 Serving plans from cache")
+        return PLANS_CACHE
+    
+    print("🔄 Fetching plans from DB...")
+    result = await db.execute(
+        select(Plan).where(Plan.is_active == True).options(
+            selectinload(Plan.plan_prices).selectinload(PlanPrice.currency)
+        )
+    )
+    plans = result.scalars().all()
+    
+    PLANS_CACHE = [
+        {
+            "id": str(plan.id),
+            "name": plan.name,
+            "description": plan.description,
+            "features": plan.features,
+            "stripe_product_id": plan.stripe_product_id,
+            "prices": [
+                {
+                    "id": str(price.id),
+                    "amount": float(price.amount),
+                    "interval": price.interval,
+                    "currency_code": price.currency.code,
+                    "stripe_price_id": price.stripe_price_id
+                }
+                for price in plan.plan_prices if price.is_active
+            ]
+        }
+        for plan in plans
+    ]
+    
+    CACHE_EXPIRY = datetime.now() + CACHE_DURATION
+    print(f"✅ Plans cached until {CACHE_EXPIRY}")
+    return PLANS_CACHE
+
 
 @app.get("/plans", response_model=List[PlanOut])
 async def get_plans(db: AsyncSession = Depends(get_db)):
-    """Get all available subscription plans."""
-    return await get_all_plans(db)
+    """Get all active plans (cached)"""
+    plans = await get_cached_plans(db)
+    return {"plans": plans}
 
 
 @app.get("/subscriptions/{user_id}", response_model=SubscriptionOut)
@@ -278,6 +332,7 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
         
         try:
             await create_plan_from_stripe(db, product)
+            invalidate_plans_cache()  
             print(f"✅ Plan created from Stripe: {product['name']}")
         except Exception as e:
             print(f"❌ Failed to create plan: {str(e)}")
@@ -288,6 +343,7 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
         
         try:
             await update_plan_from_stripe(db, product)
+            invalidate_plans_cache()
             print(f"🔄 Plan updated from Stripe: {product['name']}")
         except Exception as e:
             print(f"❌ Failed to update plan: {str(e)}")
@@ -298,6 +354,7 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
         
         try:
             await create_plan_price_from_stripe(db, price)
+            invalidate_plans_cache()
             print(f"✅ Price created from Stripe: {price['id']}")
         except Exception as e:
             print(f"❌ Failed to create price: {str(e)}")
@@ -308,6 +365,7 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
         
         try:
             await update_plan_price_from_stripe(db, price)
+            invalidate_plans_cache()
             print(f"🔄 Price updated from Stripe: {price['id']}")
         except Exception as e:
             print(f"❌ Failed to update price: {str(e)}")
@@ -318,6 +376,7 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
         
         try:
             await delete_plan_from_stripe(db, product['id'])
+            invalidate_plans_cache()
             print(f"🗑️ Plan deleted from Stripe: {product['name']}")
         except Exception as e:
             print(f"❌ Failed to delete plan: {str(e)}")
@@ -328,6 +387,7 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
         
         try:
             await delete_plan_price_from_stripe(db, price['id'])
+            invalidate_plans_cache()
             print(f"🗑️ Price deleted from Stripe: {price['id']}")
         except Exception as e:
             print(f"❌ Failed to delete price: {str(e)}")

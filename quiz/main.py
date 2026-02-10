@@ -1,6 +1,6 @@
 from datetime import timezone
 from typing import List, Optional
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select, update, delete, func, text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -223,7 +223,7 @@ async def bulk_import_from_bucket(
 
 
 @app.get("/quizzes", response_model=List[QuizListItem])
-async def list_quizzes(session: AsyncSession = Depends(get_session)):
+async def list_quizzes(limit: int = Query(10, ge=1, le=100), offset: int = Query(0, ge=0), session: AsyncSession = Depends(get_session)):
     """Get all active quizzes (global, no user_id needed)"""
     query = text("""
         SELECT 
