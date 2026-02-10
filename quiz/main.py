@@ -240,9 +240,10 @@ async def list_quizzes(limit: int = Query(10, ge=1, le=100), offset: int = Query
         WHERE q.is_active = true
         GROUP BY q.quiz_id
         ORDER BY q.created_at DESC
+        LIMIT :limit OFFSET :offset
     """)
     
-    result = await session.execute(query)
+    result = await session.execute(query, {"limit": limit, "offset": offset})
     rows = result.fetchall()
     
     return [
