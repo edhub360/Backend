@@ -50,7 +50,7 @@ async def healthz(session: AsyncSession = Depends(get_session)):
 async def get_flashcard_decks(
     session: AsyncSession = Depends(get_session),
     offset: int = Query(0, ge=0, description="Number of items to skip"),
-    limit: int = Query(10, ge=1, le=100, description="Number of items to return (max 100)")
+    limit: int = Query(6, ge=1, le=100, description="Number of items to return (max 100)")
 ):
     """
     Get paginated flashcard decks (quizzes).
