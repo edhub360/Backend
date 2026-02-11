@@ -131,7 +131,7 @@ async def get_cached_plans(db: AsyncSession):
 async def get_plans(db: AsyncSession = Depends(get_db)):
     """Get all active plans (cached)"""
     plans = await get_cached_plans(db)
-    return {"plans": plans}
+    return plans
 
 
 @app.get("/subscriptions/{user_id}", response_model=SubscriptionOut)
