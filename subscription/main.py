@@ -96,7 +96,7 @@ async def get_cached_plans(db: AsyncSession):
     print("🔄 Fetching plans from DB...")
     result = await db.execute(
         select(Plan).where(Plan.is_active == True).options(
-            selectinload(Plan.plan_prices).selectinload(PlanPrice.currency)
+            selectinload(Plan.prices)  # FIXED: Use 'prices' not 'plan_prices'
         )
     )
     plans = result.scalars().all()
@@ -106,17 +106,17 @@ async def get_cached_plans(db: AsyncSession):
             "id": str(plan.id),
             "name": plan.name,
             "description": plan.description,
-            "features": plan.features,
+            "features": plan.features_json,  # FIXED: Use 'features_json'
             "stripe_product_id": plan.stripe_product_id,
             "prices": [
                 {
                     "id": str(price.id),
                     "amount": float(price.amount),
-                    "interval": price.interval,
-                    "currency_code": price.currency.code,
+                    "interval": price.billing_period,  # FIXED: Use 'billing_period'
+                    "currency_code": price.currency,  # FIXED: Direct string access
                     "stripe_price_id": price.stripe_price_id
                 }
-                for price in plan.plan_prices if price.is_active
+                for price in plan.prices if price.is_active  # FIXED: Use 'prices'
             ]
         }
         for plan in plans
