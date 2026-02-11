@@ -6,7 +6,7 @@ import os
 from datetime import datetime, timedelta
 from uuid import UUID
 from typing import List
-
+from sqlalchemy.orm import selectinload
 from stripe_client import StripeClient
 from crud import *
 from schema import *
