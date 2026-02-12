@@ -94,6 +94,11 @@ class QuizListItem(BaseModel):
     class Config:
         from_attributes = True
 
+class QuizListResponse(BaseModel):
+    quizzes: List[QuizListItem]
+    total: int
+    page: int
+    page_size: int
 
 class QuizDetail(BaseModel):
     """Full quiz with all questions"""
