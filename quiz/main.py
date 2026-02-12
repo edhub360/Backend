@@ -10,7 +10,7 @@ from models import Base, User, QuizQuestion, Quiz, QuizAttempt, UserStudyStats  
 from schemas import (
     UserCreate, UserUpdate, UserOut,
     QuestionCreate, QuestionOut,
-    QuizCreate, QuizOut,  # Legacy
+    QuizCreate, QuizOut, QuizListResponse,  # Legacy
     QuizListItem, QuizDetail, QuizQuestionResponse,
     QuizAttemptCreate, QuizAttemptResponse,
     UserQuizHistory, QuizStatistics, QuizDashboardSummary, WeeklyActivityDay, WeeklyActivityResponse
@@ -222,9 +222,24 @@ async def bulk_import_from_bucket(
     }
 
 
-@app.get("/quizzes", response_model=List[QuizListItem])
-async def list_quizzes(limit: int = Query(10, ge=1, le=100), offset: int = Query(0, ge=0), session: AsyncSession = Depends(get_session)):
-    """Get all active quizzes (global, no user_id needed)"""
+@app.get("/quizzes", response_model=QuizListResponse)
+async def list_quizzes(
+    limit: int = Query(10, ge=1, le=100), 
+    offset: int = Query(0, ge=0), 
+    session: AsyncSession = Depends(get_session)
+):
+    """Get paginated active quizzes with total count"""
+    
+    # Count total active quizzes
+    count_query = text("""
+        SELECT COUNT(DISTINCT q.quiz_id)
+        FROM stud_hub_schema.quizzes q
+        WHERE q.is_active = true
+    """)
+    count_result = await session.execute(count_query)
+    total = count_result.scalar_one()
+    
+    # Get paginated quizzes
     query = text("""
         SELECT 
             q.quiz_id,
@@ -246,7 +261,7 @@ async def list_quizzes(limit: int = Query(10, ge=1, le=100), offset: int = Query
     result = await session.execute(query, {"limit": limit, "offset": offset})
     rows = result.fetchall()
     
-    return [
+    quizzes = [
         QuizListItem(
             quiz_id=str(row.quiz_id),
             title=row.title or f"Quiz #{str(row.quiz_id)[:8]}",
@@ -259,7 +274,13 @@ async def list_quizzes(limit: int = Query(10, ge=1, le=100), offset: int = Query
         )
         for row in rows
     ]
-
+    
+    return QuizListResponse(
+        quizzes=quizzes,
+        total=total,
+        page=(offset // limit) + 1,
+        page_size=limit
+    )
 
 
 @app.get("/quizzes/{quiz_id}", response_model=QuizDetail)

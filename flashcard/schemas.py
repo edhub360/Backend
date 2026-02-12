@@ -124,3 +124,13 @@ class FlashcardAnalyticsOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+class PaginationMeta(BaseModel):
+    total: int
+    offset: int
+    limit: int
+    has_more: bool
+
+class FlashcardDecksResponse(BaseModel):
+    decks: List[FlashcardDeckDetail]
+    pagination: PaginationMeta
