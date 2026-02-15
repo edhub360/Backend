@@ -86,3 +86,31 @@ class StripeClient:
             "user_id": session["metadata"].get("user_id"),
             "payment_status": session.get("payment_status")
         }
+    
+    @staticmethod
+    def get_payment_methods(stripe_customer_id: str) -> List[Dict]:
+        """Get all payment methods for a customer"""
+        try:
+            payment_methods = stripe.PaymentMethod.list(
+                customer=stripe_customer_id,
+                type="card"
+            )
+            
+            # Get customer's default payment method
+            customer = stripe.Customer.retrieve(stripe_customer_id)
+            default_pm_id = customer.invoice_settings.default_payment_method
+            
+            return [
+                {
+                    "id": pm.id,
+                    "brand": pm.card.brand,
+                    "last4": pm.card.last4,
+                    "exp_month": pm.card.exp_month,
+                    "exp_year": pm.card.exp_year,
+                    "is_default": pm.id == default_pm_id
+                }
+                for pm in payment_methods.data
+            ]
+        except Exception as e:
+            print(f"❌ Stripe payment method fetch error: {str(e)}")
+            return []

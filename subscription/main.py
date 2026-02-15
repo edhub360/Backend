@@ -396,6 +396,33 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
 
     return {"status": "ok"}
 
+@app.get("/payment-methods/{user_id}")
+async def get_payment_methods(
+    user_id: UUID,
+    db: AsyncSession = Depends(get_db)
+):
+    """Get user's payment methods from Stripe"""
+    try:
+        # Get customer
+        customer = await get_customer(db, user_id)
+        if not customer:
+            return {
+                "payment_methods": [],
+                "has_payment_method": False
+            }
+        
+        # Fetch payment methods from Stripe
+        payment_methods = StripeClient.get_payment_methods(customer.stripe_customer_id)
+        
+        return {
+            "payment_methods": payment_methods,
+            "has_payment_method": len(payment_methods) > 0
+        }
+    except Exception as e:
+        print(f"❌ Error fetching payment methods: {str(e)}")
+        raise HTTPException(500, f"Failed to fetch payment methods: {str(e)}")
+
+
 @app.post("/activate-subscription")
 async def activate_subscription(
     db: AsyncSession = Depends(get_db),
