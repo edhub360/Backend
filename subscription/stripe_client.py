@@ -1,5 +1,5 @@
 import stripe
-from typing import Optional
+from typing import Optional, List, Dict
 from dotenv import load_dotenv
 import os
 from datetime import datetime
