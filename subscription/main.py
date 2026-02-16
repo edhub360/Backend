@@ -425,17 +425,27 @@ async def get_payment_methods(
 from fastapi import FastAPI, Depends, HTTPException
 from stripe_client import StripeClient
 
+# ✅ ADD THIS: Request schema for customer portal
+class CustomerPortalRequest(BaseModel):
+    user_id: str
+
 @app.post("/create-customer-portal-session")
 async def create_customer_portal_session(
-    user_id: UUID,
+    request: CustomerPortalRequest,  # ← Use Pydantic model
     db: AsyncSession = Depends(get_db)
 ):
-    """Create Stripe Customer Portal session for payment method management"""
+    """Create Stripe Customer Portal session"""
     try:
+        user_id = UUID(request.user_id)
+        print(f"🔍 Creating portal for user: {user_id}")
+        
         # Get customer
         customer = await get_customer(db, user_id)
         if not customer:
-            raise HTTPException(404, "Customer not found")
+            print(f"❌ Customer not found for user: {user_id}")
+            raise HTTPException(status_code=404, detail="Customer not found. Please subscribe first.")
+        
+        print(f"✅ Found customer: {customer.stripe_customer_id}")
         
         # Create portal session
         portal_url = StripeClient.create_customer_portal_session(
@@ -443,12 +453,18 @@ async def create_customer_portal_session(
             return_url="https://edhub360.github.io/StudentHub/"
         )
         
+        print(f"✅ Portal URL created: {portal_url}")
+        
         return {"url": portal_url}
     
+    except ValueError as e:
+        print(f"❌ Invalid user_id format: {str(e)}")
+        raise HTTPException(status_code=400, detail="Invalid user_id format")
     except Exception as e:
         print(f"❌ Error creating portal session: {str(e)}")
-        raise HTTPException(500, f"Failed to create portal session: {str(e)}")
-
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to create portal session: {str(e)}")
 
 @app.post("/activate-subscription")
 async def activate_subscription(

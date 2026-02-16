@@ -119,14 +119,17 @@ class StripeClient:
     def create_customer_portal_session(customer_id: str, return_url: str) -> str:
         """Create Stripe Customer Portal session"""
         try:
-            print(f"🔗 Creating portal with return URL: {return_url}")
+            print(f"🔗 Creating portal session for customer: {customer_id}")
             session = stripe.billing_portal.Session.create(
                 customer=customer_id,
                 return_url=return_url,
             )
-            print(f"✅ Portal session created: {session.url}")
+            print(f"✅ Portal session created successfully")
             return session.url
+        except stripe.error.StripeError as e:
+            print(f"❌ Stripe API error: {str(e)}")
+            raise
         except Exception as e:
-            print(f"❌ Stripe portal error: {str(e)}")
+            print(f"❌ Unexpected error: {str(e)}")
             raise
 
