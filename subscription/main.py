@@ -422,6 +422,33 @@ async def get_payment_methods(
         print(f"❌ Error fetching payment methods: {str(e)}")
         raise HTTPException(500, f"Failed to fetch payment methods: {str(e)}")
 
+from fastapi import FastAPI, Depends, HTTPException
+from stripe_client import StripeClient
+
+@app.post("/create-customer-portal-session")
+async def create_customer_portal_session(
+    user_id: UUID,
+    db: AsyncSession = Depends(get_db)
+):
+    """Create Stripe Customer Portal session for payment method management"""
+    try:
+        # Get customer
+        customer = await get_customer(db, user_id)
+        if not customer:
+            raise HTTPException(404, "Customer not found")
+        
+        # Create portal session
+        portal_url = StripeClient.create_customer_portal_session(
+            customer.stripe_customer_id,
+            return_url="https://edhub360.github.io/StudentHub/#/settings"
+        )
+        
+        return {"url": portal_url}
+    
+    except Exception as e:
+        print(f"❌ Error creating portal session: {str(e)}")
+        raise HTTPException(500, f"Failed to create portal session: {str(e)}")
+
 
 @app.post("/activate-subscription")
 async def activate_subscription(
