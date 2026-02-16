@@ -118,9 +118,15 @@ class StripeClient:
     @staticmethod
     def create_customer_portal_session(customer_id: str, return_url: str) -> str:
         """Create Stripe Customer Portal session"""
-        session = stripe.billing_portal.Session.create(
-            customer=customer_id,
-            return_url=return_url,
-        )
-        return session.url
+        try:
+            print(f"🔗 Creating portal with return URL: {return_url}")
+            session = stripe.billing_portal.Session.create(
+                customer=customer_id,
+                return_url=return_url,
+            )
+            print(f"✅ Portal session created: {session.url}")
+            return session.url
+        except Exception as e:
+            print(f"❌ Stripe portal error: {str(e)}")
+            raise
 
