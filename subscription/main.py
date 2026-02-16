@@ -440,7 +440,7 @@ async def create_customer_portal_session(
         # Create portal session
         portal_url = StripeClient.create_customer_portal_session(
             customer.stripe_customer_id,
-            return_url="https://edhub360.github.io/StudentHub/#/settings"
+            return_url="https://edhub360.github.io/StudentHub/"
         )
         
         return {"url": portal_url}
