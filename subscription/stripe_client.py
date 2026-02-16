@@ -114,3 +114,13 @@ class StripeClient:
         except Exception as e:
             print(f"❌ Stripe payment method fetch error: {str(e)}")
             return []
+        
+    @staticmethod
+    def create_customer_portal_session(customer_id: str, return_url: str) -> str:
+        """Create Stripe Customer Portal session"""
+        session = stripe.billing_portal.Session.create(
+            customer=customer_id,
+            return_url=return_url,
+        )
+        return session.url
+
