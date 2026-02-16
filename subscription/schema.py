@@ -57,3 +57,13 @@ class SubscriptionOut(BaseModel):
 # ========== CANCEL SUBSCRIPTION SCHEMA ==========
 class CancelSubscriptionRequest(BaseModel):
     cancel_at_period_end: bool = True
+
+# Add this to your schema.py file
+from pydantic import BaseModel
+
+class CustomerPortalRequest(BaseModel):
+    user_id: str
+
+class CustomerPortalResponse(BaseModel):
+    url: str
+
