@@ -358,35 +358,58 @@ async def logout(
         )
 
 
-# Dependency for current user
+async def enforce_free_plan_expiry(db: AsyncSession, user: User) -> User:
+    """
+    Checks if the user's free plan has expired on every request.
+    If expired, sets subscription_tier to None so access is blocked immediately.
+    Does NOT reset free_plan_activated_at — that stays forever to block re-activation.
+    """
+    if (
+        user.subscription_tier == "free"
+        and user.free_plan_expires_at is not None
+    ):
+        now = datetime.now(timezone.utc)
+        expires = user.free_plan_expires_at.replace(tzinfo=timezone.utc)
+
+        if now > expires:
+            user.subscription_tier = None  # Revoke access
+            # ❌ DO NOT touch free_plan_activated_at — keeps the one-time gate intact
+            await db.commit()
+            await db.refresh(user)
+            print(f"⏰ Free plan expired for user {user.email} — tier reset to None")
+
+    return user
+
+
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: AsyncSession = Depends(get_db)
 ) -> User:
     """Dependency to get current authenticated user."""
     try:
-        # Decode JWT token
         payload = decode_jwt_token(token)
         user_id = payload.get("sub")
-        
+
         if user_id is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid authentication credentials"
             )
-        
-        # Get user from database
+
         result = await db.execute(select(User).where(User.user_id == UUID(user_id)))
         user = result.scalar_one_or_none()
-        
+
         if user is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="User not found"
             )
-        
+
+        # ✅ Auto-expire free plan on every authenticated request
+        user = await enforce_free_plan_expiry(db, user)
+
         return user
-        
+
     except ValueError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -400,7 +423,6 @@ async def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials"
         )
-
 
 @router.get("/me", response_model=UserResponse)
 async def get_me(current_user: User = Depends(get_current_user)):

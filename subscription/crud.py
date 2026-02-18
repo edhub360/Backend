@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, update
 from sqlalchemy.orm import selectinload
-from models import Customer, Subscription, Plan, PlanPrice
+from models import Customer, Subscription, Plan, PlanPrice, User
 from schema import CheckoutSessionRequest
 from uuid import UUID
 from datetime import datetime
@@ -277,4 +277,17 @@ async def delete_plan_price_from_stripe(db: AsyncSession, stripe_price_id: str):
     await db.refresh(plan_price)
     print(f"✅ Price soft-deleted: {stripe_price_id}")
     return plan_price
+
+from datetime import timezone
+
+async def has_used_free_plan(db: AsyncSession, user: "User") -> bool:
+    """Returns True if the user has ever activated the free plan (used or expired)."""
+    return user.free_plan_activated_at is not None
+
+
+async def is_free_plan_expired(user: "User") -> bool:
+    """Returns True if the free plan exists and its expiry has passed."""
+    if user.free_plan_expires_at is None:
+        return False
+    return datetime.now(timezone.utc) > user.free_plan_expires_at.replace(tzinfo=timezone.utc)
 

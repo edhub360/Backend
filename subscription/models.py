@@ -105,3 +105,6 @@ class User(Base):
     name = Column(String)
     subscription_tier = Column(String)
 
+    # NEW: Free plan tracking
+    free_plan_activated_at = Column(DateTime(timezone=True), nullable=True)
+    free_plan_expires_at = Column(DateTime(timezone=True), nullable=True)
