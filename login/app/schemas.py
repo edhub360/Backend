@@ -26,6 +26,9 @@ class UserResponse(UserBase):
     class Config:
         from_attributes = True
 
+# NEW: partial update schema
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
 
 # Authentication Schemas
 class GoogleSignInRequest(BaseModel):
