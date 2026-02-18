@@ -17,7 +17,7 @@ from app.db import get_db
 from app.models import User, AuthCredential, RefreshToken, PasswordResetToken
 from app.schemas import (
     GoogleSignInRequest, EmailRegisterRequest, EmailLoginRequest,
-    TokenResponse, RefreshTokenRequest, LogoutRequest, UserResponse
+    TokenResponse, RefreshTokenRequest, LogoutRequest, UserResponse, UserUpdate
 )
 from app.auth import (
     verify_google_token, hash_password, verify_password,
@@ -270,7 +270,6 @@ async def login(
             detail="Login failed"
         )
 
-
 @router.post("/refresh", response_model=TokenResponse)
 @limiter.limit(f"{settings.rate_limit_requests}/minute")
 async def refresh_token(
@@ -407,6 +406,26 @@ async def get_current_user(
 async def get_me(current_user: User = Depends(get_current_user)):
     """Get current user profile - protected endpoint example."""
     return UserResponse.from_orm(current_user)
+
+@router.patch("/me", response_model=UserResponse)
+async def update_me(
+    payload: UserUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Update current user's profile (currently only name).
+    """
+    user = current_user
+
+    if payload.name is not None:
+        user.name = payload.name
+
+    await db.flush()
+    await db.refresh(user)
+
+    return UserResponse.from_orm(user)
+
 
 #  NEW ENDPOINT - Activate Subscription
 
