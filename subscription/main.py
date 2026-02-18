@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import stripe
 from dotenv import load_dotenv
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 from typing import List
 from sqlalchemy.orm import selectinload
@@ -135,17 +135,83 @@ async def get_plans(db: AsyncSession = Depends(get_db)):
     plans = await get_cached_plans(db)
     return plans
 
+@app.get("/free-plan-status")
+async def get_free_plan_status(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Check user's free plan eligibility and status."""
+    now = datetime.now(timezone.utc)
 
-@app.get("/subscriptions/{user_id}", response_model=SubscriptionOut)
+    # Never activated free plan
+    if current_user.free_plan_activated_at is None:
+        return {
+            "eligible": True,
+            "status": "not_used",
+            "message": "Free plan available"
+        }
+
+    expires = current_user.free_plan_expires_at.astimezone(timezone.utc) if current_user.free_plan_expires_at else None
+
+    # Free plan still active
+    if expires and now < expires:
+        remaining = expires - now
+        return {
+            "eligible": False,
+            "status": "active",
+            "message": "Free plan active",
+            "expires_at": current_user.free_plan_expires_at.isoformat(),
+            "days_remaining": remaining.days
+        }
+
+    # Free plan expired
+    return {
+        "eligible": False,
+        "status": "expired",
+        "message": "Free plan expired. Please upgrade.",
+        "expired_at": current_user.free_plan_expires_at.isoformat() if current_user.free_plan_expires_at else None
+    }
+
+
+@app.get("/subscriptions/{user_id}")  # ✅ Remove response_model=SubscriptionOut
 async def get_subscription_by_user_id(
-    user_id: UUID, 
+    user_id: UUID,
     db: AsyncSession = Depends(get_db)
 ):
-    """Get subscription by user ID."""
+    """Get subscription by user ID — handles both free and paid plans."""
+
+    # Check Stripe subscription first (paid plans)
     sub = await get_user_subscription(db, user_id)
-    if not sub:
-        raise HTTPException(404, "No active subscription")
-    return sub
+    if sub:
+        return sub
+
+    # No Stripe sub — check free plan on users table
+    from sqlalchemy import text
+    result = await db.execute(
+        text("""
+            SELECT subscription_tier, free_plan_activated_at, free_plan_expires_at
+            FROM stud_hub_schema.users
+            WHERE user_id = :user_id
+        """),
+        {"user_id": str(user_id)}
+    )
+    user_row = result.fetchone()
+
+    if user_row and user_row.subscription_tier == 'free':
+        now = datetime.now(timezone.utc)
+        expires = user_row.free_plan_expires_at
+        is_active = expires and expires.astimezone(timezone.utc) > now
+
+        return {
+            "type": "free",
+            "plan": "free",
+            "status": "active" if is_active else "expired",
+            "current_period_start": user_row.free_plan_activated_at.isoformat() if user_row.free_plan_activated_at else None,
+            "current_period_end": user_row.free_plan_expires_at.isoformat() if user_row.free_plan_expires_at else None,
+            "expires_at": user_row.free_plan_expires_at.isoformat() if expires else None
+        }
+
+    raise HTTPException(404, "No active subscription")
 
 
 @app.get("/subscriptions/me", response_model=SubscriptionOut)
@@ -466,51 +532,118 @@ async def create_customer_portal_session(
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to create portal session: {str(e)}")
 
+from datetime import timezone as tz
+
 @app.post("/activate-subscription")
 async def activate_subscription(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Activate free trial subscription for first-time users."""
+    """Activate free plan for first-time users. Valid for 7 days, one-time only."""
     print(f"\n{'='*60}")
     print(f" DEBUG: ACTIVATE SUBSCRIPTION endpoint called")
     print(f" DEBUG: User: {current_user.email}")
     print(f" DEBUG: Current subscription_tier: {current_user.subscription_tier}")
     print(f"{'='*60}\n")
-    
+
     try:
-        # Check if already has subscription
-        if current_user.subscription_tier:
-            print(f" DEBUG: Subscription already active")
+        # GATE 1: User has already used the free plan before (even if expired)
+        if current_user.free_plan_activated_at is not None:
+            # Check if it's currently still active (not yet expired)
+            now = datetime.now(tz.utc)
+            expires = current_user.free_plan_expires_at.replace(tzinfo=tz.utc) if current_user.free_plan_expires_at else None
+
+            if expires and now < expires:
+                # Still active
+                return {
+                    "message": "Free plan is already active",
+                    "subscription_tier": "free",
+                    "status": "already_active",
+                    "expires_at": current_user.free_plan_expires_at.isoformat()
+                }
+            else:
+                # Expired — block re-activation
+                raise HTTPException(
+                    status_code=403,
+                    detail={
+                        "message": "Free plan has already been used and expired. Please upgrade to a paid plan.",
+                        "status": "free_plan_expired",
+                        "expired_at": current_user.free_plan_expires_at.isoformat() if current_user.free_plan_expires_at else None
+                    }
+                )
+
+        # GATE 2: User already has a paid active subscription
+        if current_user.subscription_tier and current_user.subscription_tier != "free":
             return {
                 "message": "Subscription already active",
                 "subscription_tier": current_user.subscription_tier,
                 "status": "already_active"
             }
-        
-        print(f" DEBUG: Setting subscription_tier to 'free'...")
-        # Activate free trial
-        current_user.subscription_tier = 'free'
-        
-        print(f" DEBUG: Committing to database...")
+
+        # Activate free plan with 7-day validity
+        now = datetime.now(tz.utc)
+        expires_at = now + timedelta(days=7)
+
+        current_user.subscription_tier = "free"
+        current_user.free_plan_activated_at = now
+        current_user.free_plan_expires_at = expires_at
+
         await db.commit()
         await db.refresh(current_user)
-        
-        print(f" DEBUG: Free trial activated successfully!")
-        
+
+        print(f" DEBUG: Free plan activated. Expires at: {expires_at.isoformat()}")
+
         return {
-            "message": "Free trial activated successfully",
+            "message": "Free plan activated successfully",
             "subscription_tier": "free",
-            "status": "activated"
+            "status": "activated",
+            "activated_at": now.isoformat(),
+            "expires_at": expires_at.isoformat()
         }
-        
+
+    except HTTPException:
+        raise
     except Exception as e:
         print(f" DEBUG: Activation error: {str(e)}")
         await db.rollback()
         raise HTTPException(
             status_code=500,
-            detail="Failed to activate subscription"
+            detail=f"Failed to activate subscription: {str(e)}"
         )
+
+@app.get("/free-plan-status")
+async def get_free_plan_status(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Check the user's free plan eligibility and status."""
+    now = datetime.now(tz.utc)
+
+    if current_user.free_plan_activated_at is None:
+        return {
+            "eligible": True,
+            "status": "not_used",
+            "message": "Free plan available"
+        }
+
+    expires = current_user.free_plan_expires_at.replace(tzinfo=tz.utc) if current_user.free_plan_expires_at else None
+
+    if expires and now < expires:
+        remaining = expires - now
+        return {
+            "eligible": False,
+            "status": "active",
+            "message": "Free plan is currently active",
+            "expires_at": current_user.free_plan_expires_at.isoformat(),
+            "days_remaining": remaining.days
+        }
+
+    return {
+        "eligible": False,
+        "status": "expired",
+        "message": "Free plan has been used and expired. Upgrade to continue.",
+        "expired_at": current_user.free_plan_expires_at.isoformat() if current_user.free_plan_expires_at else None
+    }
 
 
 if __name__ == "__main__":
