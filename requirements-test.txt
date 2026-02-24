@@ -1,0 +1,5 @@
+pytest
+pytest-asyncio
+pytest-cov
+httpx
+# Add other testing libraries here as needed
