@@ -39,6 +39,9 @@ jobs:
     - name: Type check with mypy
       run: |
         mypy quiz login --ignore-missing-imports || true
+
+    - name: Install test dependencies 
+      run: pip install pytest pytest-cov python-jose
     
     - name: Run tests with coverage
       run: |
