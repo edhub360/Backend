@@ -6,6 +6,6 @@ pytest-xdist==3.5.0
 freezegun==1.5.1
 httpx==0.25.2
 sqlalchemy[asyncio]==2.0.23
-aiosqlite==3.14.0
+aiosqlite==0.22.1
 flake8==7.3.0
 # Add other testing libraries here as needed
