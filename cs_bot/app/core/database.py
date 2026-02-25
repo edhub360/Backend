@@ -17,8 +17,11 @@ def init_vector_store():
         collection_name=settings.VECTOR_COLLECTION,
         connection=settings.DATABASE_URL,
         use_jsonb=True,
-        collection_metadata_table_name=settings.COLLECTION_TABLE,
-        embeddings_table_name=settings.EMBEDDING_TABLE,
+        engine_args={
+            "connect_args": {
+                "options": "-csearch_path=stud_hub_schema"
+            }
+        }
     )
 
 def get_vector_store() -> PGVector:
