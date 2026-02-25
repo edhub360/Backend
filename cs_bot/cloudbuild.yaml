@@ -1,0 +1,40 @@
+steps:
+  # 1. Build chatbot service image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'build',
+      '-t', 'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/chatbot-repo/chatbot-service:${SHORT_SHA}-${BUILD_ID}',
+      './chatbot-service'
+    ]
+
+  # 2. Push image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'push',
+      'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/chatbot-repo/chatbot-service:${SHORT_SHA}-${BUILD_ID}'
+    ]
+
+  # 3. Fetch secrets and deploy to Cloud Run
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        export DATABASE_URL=$(gcloud secrets versions access latest --secret="DATABASE_URL")
+        export GEMINI_API_KEY=$(gcloud secrets versions access latest --secret="APIKEY_EDHUB360")
+        export REDIS_URL=$(gcloud secrets versions access latest --secret="REDIS_URL")
+
+        gcloud run deploy chatbot-service \
+          --region=us-central1 \
+          --image=us-central1-docker.pkg.dev/arctic-sentry-467317-s7/chatbot-repo/chatbot-service:${SHORT_SHA}-${BUILD_ID} \
+          --platform=managed \
+          --allow-unauthenticated \
+          --memory=1Gi --cpu=1 --timeout=300 --max-instances=10 --port=8080 \
+          --add-cloudsql-instances=arctic-sentry-467317-s7:us-central1:studenthub \
+          --set-env-vars=DATABASE_URL=$${DATABASE_URL},GEMINI_API_KEY=$${GEMINI_API_KEY},REDIS_URL=$${REDIS_URL}
+
+options:
+  defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET
+
+images:
+  - 'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/chatbot-repo/chatbot-service:${SHORT_SHA}-${BUILD_ID}'

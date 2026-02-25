@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+pydantic-settings
+langchain
+langchain-google-genai        # replaces langchain-openai
+langchain-postgres
+langchain-community
+pgvector
+asyncpg
+sqlalchemy[asyncio]
+redis[asyncio]
+python-dotenv
+beautifulsoup4
+lxml
+httpx
