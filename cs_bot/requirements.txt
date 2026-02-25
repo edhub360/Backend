@@ -5,6 +5,7 @@ langchain
 langchain-google-genai        # replaces langchain-openai
 langchain-postgres
 langchain-community
+langchain-text-splitters   
 pgvector
 asyncpg
 sqlalchemy[asyncio]
