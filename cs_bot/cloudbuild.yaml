@@ -1,17 +1,17 @@
 steps:
-  # 1. Build chatbot service image
+  # 1. Build cs-bot service image
   - name: 'gcr.io/cloud-builders/docker'
     args: [
       'build',
-      '-t', 'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/chatbot-repo/chatbot-service:${SHORT_SHA}-${BUILD_ID}',
-      './chatbot-service'
+      '-t', 'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/cs-bot-repo/cs-bot-service:${SHORT_SHA}-${BUILD_ID}',
+      './cs-bot-service'
     ]
 
   # 2. Push image to Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
     args: [
       'push',
-      'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/chatbot-repo/chatbot-service:${SHORT_SHA}-${BUILD_ID}'
+      'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/cs-bot-repo/cs-bot-service:${SHORT_SHA}-${BUILD_ID}'
     ]
 
   # 3. Fetch secrets and deploy to Cloud Run
@@ -24,9 +24,9 @@ steps:
         export GEMINI_API_KEY=$(gcloud secrets versions access latest --secret="APIKEY_EDHUB360")
         export REDIS_URL=$(gcloud secrets versions access latest --secret="REDIS_URL")
 
-        gcloud run deploy chatbot-service \
+        gcloud run deploy cs-bot-service \
           --region=us-central1 \
-          --image=us-central1-docker.pkg.dev/arctic-sentry-467317-s7/chatbot-repo/chatbot-service:${SHORT_SHA}-${BUILD_ID} \
+          --image=us-central1-docker.pkg.dev/arctic-sentry-467317-s7/cs-bot-repo/cs-bot-service:${SHORT_SHA}-${BUILD_ID} \
           --platform=managed \
           --allow-unauthenticated \
           --memory=1Gi --cpu=1 --timeout=300 --max-instances=10 --port=8080 \
@@ -37,4 +37,4 @@ options:
   defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET
 
 images:
-  - 'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/chatbot-repo/chatbot-service:${SHORT_SHA}-${BUILD_ID}'
+  - 'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/cs-bot-repo/cs-bot-service:${SHORT_SHA}-${BUILD_ID}'
