@@ -1,5 +1,5 @@
 from langchain_community.document_loaders import WebBaseLoader
-from langchain.text_splitters import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from app.core.database import get_vector_store
 
 async def ingest_urls(urls: list[str]) -> int:
