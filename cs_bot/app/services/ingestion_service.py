@@ -20,11 +20,10 @@ async def ingest_urls(urls: list[str]) -> int:
     for chunk in chunks:
         chunk.metadata["source"] = chunk.metadata.get("source", "")
 
-    get_vector_store().add_documents(chunks)
+    await get_vector_store().aadd_documents(chunks)  # ✅ async version
     return len(chunks)
 
 
-# Added — ingest from local JSON file
 async def ingest_json(file_path: str = "data/website_content.json") -> int:
     raw = json.loads(Path(file_path).read_text())
 
@@ -42,5 +41,6 @@ async def ingest_json(file_path: str = "data/website_content.json") -> int:
         separators=["\n\n", "\n", ".", " "],
     )
     chunks = splitter.split_documents(docs)
-    get_vector_store().add_documents(chunks)
+
+    await get_vector_store().aadd_documents(chunks)  # ✅ async version
     return len(chunks)
