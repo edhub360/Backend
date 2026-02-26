@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     REDIS_URL: str
 
     CHAT_MODEL: str = "gemini-2.0-flash"
-    EMBEDDING_MODEL: str = "models/text-embedding-004"
+    EMBEDDING_MODEL: str = "models/gemini-embedding-001"   # ✅ matches your notebook service
     VECTOR_COLLECTION: str = "website_docs"
     RETRIEVER_TOP_K: int = 4
     SESSION_TTL_SECONDS: int = 3600
@@ -23,7 +23,7 @@ class Settings(BaseSettings):
         # Convert: postgresql+asyncpg://... → postgresql+psycopg://...
         return self.DATABASE_URL.replace(
             "postgresql+asyncpg://",
-            "postgresql+psycopg://"
+            "postgresql+psycopg_async://"
         )
 
     class Config:
