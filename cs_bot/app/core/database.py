@@ -21,7 +21,7 @@ def init_vector_store():
         pre_delete_collection=False,  # ✅ don't drop existing data
         engine_args={
             "connect_args": {
-                "options": "-csearch_path=stud_hub_schema"
+                "options": "-csearch_path=stud_hub_schema,public"  # ✅ set search_path to avoid permission issues
             }
         }
     )
