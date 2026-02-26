@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str        # comes in as postgresql+asyncpg://...
     REDIS_URL: str
 
+    ADMIN_KEY: str = "edhub360-admin-secret"
     CHAT_MODEL: str = "gemini-2.5-flash"
     EMBEDDING_MODEL: str = "models/gemini-embedding-001"   # ✅ matches your notebook service
     VECTOR_COLLECTION: str = "website_docs"
