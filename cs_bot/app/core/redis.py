@@ -5,12 +5,12 @@ redis_client: aioredis.Redis = None
 
 def init_redis():
     global redis_client
+    # ✅ Convert redis:// → rediss:// for TLS (Upstash requires this)
+    redis_url = settings.REDIS_URL.replace("redis://", "rediss://")
     redis_client = aioredis.from_url(
-        settings.REDIS_URL,
+        redis_url,
         decode_responses=True,
-        ssl=True,                        # ✅ Upstash requires TLS
-        ssl_cert_reqs=None,              # ✅ skip cert verification
-        socket_connect_timeout=10,       # ✅ don't hang forever
+        socket_connect_timeout=10,
         socket_timeout=10,
         retry_on_timeout=True,
     )

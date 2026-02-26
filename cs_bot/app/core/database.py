@@ -19,6 +19,7 @@ def init_vector_store():
         use_jsonb=True,
         create_extension=False,       # ✅ don't run CREATE EXTENSION vector
         pre_delete_collection=False,  # ✅ don't drop existing data
+        async_mode=True,
         engine_args={
             "connect_args": {
                 "options": "-csearch_path=stud_hub_schema,public"  # ✅ set search_path to avoid permission issues
