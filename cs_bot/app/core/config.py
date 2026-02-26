@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str        # comes in as postgresql+asyncpg://...
     REDIS_URL: str
 
-    CHAT_MODEL: str = "gemini-2.0-flash"
+    CHAT_MODEL: str = "gemini-2.5-flash"
     EMBEDDING_MODEL: str = "models/gemini-embedding-001"   # ✅ matches your notebook service
     VECTOR_COLLECTION: str = "website_docs"
     RETRIEVER_TOP_K: int = 4
