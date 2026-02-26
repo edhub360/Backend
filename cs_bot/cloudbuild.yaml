@@ -32,7 +32,7 @@ steps:
           --allow-unauthenticated \
           --memory=1Gi --cpu=1 --timeout=300 --max-instances=10 --port=8080 \
           --add-cloudsql-instances=arctic-sentry-467317-s7:us-central1:studenthub \
-          --set-env-vars=DATABASE_URL=$${DATABASE_URL},GEMINI_API_KEY=$${GEMINI_API_KEY},REDIS_URL=$${REDIS_URL}, ADMIN_KEY=$${ADMIN_KEY}
+          --set-env-vars=DATABASE_URL=$${DATABASE_URL},GEMINI_API_KEY=$${GEMINI_API_KEY},REDIS_URL=$${REDIS_URL},ADMIN_KEY=$${ADMIN_KEY}
 
 options:
   defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET
