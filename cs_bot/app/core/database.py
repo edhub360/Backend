@@ -10,13 +10,15 @@ def init_vector_store():
 
     embeddings = GoogleGenerativeAIEmbeddings(
         model=settings.EMBEDDING_MODEL,
-        google_api_key=settings.GEMINI_API_KEY,   # ✅ updated key name
+        google_api_key=settings.GEMINI_API_KEY,
     )
     vector_store = PGVector(
         embeddings=embeddings,
         collection_name=settings.VECTOR_COLLECTION,
         connection=settings.PGVECTOR_URL,
         use_jsonb=True,
+        create_extension=False,       # ✅ don't run CREATE EXTENSION vector
+        pre_delete_collection=False,  # ✅ don't drop existing data
         engine_args={
             "connect_args": {
                 "options": "-csearch_path=stud_hub_schema"
