@@ -8,8 +8,11 @@ def init_redis():
     redis_client = aioredis.from_url(
         settings.REDIS_URL,
         decode_responses=True,
-        ssl=True,               # ✅ force TLS even though URL says redis://
-        ssl_cert_reqs=None,     # ✅ skip cert verification (Upstash free tier)
+        ssl=True,                        # ✅ Upstash requires TLS
+        ssl_cert_reqs=None,              # ✅ skip cert verification
+        socket_connect_timeout=10,       # ✅ don't hang forever
+        socket_timeout=10,
+        retry_on_timeout=True,
     )
 
 def get_redis() -> aioredis.Redis:

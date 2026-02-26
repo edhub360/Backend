@@ -20,20 +20,30 @@ def _deserialize(data: str) -> list[BaseMessage]:
     return result
 
 async def get_history(session_id: str) -> list[BaseMessage]:
-    redis = get_redis()
-    data = await redis.get(f"chat:{session_id}")
-    if not data:
-        return []
-    return _deserialize(data)
+    try:
+        redis = get_redis()
+        data = await redis.get(f"chat:{session_id}")
+        if not data:
+            return []
+        return _deserialize(data)
+    except Exception as e:
+        print(f"[Redis] get_history failed: {e}")
+        return []          # ✅ return empty history, don't crash
 
 async def save_history(session_id: str, messages: list[BaseMessage]):
-    redis = get_redis()
-    await redis.setex(
-        f"chat:{session_id}",
-        settings.SESSION_TTL_SECONDS,
-        _serialize(messages),
-    )
+    try:
+        redis = get_redis()
+        await redis.setex(
+            f"chat:{session_id}",
+            settings.SESSION_TTL_SECONDS,
+            _serialize(messages),
+        )
+    except Exception as e:
+        print(f"[Redis] save_history failed: {e}")  # ✅ log but don't crash
 
 async def delete_history(session_id: str):
-    redis = get_redis()
-    await redis.delete(f"chat:{session_id}")
+    try:
+        redis = get_redis()
+        await redis.delete(f"chat:{session_id}")
+    except Exception as e:
+        print(f"[Redis] delete_history failed: {e}")
