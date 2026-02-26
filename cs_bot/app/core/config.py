@@ -4,9 +4,9 @@ class Settings(BaseSettings):
     APP_NAME: str = "Chatbot Service"
     DEBUG: bool = False
 
-    GEMINI_API_KEY: str           # ✅ matches --set-env-vars key name
-    DATABASE_URL: str             # ✅ matches --set-env-vars key name
-    REDIS_URL: str                # ✅ matches --set-env-vars key name
+    GEMINI_API_KEY: str
+    DATABASE_URL: str        # comes in as postgresql+asyncpg://...
+    REDIS_URL: str
 
     CHAT_MODEL: str = "gemini-2.0-flash"
     EMBEDDING_MODEL: str = "models/text-embedding-004"
@@ -17,7 +17,16 @@ class Settings(BaseSettings):
     COLLECTION_TABLE: str = "csbot_collection"
     EMBEDDING_TABLE: str = "csbot_embedding"
 
+    @property
+    def PGVECTOR_URL(self) -> str:
+        # langchain-postgres needs psycopg3, not asyncpg
+        # Convert: postgresql+asyncpg://... → postgresql+psycopg://...
+        return self.DATABASE_URL.replace(
+            "postgresql+asyncpg://",
+            "postgresql+psycopg://"
+        )
+
     class Config:
-        env_file = ".env"          # only used locally, ignored in Cloud Run
+        env_file = ".env"
 
 settings = Settings()

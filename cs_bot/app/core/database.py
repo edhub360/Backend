@@ -15,7 +15,7 @@ def init_vector_store():
     vector_store = PGVector(
         embeddings=embeddings,
         collection_name=settings.VECTOR_COLLECTION,
-        connection=settings.DATABASE_URL,
+        connection=settings.PGVECTOR_URL,
         use_jsonb=True,
         engine_args={
             "connect_args": {
