@@ -9,20 +9,21 @@ def init_vector_store():
     global embeddings, vector_store
 
     embeddings = GoogleGenerativeAIEmbeddings(
-        model=settings.EMBEDDING_MODEL,
+        model=settings.EMBEDDING_MODEL,          # models/gemini-embedding-001
         google_api_key=settings.GEMINI_API_KEY,
+        task_type="semantic_similarity",         # ✅ matches your notebook service
     )
     vector_store = PGVector(
         embeddings=embeddings,
         collection_name=settings.VECTOR_COLLECTION,
         connection=settings.PGVECTOR_URL,
         use_jsonb=True,
-        create_extension=False,       # ✅ don't run CREATE EXTENSION vector
-        pre_delete_collection=False,  # ✅ don't drop existing data
+        create_extension=False,
+        pre_delete_collection=False,
         async_mode=True,
         engine_args={
             "connect_args": {
-                "options": "-csearch_path=stud_hub_schema,public"  # ✅ set search_path to avoid permission issues
+                "options": "-csearch_path=stud_hub_schema,public"
             }
         }
     )
