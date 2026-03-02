@@ -8,6 +8,8 @@ langchain-community
 langchain-text-splitters   
 pgvector
 asyncpg
+psycopg[binary]          # ✅ replaces asyncpg — psycopg3 binary build
+psycopg2-binary          # ✅ fallback for other libs
 sqlalchemy[asyncio]
 redis[asyncio]
 python-dotenv
