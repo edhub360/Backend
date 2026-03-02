@@ -7,6 +7,7 @@ from passlib.context import CryptContext
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 from fastapi import HTTPException, status
+import httpx  
 
 from app.config import settings
 from app.utils import generate_secure_token, hash_token
@@ -70,49 +71,50 @@ def decode_jwt_token(token: str) -> Dict[str, Any]:
 
 
 async def verify_google_token(token: str) -> Dict[str, Any]:
-    """Verify Google ID token and return user info."""
+    """Verify Google OAuth2 access token and return user info."""
     try:
-        # Verify the token
-        idinfo = id_token.verify_oauth2_token(
-            token, 
-            google_requests.Request(), 
-            settings.google_client_id
-        )
-        
-        # Verify issuer
-        if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
-            raise ValueError('Wrong issuer.')
-        
-        # Check email verification
+        # ✅ Use Google userinfo endpoint instead of id_token verification
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                "https://www.googleapis.com/oauth2/v3/userinfo",
+                headers={"Authorization": f"Bearer {token}"}
+            )
+
+        if response.status_code != 200:
+            logger.warning(f"Google userinfo request failed: {response.status_code}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid Google token"
+            )
+
+        idinfo = response.json()
+
+        # ✅ Check email verification
         if not idinfo.get('email_verified', False):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email not verified by Google"
             )
-        
-        # Extract user info
+
+        # ✅ Extract user info
         user_info = {
-            'google_id': idinfo['sub'],
+            'google_id': idinfo.get('sub'),
             'email': idinfo.get('email'),
             'name': idinfo.get('name'),
             'picture': idinfo.get('picture')
         }
-        
+
         if not user_info['email']:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email not provided by Google"
             )
-        
+
         logger.info(f"Google token verified for user: {user_info['email']}")
         return user_info
-        
-    except ValueError as e:
-        logger.warning(f"Google token verification failed: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid Google token"
-        )
+
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Google token verification error: {str(e)}")
         raise HTTPException(
