@@ -17,11 +17,11 @@ from app.db import get_db
 from app.models import User, AuthCredential, RefreshToken, PasswordResetToken
 from app.schemas import (
     GoogleSignInRequest, EmailRegisterRequest, EmailLoginRequest,
-    TokenResponse, RefreshTokenRequest, LogoutRequest, UserResponse, UserUpdate
+    TokenResponse, RefreshTokenRequest, LogoutRequest, UserResponse, UserUpdate, MicrosoftSignInRequest
 )
 from app.auth import (
     verify_google_token, hash_password, verify_password,
-    create_access_token, create_refresh_token, decode_jwt_token
+    create_access_token, create_refresh_token, decode_jwt_token, verify_microsoft_token
 )
 from app.config import settings
 
@@ -168,6 +168,44 @@ async def google_signin(
         raise
     except Exception as e:
         logger.error(f"Google sign-in error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Authentication failed"
+        )
+
+@router.post("/microsoft", response_model=TokenResponse)
+@limiter.limit(f"{settings.rate_limit_requests}/minute")
+async def microsoft_signin(
+    microsoft_request: MicrosoftSignInRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db)
+):
+    """Microsoft Sign-In authentication endpoint."""
+    try:
+        user_info = await verify_microsoft_token(microsoft_request.token)
+
+        user = await get_user_by_email(db, user_info['email'])
+        is_new_user = user is None  # ✅ track before any DB ops
+
+        if user:
+            if user.name != user_info['name']:
+                user.name = user_info['name']
+                await db.flush()
+            await db.refresh(user)  # ✅ avoid stale subscription_tier
+        else:
+            user = await create_user(db, user_info['email'], user_info['name'])
+            await create_auth_credential(db, user.user_id, "microsoft")
+
+        tokens = await generate_tokens(db, user)
+        is_first_login = is_new_user or not user.subscription_tier
+
+        logger.info(f"Microsoft sign-in successful for user: {user.email}")
+        return TokenResponse(**tokens, is_first_login=is_first_login)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Microsoft sign-in error: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Authentication failed"

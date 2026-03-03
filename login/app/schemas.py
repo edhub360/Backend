@@ -35,6 +35,10 @@ class GoogleSignInRequest(BaseModel):
     """Schema for Google Sign-In request."""
     token: str = Field(..., description="Google ID token from frontend")
 
+class MicrosoftSignInRequest(BaseModel):
+    """Schema for Microsoft Sign-In request."""
+    token: str = Field(..., description="Microsoft OAuth2 access token")
+
 
 class EmailRegisterRequest(BaseModel):
     """Schema for email registration."""

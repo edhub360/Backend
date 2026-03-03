@@ -121,3 +121,47 @@ async def verify_google_token(token: str) -> Dict[str, Any]:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to verify Google token"
         )
+    
+async def verify_microsoft_token(token: str) -> Dict[str, Any]:
+    """Verify Microsoft access token via Graph API."""
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                "https://graph.microsoft.com/v1.0/me",
+                headers={"Authorization": f"Bearer {token}"},
+                params={"$select": "id,displayName,mail,userPrincipalName"}
+            )
+
+        if response.status_code != 200:
+            logger.warning(f"Microsoft Graph request failed: {response.status_code}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid Microsoft token"
+            )
+
+        profile = response.json()
+
+        # ✅ mail can be null for personal accounts — fallback to userPrincipalName
+        email = profile.get('mail') or profile.get('userPrincipalName')
+
+        if not email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email not provided by Microsoft"
+            )
+
+        return {
+            'microsoft_id': profile.get('id'),
+            'email': email,
+            'name': profile.get('displayName'),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Microsoft token verification error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to verify Microsoft token"
+        )
+
