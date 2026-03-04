@@ -109,31 +109,43 @@ class GeminiService:
         chunks: List[Dict[str, Any]],
         max_chars: int = 30000
     ) -> str:
-        """Build context string from relevant chunks with chunk-boundary-aware truncation."""
+        """Build context string with correct per-file source labels."""
         if not chunks:
             return "No relevant context available."
+
+        # Map source_id → display label using actual filenames
+        # Built once so all chunks from the same file share the same label
+        source_label_map: Dict[str, str] = {}
+        source_counter = 1
+        for chunk in chunks:
+            sid = chunk.get("source_id", "")
+            if sid and sid not in source_label_map:
+                name = chunk.get("source_name", "Unknown source")
+                source_label_map[sid] = f"Source {source_counter}: {name}"
+                source_counter += 1
 
         context_parts = []
         total_chars = 0
 
-        for i, chunk in enumerate(chunks, 1):
-            source_name = chunk.get("source_name", "Unknown source")
+        for chunk in chunks:
+            sid = chunk.get("source_id", "")
+            label = source_label_map.get(sid, "Unknown source")
             content = chunk.get("chunk", "")
             score = chunk.get("score", 0.0)
 
-            part = f"[Source {i}: {source_name} (relevance: {score:.2f})]\n{content}\n"
+            part = f"[{label} (relevance: {score:.2f})]\n{content}\n"
 
             if total_chars + len(part) > max_chars:
                 logger.info(
-                    f"Context truncated cleanly at chunk {i-1} "
-                    f"({total_chars}/{max_chars} chars used)"
+                    f"Context truncated at {total_chars}/{max_chars} chars"
                 )
-                break  # stop at a clean chunk boundary, never mid-sentence
+                break
 
             context_parts.append(part)
             total_chars += len(part)
 
         return "\n".join(context_parts)
+
 
 
     def _build_history_context(self, history: List[Dict[str, str]]) -> str:
