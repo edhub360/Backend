@@ -12,18 +12,31 @@ class GeminiService:
     """Service for interacting with Google Gemini API for text generation."""
     
     def __init__(self):
-        """Initialize Gemini service with API configuration."""
         self.api_key = os.getenv("GEMINI_API_KEY")
         if not self.api_key:
             raise ValueError("GEMINI_API_KEY environment variable is required")
-        
-        # Configure Gemini
+
         genai.configure(api_key=self.api_key)
-        
-        # Initialize the model
-        self.model = genai.GenerativeModel("gemini-2.5-flash")
-        
-        logger.info("Gemini service initialized successfully")
+
+        # Set generation config at model level — acts as baseline for all calls
+        self.default_generation_config = {
+            "max_output_tokens": 8192,
+            "temperature": 0.7,
+            "top_p": 0.8,
+            "top_k": 40,
+        }
+
+        self.model = genai.GenerativeModel(
+            model_name="gemini-2.5-flash",
+            generation_config=self.default_generation_config,
+        )
+
+        logger.info(
+            f"Gemini service initialized | "
+            f"model=gemini-2.5-flash | "
+            f"max_output_tokens={self.default_generation_config['max_output_tokens']}"
+        )
+
     
     async def generate_contextual_response(
         self,
@@ -33,32 +46,36 @@ class GeminiService:
         max_tokens: Optional[int] = None
     ) -> str:
         try:
-            # Build context with chunk-boundary-aware truncation
             context_text = self._build_context_from_chunks(context_chunks, max_chars=30000)
-
-            # Build chat history context
             history_context = self._build_history_context(chat_history or [])
-
-            # Create comprehensive prompt
             prompt = self._create_rag_prompt(user_query, context_text, history_context)
 
-            logger.info(f"Sending prompt to Gemini (length: {len(prompt)} chars)")
-
-            # 8192 is a safe, generous ceiling for notebook Q&A responses
-            safe_max_output_tokens = 8192
-
-            generation_config = genai.types.GenerationConfig(
-                max_output_tokens=min(safe_max_output_tokens, max_tokens or safe_max_output_tokens),
-                temperature=0.7,
-                top_p=0.8,
-                top_k=40
+            prompt_tokens_approx = len(prompt) // 4
+            logger.info(
+                f"Sending prompt to Gemini | "
+                f"chars={len(prompt)} | "
+                f"~{prompt_tokens_approx} tokens"
             )
 
-            # Generate response
+            # Use dict form — GenerationConfig object is silently ignored
+            # on some google-generativeai SDK versions for gemini-2.5-flash
+            # max_tokens from caller only raises the cap, never lowers below 8192
+            safe_max_output_tokens = 8192
+            generation_config = {
+                "max_output_tokens": max(safe_max_output_tokens, max_tokens or safe_max_output_tokens),
+                "temperature": 0.7,
+                "top_p": 0.8,
+                "top_k": 40,
+            }
+
+            logger.info(f"max_output_tokens={generation_config['max_output_tokens']}")
+
+            # Generate response — model already has default_generation_config from __init__
+            # per-call generation_config overrides it
             response = await asyncio.to_thread(
                 self.model.generate_content,
                 prompt,
-                generation_config=generation_config
+                generation_config=generation_config  # dict, not GenerationConfig object
             )
 
             if not response or not getattr(response, "candidates", None):
@@ -66,15 +83,22 @@ class GeminiService:
 
             candidate = response.candidates[0]
             finish_reason = getattr(candidate, "finish_reason", None)
+            finish_reason_name = getattr(finish_reason, "name", str(finish_reason))
             token_count = getattr(candidate, "token_count", None)
 
-            logger.info(f"Gemini finish_reason={finish_reason}, token_count={token_count}")
+            logger.info(
+                f"Gemini finish_reason={finish_reason_name} | "
+                f"token_count={token_count} | "
+                f"max_output_tokens={generation_config['max_output_tokens']}"
+            )
 
-            # Warn early if truncation occurred — helps catch regressions
-            if finish_reason and finish_reason.name == "MAX_TOKENS":
+            # Warn immediately on truncation — visible in Cloud Run logs
+            if finish_reason_name == "MAX_TOKENS":
                 logger.warning(
-                    f"Response truncated at MAX_TOKENS ({safe_max_output_tokens}). "
-                    "Consider increasing safe_max_output_tokens or reducing context size."
+                    f"Response truncated at MAX_TOKENS. "
+                    f"prompt_tokens≈{prompt_tokens_approx}, "
+                    f"max_output_tokens={generation_config['max_output_tokens']}. "
+                    f"Reduce top_n chunks or increase max_output_tokens."
                 )
 
             # Safely extract text from parts
@@ -84,19 +108,23 @@ class GeminiService:
             ).strip()
 
             if not text:
-                if finish_reason and finish_reason.name == "MAX_TOKENS":
+                if finish_reason_name == "MAX_TOKENS":
                     raise ValueError(
                         "Gemini returned no text because max_output_tokens was reached. "
                         "Try increasing max_tokens or reducing context size."
                     )
-                if finish_reason and finish_reason.name == "SAFETY":
+                if finish_reason_name == "SAFETY":
                     raise ValueError(
                         "Gemini blocked the response due to safety filters. "
                         "Try rephrasing the question."
                     )
                 raise ValueError("Gemini returned a candidate with no text parts.")
 
-            logger.info(f"Successfully generated response ({len(text)} chars)")
+            logger.info(
+                f"Response generated successfully | "
+                f"chars={len(text)} | "
+                f"finish={finish_reason_name}"
+            )
             return text
 
         except Exception as e:
