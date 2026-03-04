@@ -25,6 +25,8 @@ from app.auth import (
 )
 from app.config import settings
 
+MAX_SESSIONS_PER_USER = 3
+
 logger = logging.getLogger(__name__)
 
 # Rate limiting
@@ -69,15 +71,33 @@ async def create_auth_credential(
     await db.flush()
     return credential
 
-
 async def create_refresh_token_db(
-    db: AsyncSession, 
-    user_id: UUID, 
+    db: AsyncSession,
+    user_id: UUID,
     token_hash: str
 ) -> RefreshToken:
-    """Create refresh token in database."""
-    expires_at = datetime.now(timezone.utc) + timedelta(days=settings.refresh_token_expire_days)
+    """Create refresh token in database, max 3 concurrent sessions per user."""
     
+    # Fetch existing active sessions ordered oldest first
+    result = await db.execute(
+        select(RefreshToken)
+        .where(
+            RefreshToken.user_id == user_id,
+            RefreshToken.revoked == False,          # only active sessions
+            RefreshToken.expires_at > datetime.now(timezone.utc)  # not expired
+        )
+        .order_by(RefreshToken.issued_at.asc())     
+    )
+    existing_tokens = result.scalars().all()
+
+    # Drop oldest session if limit exceeded
+    if len(existing_tokens) >= MAX_SESSIONS_PER_USER:
+        oldest = existing_tokens[0]
+        await db.delete(oldest)
+        logger.info(f"Max sessions reached for user {user_id} — oldest session revoked")
+
+    # Create new session
+    expires_at = datetime.now(timezone.utc) + timedelta(days=settings.refresh_token_expire_days)
     refresh_token = RefreshToken(
         user_id=user_id,
         token_hash=token_hash,
@@ -86,6 +106,7 @@ async def create_refresh_token_db(
     db.add(refresh_token)
     await db.flush()
     return refresh_token
+
 
 
 from datetime import datetime, timedelta, timezone
