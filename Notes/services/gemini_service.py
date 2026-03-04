@@ -32,62 +32,50 @@ class GeminiService:
         chat_history: List[Dict[str, str]] = None,
         max_tokens: Optional[int] = None
     ) -> str:
-        """
-        Generate a response using Gemini with provided context and chat history.
-        
-        Args:
-            user_query: The user's question
-            context_chunks: List of relevant text chunks from the notebook
-            chat_history: Previous chat messages for context
-            max_tokens: Maximum tokens for response (optional)
-        
-        Returns:
-            Generated response text
-        """
         try:
-            # Build context from chunks
-            context_text = self._build_context_from_chunks(context_chunks)
-            
+            # Build context with chunk-boundary-aware truncation
+            context_text = self._build_context_from_chunks(context_chunks, max_chars=30000)
+
             # Build chat history context
             history_context = self._build_history_context(chat_history or [])
-            
-            # Limit context size to keep total prompt within safe bounds
-            MAX_CONTEXT_CHARS = 10000
-
-            if len(context_text) > MAX_CONTEXT_CHARS:
-                logger.info(
-                    f"Truncating context_text from {len(context_text)} to {MAX_CONTEXT_CHARS} chars"
-                )
-                context_text = context_text[:MAX_CONTEXT_CHARS]
 
             # Create comprehensive prompt
             prompt = self._create_rag_prompt(user_query, context_text, history_context)
-            
+
             logger.info(f"Sending prompt to Gemini (length: {len(prompt)} chars)")
-            # Use a safe upper bound for output tokens, independent of user max_tokens
-            safe_max_output_tokens = 2048  
-            # Configure generation parameters
+
+            # 8192 is a safe, generous ceiling for notebook Q&A responses
+            safe_max_output_tokens = 8192
+
             generation_config = genai.types.GenerationConfig(
-                max_output_tokens=min(safe_max_output_tokens, (max_tokens or safe_max_output_tokens)),
+                max_output_tokens=min(safe_max_output_tokens, max_tokens or safe_max_output_tokens),
                 temperature=0.7,
                 top_p=0.8,
                 top_k=40
             )
-            
+
             # Generate response
             response = await asyncio.to_thread(
                 self.model.generate_content,
                 prompt,
                 generation_config=generation_config
             )
-            
+
             if not response or not getattr(response, "candidates", None):
                 raise ValueError("Empty response from Gemini API (no candidates)")
 
             candidate = response.candidates[0]
             finish_reason = getattr(candidate, "finish_reason", None)
             token_count = getattr(candidate, "token_count", None)
+
             logger.info(f"Gemini finish_reason={finish_reason}, token_count={token_count}")
+
+            # Warn early if truncation occurred — helps catch regressions
+            if finish_reason and finish_reason.name == "MAX_TOKENS":
+                logger.warning(
+                    f"Response truncated at MAX_TOKENS ({safe_max_output_tokens}). "
+                    "Consider increasing safe_max_output_tokens or reducing context size."
+                )
 
             # Safely extract text from parts
             parts = getattr(getattr(candidate, "content", None), "parts", []) or []
@@ -96,7 +84,6 @@ class GeminiService:
             ).strip()
 
             if not text:
-                # Handle common no-text cases explicitly
                 if finish_reason and finish_reason.name == "MAX_TOKENS":
                     raise ValueError(
                         "Gemini returned no text because max_output_tokens was reached. "
@@ -115,103 +102,128 @@ class GeminiService:
         except Exception as e:
             logger.error(f"Error generating Gemini response: {str(e)}")
             raise Exception(f"Failed to generate AI response: {str(e)}")
+
     
-    def _build_context_from_chunks(self, chunks: List[Dict[str, Any]]) -> str:
-        """Build context string from relevant chunks."""
+    def _build_context_from_chunks(
+        self,
+        chunks: List[Dict[str, Any]],
+        max_chars: int = 30000
+    ) -> str:
+        """Build context string from relevant chunks with chunk-boundary-aware truncation."""
         if not chunks:
             return "No relevant context available."
-        
+
         context_parts = []
+        total_chars = 0
+
         for i, chunk in enumerate(chunks, 1):
             source_name = chunk.get("source_name", "Unknown source")
             content = chunk.get("chunk", "")
             score = chunk.get("score", 0.0)
-            
-            context_parts.append(
-                f"[Source {i}: {source_name} (relevance: {score:.2f})]\n{content}\n"
-            )
-        
+
+            part = f"[Source {i}: {source_name} (relevance: {score:.2f})]\n{content}\n"
+
+            if total_chars + len(part) > max_chars:
+                logger.info(
+                    f"Context truncated cleanly at chunk {i-1} "
+                    f"({total_chars}/{max_chars} chars used)"
+                )
+                break  # stop at a clean chunk boundary, never mid-sentence
+
+            context_parts.append(part)
+            total_chars += len(part)
+
         return "\n".join(context_parts)
-    
+
+
     def _build_history_context(self, history: List[Dict[str, str]]) -> str:
-        """Build chat history context string."""
+        """Build chat history context string, capped at recent 6 messages."""
         if not history:
             return ""
-        
-        # Only include recent history (last 6 messages to keep prompt manageable)
-        recent_history = history[-6:] if len(history) > 6 else history
-        
+
+        # Only include recent history to keep prompt size manageable
+        recent_history = history[-6:]
+
         history_parts = []
         for msg in recent_history:
             role = msg.get("role", "unknown")
-            content = msg.get("content", "")
-            
+            content = msg.get("content", "").strip()
+
+            if not content:
+                continue  # skip empty messages that waste tokens
+
             if role == "user":
-                history_parts.append(f"Previous User Question: {content}")
+                history_parts.append(f"User: {content}")
             elif role == "assistant":
-                history_parts.append(f"Previous Assistant Response: {content}")
-        
-        return "\n".join(history_parts) if history_parts else ""
+                history_parts.append(f"Assistant: {content}")
+            # silently skip unknown roles rather than polluting the prompt
+
+        return "\n".join(history_parts)
+
     
     def _create_rag_prompt(self, user_query: str, context: str, history: str) -> str:
-        """Create a comprehensive RAG prompt for Gemini."""
-        
-        base_prompt = """You are an AI assistant helping users understand their uploaded documents and notes. You have access to relevant content from their notebook sources.
+        """Create a RAG prompt for Gemini with minimal token waste."""
 
-                INSTRUCTIONS:
-                1. Answer the user's question based primarily on the provided context from their documents
-                2. If the context contains relevant information, use it to provide a comprehensive answer
-                3. If the context doesn't contain enough information, acknowledge this and provide what you can
-                4. Maintain conversation continuity by considering previous chat history when relevant
-                5. Be concise but thorough in your responses
-                6. Always cite which sources you're referencing when possible
+        base_prompt = """You are an AI assistant helping users understand their uploaded documents and notes.
 
-                """
-        
-        if context and context.strip() != "No relevant context available.":
-            prompt = base_prompt + f"""
-                RELEVANT CONTEXT FROM YOUR DOCUMENTS:
-                {context}
+    INSTRUCTIONS:
+    1. Answer based primarily on the provided context from the user's documents.
+    2. If context is insufficient, acknowledge it and answer what you can.
+    3. Use chat history to maintain conversation continuity when relevant.
+    4. Be concise but thorough. Cite source numbers (e.g. [Source 1]) when possible.
+    """
 
-                """
+        has_context = context and context.strip() != "No relevant context available."
+
+        if has_context:
+            base_prompt += f"\nRELEVANT CONTEXT:\n{context}\n"
         else:
-            prompt = base_prompt + "\nNOTE: No specific context was found in your documents for this query.\n"
-        
+            base_prompt += "\nNOTE: No specific context was found in your documents for this query.\n"
+
         if history:
-            prompt += f"""
-                PREVIOUS CONVERSATION:
-                {history}
+            base_prompt += f"\nCONVERSATION HISTORY:\n{history}\n"
 
-                """
-        
-        prompt += f"""
-            USER QUESTION: {user_query}
+        base_prompt += f"\nUSER QUESTION: {user_query}\n\nRESPONSE:"
 
-            RESPONSE:"""
-        
-        return prompt
-    
+        return base_prompt
+
+
     async def generate_simple_response(self, prompt: str, max_tokens: Optional[int] = None) -> str:
         """Generate a simple response without RAG context."""
         try:
             generation_config = genai.types.GenerationConfig(
-                max_output_tokens=max_tokens or 512,
+                max_output_tokens=max_tokens or 4096,  # was 512 — far too low for any meaningful answer
                 temperature=0.7,
                 top_p=0.8,
                 top_k=40
             )
-            
+
             response = await asyncio.to_thread(
                 self.model.generate_content,
                 prompt,
                 generation_config=generation_config
             )
-            
-            if not response or not response.text:
+
+            if not response or not getattr(response, "candidates", None):
+                raise ValueError("Empty response from Gemini API (no candidates)")
+
+            candidate = response.candidates[0]
+            finish_reason = getattr(candidate, "finish_reason", None)
+
+            if finish_reason and finish_reason.name == "MAX_TOKENS":
+                logger.warning(
+                    f"generate_simple_response truncated at MAX_TOKENS "
+                    f"({max_tokens or 4096}). Consider passing a higher max_tokens."
+                )
+
+            text = response.text.strip() if response.text else ""
+
+            if not text:
                 raise ValueError("Empty response from Gemini API")
-            
-            return response.text.strip()
-            
+
+            logger.info(f"Simple response generated ({len(text)} chars)")
+            return text
+
         except Exception as e:
             logger.error(f"Error generating simple response: {str(e)}")
             raise Exception(f"Failed to generate response: {str(e)}")
