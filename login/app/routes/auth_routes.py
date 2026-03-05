@@ -7,7 +7,7 @@ from starlette.requests import Request
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, update
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -76,25 +76,19 @@ async def create_refresh_token_db(
     user_id: UUID,
     token_hash: str
 ) -> RefreshToken:
-    """Create refresh token in database, max 3 concurrent sessions per user."""
-    
-    # Fetch existing active sessions ordered oldest first
-    result = await db.execute(
-        select(RefreshToken)
+    """Create refresh token — single session per user, revokes previous on new login."""
+
+    # Revoke all existing active sessions
+    await db.execute(
+        update(RefreshToken)
         .where(
             RefreshToken.user_id == user_id,
-            RefreshToken.revoked == False,          # only active sessions
-            RefreshToken.expires_at > datetime.now(timezone.utc)  # not expired
+            RefreshToken.revoked == False,
+            RefreshToken.expires_at > datetime.now(timezone.utc)
         )
-        .order_by(RefreshToken.issued_at.asc())     
+        .values(revoked=True)
     )
-    existing_tokens = result.scalars().all()
-
-    # Drop oldest session if limit exceeded
-    if len(existing_tokens) >= MAX_SESSIONS_PER_USER:
-        oldest = existing_tokens[0]
-        await db.delete(oldest)
-        logger.info(f"Max sessions reached for user {user_id} — oldest session revoked")
+    logger.info(f"Previous sessions revoked for user {user_id}")
 
     # Create new session
     expires_at = datetime.now(timezone.utc) + timedelta(days=settings.refresh_token_expire_days)
@@ -106,10 +100,6 @@ async def create_refresh_token_db(
     db.add(refresh_token)
     await db.flush()
     return refresh_token
-
-
-
-from datetime import datetime, timedelta, timezone
 
 async def create_password_reset_token_db(
     db: AsyncSession,
@@ -156,7 +146,7 @@ async def generate_tokens(db: AsyncSession, user: User) -> Dict[str, Any]:
 @limiter.limit(f"{settings.rate_limit_requests}/minute")
 async def google_signin(
     google_request: GoogleSignInRequest,  # Renamed to avoid confusion
-    request: Request,  # ✅ Add this - required by SlowAPI
+    request: Request,  # Add this - required by SlowAPI
     db: AsyncSession = Depends(get_db)
 ):
     """Google Sign-In authentication endpoint."""
@@ -332,50 +322,59 @@ async def login(
 @router.post("/refresh", response_model=TokenResponse)
 @limiter.limit(f"{settings.rate_limit_requests}/minute")
 async def refresh_token(
-    refresh_request: RefreshTokenRequest,  # Renamed
-    request: Request,  # ✅ Add this - required by SlowAPI
+    refresh_request: RefreshTokenRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db)
 ):
     try:
         token_hash = hash_token(refresh_request.refresh_token)
-        
-        # Find refresh token
+
+        # Find token WITHOUT revoked/expiry filters — check separately
         result = await db.execute(
-            select(RefreshToken).where(
-                RefreshToken.token_hash == token_hash,
-                RefreshToken.revoked == False,
-                RefreshToken.expires_at > datetime.now(timezone.utc)
-            )
+            select(RefreshToken).where(RefreshToken.token_hash == token_hash)
         )
         refresh_token_record = result.scalar_one_or_none()
-        
+
         if not refresh_token_record:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid or expired refresh token"
+                detail="Invalid refresh token"
             )
-        
+
+        # Distinguish revoked (another device) vs expired (timeout)
+        if refresh_token_record.revoked:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Session expired due to login from another device"
+            )
+
+        if refresh_token_record.expires_at < datetime.now(timezone.utc):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Session expired, please log in again"
+            )
+
         # Get user
         result = await db.execute(
             select(User).where(User.user_id == refresh_token_record.user_id)
         )
         user = result.scalar_one_or_none()
-        
+
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="User not found"
             )
-        
-        # Revoke old refresh token
+
+        # Revoke old refresh token (token rotation)
         refresh_token_record.revoked = True
-        
+
         # Generate new tokens
         tokens = await generate_tokens(db, user)
-        
+
         logger.info(f"Token refresh successful for user: {user.email}")
         return TokenResponse(**tokens)
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -390,7 +389,7 @@ async def refresh_token(
 @limiter.limit(f"{settings.rate_limit_requests}/minute")
 async def logout(
     logout_request: LogoutRequest,  # Renamed
-    request: Request,  # ✅ Add this - required by SlowAPI
+    request: Request,  # Add this - required by SlowAPI
     db: AsyncSession = Depends(get_db)
 ):
     try:
@@ -432,7 +431,7 @@ async def enforce_free_plan_expiry(db: AsyncSession, user: User) -> User:
 
         if now > expires:
             user.subscription_tier = None  # Revoke access
-            # ❌ DO NOT touch free_plan_activated_at — keeps the one-time gate intact
+            # DO NOT touch free_plan_activated_at — keeps the one-time gate intact
             await db.commit()
             await db.refresh(user)
             print(f"⏰ Free plan expired for user {user.email} — tier reset to None")
