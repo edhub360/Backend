@@ -39,6 +39,9 @@ class MicrosoftSignInRequest(BaseModel):
     """Schema for Microsoft Sign-In request."""
     token: str = Field(..., description="Microsoft OAuth2 access token")
 
+class FacebookLoginRequest(BaseModel):
+    """Schema for Facebook Sign-In request."""
+    token: str = Field(..., description="Facebook OAuth2 access token from frontend")
 
 class EmailRegisterRequest(BaseModel):
     """Schema for email registration."""
