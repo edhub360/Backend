@@ -73,7 +73,7 @@ def decode_jwt_token(token: str) -> Dict[str, Any]:
 async def verify_google_token(token: str) -> Dict[str, Any]:
     """Verify Google OAuth2 access token and return user info."""
     try:
-        # ✅ Use Google userinfo endpoint instead of id_token verification
+        # Use Google userinfo endpoint instead of id_token verification
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 "https://www.googleapis.com/oauth2/v3/userinfo",
@@ -89,14 +89,14 @@ async def verify_google_token(token: str) -> Dict[str, Any]:
 
         idinfo = response.json()
 
-        # ✅ Check email verification
+        # Check email verification
         if not idinfo.get('email_verified', False):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email not verified by Google"
             )
 
-        # ✅ Extract user info
+        # Extract user info
         user_info = {
             'google_id': idinfo.get('sub'),
             'email': idinfo.get('email'),
@@ -141,7 +141,7 @@ async def verify_microsoft_token(token: str) -> Dict[str, Any]:
 
         profile = response.json()
 
-        # ✅ mail can be null for personal accounts — fallback to userPrincipalName
+        #  mail can be null for personal accounts — fallback to userPrincipalName
         email = profile.get('mail') or profile.get('userPrincipalName')
 
         if not email:
@@ -165,3 +165,54 @@ async def verify_microsoft_token(token: str) -> Dict[str, Any]:
             detail="Failed to verify Microsoft token"
         )
 
+async def verify_facebook_token(token: str) -> Dict[str, Any]:
+    """Verify Facebook access token via Graph API."""
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                "https://graph.facebook.com/me",
+                params={
+                    "fields": "id,name,email,picture",
+                    "access_token": token,
+                }
+            )
+
+        if response.status_code != 200:
+            logger.warning(f"Facebook Graph request failed: {response.status_code}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid Facebook token"
+            )
+
+        profile = response.json()
+
+        if "error" in profile:
+            logger.warning(f"Facebook token error: {profile['error']}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid Facebook token"
+            )
+
+        email = profile.get("email")
+
+        if not email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email not provided by Facebook account"
+            )
+
+        return {
+            "facebook_id": profile.get("id"),
+            "email": email,
+            "name": profile.get("name"),
+            "picture": profile.get("picture", {}).get("data", {}).get("url"),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Facebook token verification error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to verify Facebook token"
+        )
