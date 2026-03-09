@@ -7,3 +7,4 @@ pydantic[email]==2.9.2
 stripe==11.1.0
 python-dotenv==1.0.1
 python-jose[cryptography]==3.3.0
+fastapi-mail==1.4.1 
