@@ -44,6 +44,7 @@ class SubscriptionOut(BaseModel):
     id: UUID
     customer_id: UUID
     plan_id: UUID
+    plan_name: str
     status: str
     stripe_subscription_id: str
     current_period_start: datetime
@@ -70,3 +71,4 @@ class CustomerPortalRequest(BaseModel):
 class CustomerPortalResponse(BaseModel):
     url: str
 
+#redeploy
