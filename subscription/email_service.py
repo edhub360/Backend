@@ -5,25 +5,26 @@ import os
 
 load_dotenv()
 
-conf = ConnectionConfig(
-    MAIL_USERNAME=os.getenv("MAIL_USERNAME"),
-    MAIL_PASSWORD=os.getenv("MAIL_PASSWORD"),       # Gmail App Password
-    MAIL_FROM=os.getenv("MAIL_FROM"),
-    MAIL_FROM_NAME="StudentHub by Edhub360",
-    MAIL_PORT=587,
-    MAIL_SERVER="smtp.gmail.com",
-    MAIL_STARTTLS=True,
-    MAIL_SSL_TLS=False,
-    USE_CREDENTIALS=True,
-)
-
-# Dynamic URL based on environment
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 APP_URL = (
     "https://app.edhub360.com"
     if ENVIRONMENT == "production"
     else "https://edhub360.github.io/StudentHub"
 )
+
+def _get_mail_config() -> ConnectionConfig:
+    """ Lazy init — only called when email is actually sent, not at import time."""
+    return ConnectionConfig(
+        MAIL_USERNAME=os.getenv("MAIL_USERNAME"),
+        MAIL_PASSWORD=os.getenv("MAIL_PASSWORD"),
+        MAIL_FROM=os.getenv("MAIL_FROM"),
+        MAIL_FROM_NAME="StudentHub by Edhub360",
+        MAIL_PORT=587,
+        MAIL_SERVER="smtp.gmail.com",
+        MAIL_STARTTLS=True,
+        MAIL_SSL_TLS=False,
+        USE_CREDENTIALS=True,
+    )
 
 
 async def send_subscription_success_email(
@@ -34,9 +35,8 @@ async def send_subscription_success_email(
     currency: str,
     expires_at: datetime,
 ):
-    # Free plan — don't show amount
     amount_row = (
-        f"<li><b>Amount Paid:</b> Free</li>"
+        "<li><b>Amount Paid:</b> Free</li>"
         if amount == 0
         else f"<li><b>Amount Paid:</b> {currency.upper()} {amount:.2f}</li>"
     )
@@ -45,13 +45,13 @@ async def send_subscription_success_email(
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto;">
         <h2 style="color: #2563eb;">🎉 Subscription Activated – StudentHub</h2>
         <p>Hi <strong>{user_name}</strong>,</p>
-        <p>Your <strong>{plan_name}</strong> plan is now active. You have full access to StudentHub features.</p>
+        <p>Your <strong>{plan_name}</strong> plan is now active.</p>
         <ul>
             {amount_row}
             <li><b>Plan Expires On:</b> {expires_at.strftime('%B %d, %Y')}</li>
         </ul>
         <p>Happy learning! 🚀</p>
-        <a href="{APP_URL}" 
+        <a href="{APP_URL}"
            style="display:inline-block;background:#2563eb;color:white;padding:10px 24px;
                   border-radius:6px;text-decoration:none;font-weight:bold;margin-top:12px;">
             Go to Dashboard
@@ -67,7 +67,7 @@ async def send_subscription_success_email(
         body=body,
         subtype="html",
     )
-    fm = FastMail(conf)
+    fm = FastMail(_get_mail_config())   #  initialized here, not at import
     await fm.send_message(message)
 
 
@@ -113,5 +113,5 @@ async def send_subscription_expiry_email(
         body=body,
         subtype="html",
     )
-    fm = FastMail(conf)
+    fm = FastMail(_get_mail_config())   #  initialized here, not at import
     await fm.send_message(message)
