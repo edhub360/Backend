@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import stripe
 from dotenv import load_dotenv
 import os
+from sqlalchemy import text
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 from typing import List
@@ -13,6 +14,7 @@ from schema import *
 from db import get_db, engine
 from models import Base, User
 from auth import get_current_user
+from email_service import send_subscription_success_email, send_subscription_expiry_email
 
 
 load_dotenv()
@@ -50,28 +52,34 @@ async def create_checkout_session(
     request: CheckoutSessionRequest,
     db: AsyncSession = Depends(get_db)
 ):
-    # 1. Get/create customer
     customer = await get_customer(db, request.user_id)
     if not customer:
         stripe_cust_id = StripeClient.create_customer(str(request.user_id))
         customer = await create_customer(db, request.user_id, stripe_cust_id)
-    
-    # 2. Get price
+
     price = await get_plan_price(db, request.plan_id, request.billing_period)
     if not price:
         raise HTTPException(404, "Plan price not found")
-    
-    # 3. Create checkout WITH METADATA
-    frontend_url = "https://edhub360.github.io/StudentHub"
+
+    # Block free plan reuse
+    plan = await get_plan(db, request.plan_id)
+    if plan and plan.name.lower() == "free":
+        has_used = await has_used_free_plan(db, customer.id)
+        if has_used:
+            raise HTTPException(
+                status_code=403,
+                detail="Free plan has already been used. Please upgrade to a paid plan."
+            )
+
     url = StripeClient.create_checkout_session(
         customer.stripe_customer_id,
         price.stripe_price_id,
-        f"{frontend_url}/success",
-        f"{frontend_url}/cancel",
-        {"user_id": str(request.user_id)}  # ADD THIS LINE!
+        request.success_url,
+        request.cancel_url,
+        {"user_id": str(request.user_id)}
     )
-    
     return CheckoutSessionResponse(url=url)
+
 
 # ========== CACHE CONFIGURATION ==========
 PLANS_CACHE = None
@@ -106,17 +114,17 @@ async def get_cached_plans(db: AsyncSession):
             "id": str(plan.id),
             "name": plan.name,
             "description": plan.description,
-            "features_json": plan.features_json,  # ✅ Match schema field name
-            "is_active": plan.is_active,  # ✅ Add missing field
+            "features_json": plan.features_json,  #  Match schema field name
+            "is_active": plan.is_active,  # Add missing field
             "stripe_product_id": plan.stripe_product_id,
             "prices": [
                 {
                     "id": str(price.id),
-                    "billing_period": price.billing_period,  # ✅ Match schema field name
-                    "currency": price.currency,  # ✅ Match schema field name
+                    "billing_period": price.billing_period,  # Match schema field name
+                    "currency": price.currency,  # Match schema field name
                     "amount": float(price.amount),
                     "stripe_price_id": price.stripe_price_id,
-                    "is_active": price.is_active  # ✅ Add missing field
+                    "is_active": price.is_active  #  Add missing field
                 }
                 for price in plan.prices if price.is_active
             ]
@@ -135,45 +143,8 @@ async def get_plans(db: AsyncSession = Depends(get_db)):
     plans = await get_cached_plans(db)
     return plans
 
-@app.get("/free-plan-status")
-async def get_free_plan_status(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """Check user's free plan eligibility and status."""
-    now = datetime.now(timezone.utc)
 
-    # Never activated free plan
-    if current_user.free_plan_activated_at is None:
-        return {
-            "eligible": True,
-            "status": "not_used",
-            "message": "Free plan available"
-        }
-
-    expires = current_user.free_plan_expires_at.astimezone(timezone.utc) if current_user.free_plan_expires_at else None
-
-    # Free plan still active
-    if expires and now < expires:
-        remaining = expires - now
-        return {
-            "eligible": False,
-            "status": "active",
-            "message": "Free plan active",
-            "expires_at": current_user.free_plan_expires_at.isoformat(),
-            "days_remaining": remaining.days
-        }
-
-    # Free plan expired
-    return {
-        "eligible": False,
-        "status": "expired",
-        "message": "Free plan expired. Please upgrade.",
-        "expired_at": current_user.free_plan_expires_at.isoformat() if current_user.free_plan_expires_at else None
-    }
-
-
-@app.get("/subscriptions/{user_id}")  # ✅ Remove response_model=SubscriptionOut
+@app.get("/subscriptions/{user_id}")  # Remove response_model=SubscriptionOut
 async def get_subscription_by_user_id(
     user_id: UUID,
     db: AsyncSession = Depends(get_db)
@@ -253,23 +224,23 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     print(f"🔔 Webhook Event: {event['type']}")
     
     if event['type'] == 'checkout.session.completed':
-        print("✅ CHECKOUT SESSION COMPLETED TRIGGERED!")  # ADD THIS
+        print(" CHECKOUT SESSION COMPLETED TRIGGERED!")
         
         session = event['data']['object']
-        print(f"📦 Session ID: {session.get('id')}")  # ADD THIS
-        print(f"💳 Subscription: {session.get('subscription')}")  # ADD THIS
-        print(f"👤 Metadata: {session.get('metadata')}")  # ADD THIS
+        print(f"📦 Session ID: {session.get('id')}")
+        print(f"💳 Subscription: {session.get('subscription')}")
+        print(f"👤 Metadata: {session.get('metadata')}")
         
         parsed = StripeClient.parse_checkout_session(session)
-        print(f"🔍 Parsed: {parsed}")  # ADD THIS - CRITICAL!
+        print(f"🔍 Parsed: {parsed}")
         
         if parsed['subscription_id'] and parsed['user_id']:
-            print("✅ ENTERING IF BLOCK - Has sub_id + user_id")  # ADD THIS
+            print(" ENTERING IF BLOCK - Has sub_id + user_id")
             
             user_id = UUID(parsed['user_id'])
             stripe_sub_id = parsed['subscription_id']
             
-            # ✅ CHECK IF SUBSCRIPTION ALREADY EXISTS
+            # CHECK IF SUBSCRIPTION ALREADY EXISTS
             existing_sub = await get_subscription_by_stripe_id(db, stripe_sub_id)
             if existing_sub:
                 print(f"⚠️ Subscription already exists: {stripe_sub_id}")
@@ -277,18 +248,24 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
             
             stripe_sub = StripeClient.retrieve_subscription(stripe_sub_id)
             plan_price_id = stripe_sub['items']['data'][0]['price']['id']
-            
             print(f"🔍 Looking for price: {plan_price_id}")
             
             price = await get_plan_price_by_stripe_id(db, plan_price_id)
-            print(f"✅ Price found: {price}")
+            print(f" Price found: {price}")
             
             customer = await get_customer(db, user_id)
             print(f"👤 Customer: {customer}")
             
             if price and customer:
+                # STEP 1: Fetch plan FIRST before using it
+                plan = await get_plan(db, price.plan_id)
+                if not plan:
+                    print(f"❌ Plan not found: {price.plan_id}")
+                    return {"status": "ok"}
+
+                # STEP 2: Create subscription in DB
                 await create_subscription(
-                    db, 
+                    db,
                     customer.id,
                     price.plan_id,
                     parsed['subscription_id'],
@@ -297,24 +274,39 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
                 )
                 print("🎉 Subscription created!")
 
-                # Update user's subscription_tier with plan name
-                plan = await get_plan(db, price.plan_id)
-                if plan:
-                    from sqlalchemy import text
-                    await db.execute(
-                        text("UPDATE stud_hub_schema.users SET subscription_tier = :tier WHERE user_id = :user_id"),
-                        {"tier": plan.name.lower(), "user_id": str(user_id)}  # Use plan name
-                    )
-                    await db.commit()
-                    print(f"✅ User subscription_tier updated to: {plan.name}")
-                else:
-                    print(f"❌ Plan not found: {price.plan_id}")
+                # STEP 3: Update subscription_tier
+                from sqlalchemy import text
+                await db.execute(
+                    text("UPDATE stud_hub_schema.users SET subscription_tier = :tier WHERE user_id = :user_id"),
+                    {"tier": plan.name.lower(), "user_id": str(user_id)}
+                )
+                await db.commit()
+                print(f" User subscription_tier updated to: {plan.name}")
 
+                # STEP 4: Send success email (non-blocking)
+                try:
+                    user_result = await db.execute(
+                        text("SELECT email, name FROM stud_hub_schema.users WHERE user_id = :user_id"),
+                        {"user_id": str(user_id)}
+                    )
+                    user_row = user_result.fetchone()
+                    if user_row:
+                        await send_subscription_success_email(
+                            to_email=user_row.email,
+                            user_name=user_row.name,
+                            plan_name=plan.name,
+                            amount=session.get("amount_total", 0) / 100,
+                            currency=session.get("currency", "inr"),
+                            expires_at=datetime.fromtimestamp(stripe_sub['current_period_end'])
+                        )
+                        print(f"📧 Success email sent to {user_row.email}")
+                except Exception as e:
+                    print(f"❌ Email send failed (non-blocking): {e}")
             else:
-                print(f"❌ FAILED - price: {price}, customer: {customer}")  # ADD THIS
+                print(f"❌ FAILED - price: {price}, customer: {customer}")
         else:
-            print(f"❌ IF CONDITION FAILED - sub_id: {parsed.get('subscription_id')}, user_id: {parsed.get('user_id')}")  # ADD THIS
-    
+            print(f"❌ IF CONDITION FAILED - sub_id: {parsed.get('subscription_id')}, user_id: {parsed.get('user_id')}")
+
     #elif event['type'] == 'invoice.payment_succeeded':
         #pass
     
@@ -385,7 +377,7 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
                 cancelled_at=datetime.fromtimestamp(subscription['canceled_at']) if subscription.get('canceled_at') else None
             )
 
-            # ✅ ADD THIS: Update user's subscription_tier to NULL when deleted
+            # ADD THIS: Update user's subscription_tier to NULL when deleted
             from sqlalchemy import text
             await db.execute(
                 text("UPDATE stud_hub_schema.users SET subscription_tier = NULL WHERE user_id = (SELECT user_id FROM stud_hub_schema.customers WHERE id = :customer_id)"),
@@ -393,6 +385,32 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
             )
             await db.commit()
             print("🛑 Subscription ended/deleted, user tier reset")
+
+            # SEND EXPIRY/CANCELLATION EMAIL
+            try:
+                from sqlalchemy import text as text2
+                user_result = await db.execute(
+                    text2("""
+                        SELECT u.email, u.name 
+                        FROM stud_hub_schema.users u
+                        JOIN stud_hub_schema.customers c ON c.user_id = u.user_id
+                        WHERE c.id = :customer_id
+                    """),
+                    {"customer_id": str(db_sub.customer_id)}
+                )
+                user_row = user_result.fetchone()
+                if user_row:
+                    await send_subscription_expiry_email(
+                        to_email=user_row.email,
+                        user_name=user_row.name,
+                        plan_name="your plan",          # or fetch plan name via db_sub.plan_id
+                        expires_at=datetime.utcnow(),
+                        days_remaining=0
+                    )
+                    print(f"📧 Expiry email sent to {user_row.email}")
+            except Exception as e:
+                print(f"❌ Expiry email failed (non-blocking): {e}")
+
 
     # ========== NEW: PRODUCT CREATED ==========
     elif event['type'] == 'product.created':
@@ -462,6 +480,8 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
 
     return {"status": "ok"}
 
+# ========== PAYMENT METHODS ==========
+
 @app.get("/payment-methods/{user_id}")
 async def get_payment_methods(
     user_id: UUID,
@@ -469,17 +489,15 @@ async def get_payment_methods(
 ):
     """Get user's payment methods from Stripe"""
     try:
-        # Get customer
         customer = await get_customer(db, user_id)
         if not customer:
             return {
                 "payment_methods": [],
                 "has_payment_method": False
             }
-        
-        # Fetch payment methods from Stripe
+
         payment_methods = StripeClient.get_payment_methods(customer.stripe_customer_id)
-        
+
         return {
             "payment_methods": payment_methods,
             "has_payment_method": len(payment_methods) > 0
@@ -488,41 +506,46 @@ async def get_payment_methods(
         print(f"❌ Error fetching payment methods: {str(e)}")
         raise HTTPException(500, f"Failed to fetch payment methods: {str(e)}")
 
-from fastapi import FastAPI, Depends, HTTPException
-from stripe_client import StripeClient
 
-# ✅ ADD THIS: Request schema for customer portal
+# ========== CUSTOMER PORTAL ==========
+
 class CustomerPortalRequest(BaseModel):
     user_id: str
 
+
 @app.post("/create-customer-portal-session")
 async def create_customer_portal_session(
-    request: CustomerPortalRequest,  # ← Use Pydantic model
+    request: CustomerPortalRequest,
     db: AsyncSession = Depends(get_db)
 ):
     """Create Stripe Customer Portal session"""
     try:
         user_id = UUID(request.user_id)
         print(f"🔍 Creating portal for user: {user_id}")
-        
-        # Get customer
+
         customer = await get_customer(db, user_id)
         if not customer:
             print(f"❌ Customer not found for user: {user_id}")
             raise HTTPException(status_code=404, detail="Customer not found. Please subscribe first.")
-        
-        print(f"✅ Found customer: {customer.stripe_customer_id}")
-        
-        # Create portal session
+
+        print(f" Found customer: {customer.stripe_customer_id}")
+
+        #  Dynamic return URL — no hardcoding
+        environment = os.getenv("ENVIRONMENT", "development")
+        return_url = (
+            "https://app.edhub360.com"
+            if environment == "production"
+            else "https://edhub360.github.io/StudentHub/"
+        )
+
         portal_url = StripeClient.create_customer_portal_session(
             customer.stripe_customer_id,
-            return_url="https://edhub360.github.io/StudentHub/"
+            return_url=return_url
         )
-        
-        print(f"✅ Portal URL created: {portal_url}")
-        
+
+        print(f" Portal URL created: {portal_url}")
         return {"url": portal_url}
-    
+
     except ValueError as e:
         print(f"❌ Invalid user_id format: {str(e)}")
         raise HTTPException(status_code=400, detail="Invalid user_id format")
@@ -532,118 +555,9 @@ async def create_customer_portal_session(
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to create portal session: {str(e)}")
 
-from datetime import timezone as tz
 
-@app.post("/activate-subscription")
-async def activate_subscription(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """Activate free plan for first-time users. Valid for 7 days, one-time only."""
-    print(f"\n{'='*60}")
-    print(f" DEBUG: ACTIVATE SUBSCRIPTION endpoint called")
-    print(f" DEBUG: User: {current_user.email}")
-    print(f" DEBUG: Current subscription_tier: {current_user.subscription_tier}")
-    print(f"{'='*60}\n")
-
-    try:
-        # GATE 1: User has already used the free plan before (even if expired)
-        if current_user.free_plan_activated_at is not None:
-            # Check if it's currently still active (not yet expired)
-            now = datetime.now(tz.utc)
-            expires = current_user.free_plan_expires_at.replace(tzinfo=tz.utc) if current_user.free_plan_expires_at else None
-
-            if expires and now < expires:
-                # Still active
-                return {
-                    "message": "Free plan is already active",
-                    "subscription_tier": "free",
-                    "status": "already_active",
-                    "expires_at": current_user.free_plan_expires_at.isoformat()
-                }
-            else:
-                # Expired — block re-activation
-                raise HTTPException(
-                    status_code=403,
-                    detail={
-                        "message": "Free plan has already been used and expired. Please upgrade to a paid plan.",
-                        "status": "free_plan_expired",
-                        "expired_at": current_user.free_plan_expires_at.isoformat() if current_user.free_plan_expires_at else None
-                    }
-                )
-
-        # GATE 2: User already has a paid active subscription
-        if current_user.subscription_tier and current_user.subscription_tier != "free":
-            return {
-                "message": "Subscription already active",
-                "subscription_tier": current_user.subscription_tier,
-                "status": "already_active"
-            }
-
-        # Activate free plan with 7-day validity
-        now = datetime.now(tz.utc)
-        expires_at = now + timedelta(days=7)
-
-        current_user.subscription_tier = "free"
-        current_user.free_plan_activated_at = now
-        current_user.free_plan_expires_at = expires_at
-
-        await db.commit()
-        await db.refresh(current_user)
-
-        print(f" DEBUG: Free plan activated. Expires at: {expires_at.isoformat()}")
-
-        return {
-            "message": "Free plan activated successfully",
-            "subscription_tier": "free",
-            "status": "activated",
-            "activated_at": now.isoformat(),
-            "expires_at": expires_at.isoformat()
-        }
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f" DEBUG: Activation error: {str(e)}")
-        await db.rollback()
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to activate subscription: {str(e)}"
-        )
-
-@app.get("/free-plan-status")
-async def get_free_plan_status(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """Check the user's free plan eligibility and status."""
-    now = datetime.now(tz.utc)
-
-    if current_user.free_plan_activated_at is None:
-        return {
-            "eligible": True,
-            "status": "not_used",
-            "message": "Free plan available"
-        }
-
-    expires = current_user.free_plan_expires_at.replace(tzinfo=tz.utc) if current_user.free_plan_expires_at else None
-
-    if expires and now < expires:
-        remaining = expires - now
-        return {
-            "eligible": False,
-            "status": "active",
-            "message": "Free plan is currently active",
-            "expires_at": current_user.free_plan_expires_at.isoformat(),
-            "days_remaining": remaining.days
-        }
-
-    return {
-        "eligible": False,
-        "status": "expired",
-        "message": "Free plan has been used and expired. Upgrade to continue.",
-        "expired_at": current_user.free_plan_expires_at.isoformat() if current_user.free_plan_expires_at else None
-    }
+#  DELETE /activate-subscription — free plan now goes through Stripe checkout
+#  DELETE /free-plan-status — no longer needed
 
 
 if __name__ == "__main__":

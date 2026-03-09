@@ -2,12 +2,13 @@ import stripe
 from typing import Optional, List, Dict
 from dotenv import load_dotenv
 import os
-from datetime import datetime
 
 load_dotenv()
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
+
 class StripeClient:
+
     @staticmethod
     def create_customer(user_id: str, email: Optional[str] = None) -> str:
         """Create Stripe customer with metadata"""
@@ -16,37 +17,35 @@ class StripeClient:
         }
         if email:
             customer_data["email"] = email
-            
+
         customer = stripe.Customer.create(**customer_data)
         return customer.id
 
+
     @staticmethod
     def create_checkout_session(
-        customer_id: str, 
-        price_id: str, 
-        success_url: str, 
+        customer_id: str,
+        price_id: str,
+        success_url: str,       # already includes ?session_id= from frontend
         cancel_url: str,
-        metadata: dict = None,  # ADD THIS
+        metadata: dict = None,
         mode: str = "subscription"
     ) -> str:
         """Create Stripe Checkout session"""
-        
+
         params = {
             "customer": customer_id,
             "mode": mode,
             "payment_method_types": ["card"],
-            "line_items": [{
-                "price": price_id, 
-                "quantity": 1
-            }],
-            "success_url": success_url + "?session_id={CHECKOUT_SESSION_ID}",
+            "line_items": [{"price": price_id, "quantity": 1}],
+            "success_url": success_url,   # no appending — frontend sends complete URL
             "cancel_url": cancel_url,
+            "payment_method_collection": "if_required",  # skips card for ₹0 free plan
         }
-        
-        # ADD METADATA IF PROVIDED
+
         if metadata:
             params["metadata"] = metadata
-        
+
         session = stripe.checkout.Session.create(**params)
         return session.url
 
@@ -59,10 +58,12 @@ class StripeClient:
             cancel_at_period_end=cancel_at_period_end
         )
 
+
     @staticmethod
     def retrieve_subscription(sub_id: str):
         """Get full subscription details"""
         return stripe.Subscription.retrieve(sub_id)
+
 
     @staticmethod
     def get_webhook_event(payload: bytes, sig_header: str, webhook_secret: str):
@@ -77,6 +78,7 @@ class StripeClient:
         except stripe.error.SignatureVerificationError:
             raise Exception("Invalid signature")
 
+
     @staticmethod
     def parse_checkout_session(session: dict):
         """Extract data from checkout.session.completed"""
@@ -86,7 +88,8 @@ class StripeClient:
             "user_id": session["metadata"].get("user_id"),
             "payment_status": session.get("payment_status")
         }
-    
+
+
     @staticmethod
     def get_payment_methods(stripe_customer_id: str) -> List[Dict]:
         """Get all payment methods for a customer"""
@@ -95,11 +98,9 @@ class StripeClient:
                 customer=stripe_customer_id,
                 type="card"
             )
-            
-            # Get customer's default payment method
             customer = stripe.Customer.retrieve(stripe_customer_id)
             default_pm_id = customer.invoice_settings.default_payment_method
-            
+
             return [
                 {
                     "id": pm.id,
@@ -114,7 +115,8 @@ class StripeClient:
         except Exception as e:
             print(f"❌ Stripe payment method fetch error: {str(e)}")
             return []
-        
+
+
     @staticmethod
     def create_customer_portal_session(customer_id: str, return_url: str) -> str:
         """Create Stripe Customer Portal session"""
@@ -124,7 +126,7 @@ class StripeClient:
                 customer=customer_id,
                 return_url=return_url,
             )
-            print(f"✅ Portal session created successfully")
+            print(f" Portal session created successfully")
             return session.url
         except stripe.error.StripeError as e:
             print(f"❌ Stripe API error: {str(e)}")
@@ -132,4 +134,3 @@ class StripeClient:
         except Exception as e:
             print(f"❌ Unexpected error: {str(e)}")
             raise
-
