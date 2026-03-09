@@ -144,45 +144,28 @@ async def get_plans(db: AsyncSession = Depends(get_db)):
     return plans
 
 
-@app.get("/subscriptions/{user_id}")  # Remove response_model=SubscriptionOut
+@app.get("/subscriptions/{user_id}")
 async def get_subscription_by_user_id(
     user_id: UUID,
     db: AsyncSession = Depends(get_db)
 ):
-    """Get subscription by user ID — handles both free and paid plans."""
+    """Get subscription by user ID — Stripe-only plans."""
 
-    # Check Stripe subscription first (paid plans)
     sub = await get_user_subscription(db, user_id)
     if sub:
-        return sub
-
-    # No Stripe sub — check free plan on users table
-    from sqlalchemy import text
-    result = await db.execute(
-        text("""
-            SELECT subscription_tier, free_plan_activated_at, free_plan_expires_at
-            FROM stud_hub_schema.users
-            WHERE user_id = :user_id
-        """),
-        {"user_id": str(user_id)}
-    )
-    user_row = result.fetchone()
-
-    if user_row and user_row.subscription_tier == 'free':
-        now = datetime.now(timezone.utc)
-        expires = user_row.free_plan_expires_at
-        is_active = expires and expires.astimezone(timezone.utc) > now
-
         return {
-            "type": "free",
-            "plan": "free",
-            "status": "active" if is_active else "expired",
-            "current_period_start": user_row.free_plan_activated_at.isoformat() if user_row.free_plan_activated_at else None,
-            "current_period_end": user_row.free_plan_expires_at.isoformat() if user_row.free_plan_expires_at else None,
-            "expires_at": user_row.free_plan_expires_at.isoformat() if expires else None
+            "type": "paid",
+            "plan": sub.plan_name,
+            "status": sub.status,
+            "current_period_start": sub.current_period_start.isoformat() if sub.current_period_start else None,
+            "current_period_end": sub.current_period_end.isoformat() if sub.current_period_end else None,
+            "cancel_at": sub.cancel_at.isoformat() if sub.cancel_at else None,
+            "stripe_subscription_id": sub.stripe_subscription_id,
         }
 
-    raise HTTPException(404, "No active subscription")
+    # No Stripe sub = no subscription at all (free plan columns removed)
+    raise HTTPException(status_code=404, detail="No active subscription")
+
 
 
 @app.get("/subscriptions/me", response_model=SubscriptionOut)
