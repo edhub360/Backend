@@ -32,6 +32,9 @@ class CheckoutSessionRequest(BaseModel):
     user_id: UUID
     plan_id: UUID
     billing_period: str = Field(..., pattern="^(monthly|yearly)$")
+    success_url: str = Field(..., description="Frontend success redirect URL")
+    cancel_url: str = Field(..., description="Frontend cancel redirect URL")
+
 
 class CheckoutSessionResponse(BaseModel):
     url: str
