@@ -20,11 +20,7 @@ class User(Base):
     study_goals = Column(JSONB)
     device_info = Column(JSONB)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-
-    # ✅ ADD THESE - free plan tracking columns
-    free_plan_activated_at = Column(DateTime(timezone=True), nullable=True)
-    free_plan_expires_at   = Column(DateTime(timezone=True), nullable=True)
-    
+ 
     # Relationships
     auth_credentials = relationship("AuthCredential", back_populates="user", cascade="all, delete-orphan")
     refresh_tokens = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")
