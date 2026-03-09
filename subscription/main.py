@@ -12,7 +12,7 @@ from stripe_client import StripeClient
 from crud import *
 from schema import *
 from db import get_db, engine
-from models import Base, User
+from models import Base
 from auth import get_current_user
 from email_service import send_subscription_success_email, send_subscription_expiry_email
 
