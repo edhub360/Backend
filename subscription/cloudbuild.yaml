@@ -1,45 +1,53 @@
 steps:
-  # 1. Build and push Subscription backend
+  # 1. Build
   - name: 'gcr.io/cloud-builders/docker'
     args: [
       'build', 
-      '-t', 'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/subscription-repo/subscription-service:${SHORT_SHA}-${BUILD_ID}', 
+      '-t', 'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/subscription-repo/subscription-service:$SHORT_SHA-$BUILD_ID', 
       './subscription'
     ]
 
+  # 2. Push
   - name: 'gcr.io/cloud-builders/docker'
     args: [
       'push', 
-      'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/subscription-repo/subscription-service:${SHORT_SHA}-${BUILD_ID}'
+      'us-central1-docker.pkg.dev/arctic-sentry-467317-s7/subscription-repo/subscription-service:$SHORT_SHA-$BUILD_ID'
     ]
 
-  # 2. Deploy to Cloud Run using secrets from Secret Manager
+  # 3. Deploy
   - name: 'gcr.io/cloud-builders/gcloud'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
-        export DATABASE_URL=$(gcloud secrets versions access latest --secret="DATABASE_URL")
-        export STRIPE_SECRET_KEY=$(gcloud secrets versions access latest --secret="STRIPE_SECRET_KEY")
-        export STRIPE_WEBHOOK_SECRET=$(gcloud secrets versions access latest --secret="STRIPE_WEBHOOK_SECRET")
-        export JWT_SECRET_KEY=$(gcloud secrets versions access latest --secret="JWT_SECRET_KEY")
-        export JWT_ALGORITHM=$(gcloud secrets versions access latest --secret="JWT_ALGORITHM")
-        export MAIL_USERNAME=$(gcloud secrets versions access latest --secret="MAIL_USERNAME")
-        export MAIL_PASSWORD=$(gcloud secrets versions access latest --secret="MAIL_PASSWORD")
-        export MAIL_FROM=$(gcloud secrets versions access latest --secret="MAIL_FROM")
+        DATABASE_URL=$(gcloud secrets versions access latest --secret="DATABASE_URL")
+        STRIPE_SECRET_KEY=$(gcloud secrets versions access latest --secret="STRIPE_SECRET_KEY")
+        STRIPE_WEBHOOK_SECRET=$(gcloud secrets versions access latest --secret="STRIPE_WEBHOOK_SECRET")
+        JWT_SECRET_KEY=$(gcloud secrets versions access latest --secret="JWT_SECRET_KEY")
+        JWT_ALGORITHM=$(gcloud secrets versions access latest --secret="JWT_ALGORITHM")
+        MAIL_USERNAME=$(gcloud secrets versions access latest --secret="MAIL_USERNAME")
+        MAIL_PASSWORD=$(gcloud secrets versions access latest --secret="MAIL_PASSWORD")
+        MAIL_FROM=$(gcloud secrets versions access latest --secret="MAIL_FROM")
 
         gcloud run deploy subscription-service \
           --region=us-central1 \
-          --image=us-central1-docker.pkg.dev/arctic-sentry-467317-s7/subscription-repo/subscription-service:${SHORT_SHA}-${BUILD_ID} \
+          --image=us-central1-docker.pkg.dev/arctic-sentry-467317-s7/subscription-repo/subscription-service:$SHORT_SHA-$BUILD_ID \
           --platform=managed \
           --allow-unauthenticated \
           --memory=1Gi --cpu=1 --timeout=300 --max-instances=10 --port=8000 \
           --add-cloudsql-instances=arctic-sentry-467317-s7:us-central1:studenthub \
-          --set-env-vars=ENVIRONMENT=production,DATABASE_URL=$${DATABASE_URL},STRIPE_SECRET_KEY=$${STRIPE_SECRET_KEY},STRIPE_WEBHOOK_SECRET=$${STRIPE_WEBHOOK_SECRET},JWT_SECRET_KEY=$${JWT_SECRET_KEY},JWT_ALGORITHM=$${JWT_ALGORITHM},MAIL_USERNAME=$$MAIL_USERNAME,MAIL_PASSWORD=$MAIL_PASSWORD,MAIL_FROM=$$MAIL_FROM
+          --set-env-vars="ENVIRONMENT=production" \
+          --set-env-vars="DATABASE_URL=${DATABASE_URL}" \
+          --set-env-vars="STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}" \
+          --set-env-vars="STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}" \
+          --set-env-vars="JWT_SECRET_KEY=${JWT_SECRET_KEY}" \
+          --set-env-vars="JWT_ALGORITHM=${JWT_ALGORITHM}" \
+          --set-env-vars="MAIL_USERNAME=${MAIL_USERNAME}" \
+          --set-env-vars="MAIL_PASSWORD=${MAIL_PASSWORD}" \
+          --set-env-vars="MAIL_FROM=${MAIL_FROM}"
 
 options:
   defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET
 
 images:
-  - 'us-central1-docker.pkg.dev/$PROJECT_ID/subscription-repo/subscription-service:${SHORT_SHA}-${BUILD_ID}'
- 
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/subscription-repo/subscription-service:$SHORT_SHA-$BUILD_ID'
