@@ -258,6 +258,7 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
                 print("🎉 Subscription created!")
 
                 # STEP 3: Update subscription_tier
+                from sqlalchemy import text
                 await db.execute(
                     text("UPDATE stud_hub_schema.users SET subscription_tier = :tier WHERE user_id = :user_id"),
                     {"tier": plan.name.lower(), "user_id": str(user_id)}
