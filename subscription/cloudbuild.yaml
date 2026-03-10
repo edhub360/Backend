@@ -24,6 +24,9 @@ steps:
         export STRIPE_WEBHOOK_SECRET=$(gcloud secrets versions access latest --secret="STRIPE_WEBHOOK_SECRET")
         export JWT_SECRET_KEY=$(gcloud secrets versions access latest --secret="JWT_SECRET_KEY")
         export JWT_ALGORITHM=$(gcloud secrets versions access latest --secret="JWT_ALGORITHM")
+        export MAIL_USERNAME=$(gcloud secrets versions access latest --secret="MAIL_USERNAME")
+        export MAIL_PASSWORD=$(gcloud secrets versions access latest --secret="MAIL_PASSWORD")
+        export MAIL_FROM=$(gcloud secrets versions access latest --secret="MAIL_FROM")
 
         gcloud run deploy subscription-service \
           --region=us-central1 \
