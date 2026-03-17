@@ -14,13 +14,14 @@ steps:
     ]
 
   # 2. Deploy to Cloud Run using secrets from Secret Manager
+  # Updated stripe secret key and webhook secret
   - name: 'gcr.io/cloud-builders/gcloud'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
         export DATABASE_URL=$$(gcloud secrets versions access latest --secret="DATABASE_URL")
-        export STRIPE_SECRET_KEY=$$(gcloud secrets versions access latest --secret="STRIPE_SECRET_KEY")
+        export STRIPE_SECRET_KEY=$$(gcloud secrets versions access latest --secret="STRIPE_SECRET_KEY")                  
         export STRIPE_WEBHOOK_SECRET=$$(gcloud secrets versions access latest --secret="STRIPE_WEBHOOK_SECRET")
         export JWT_SECRET_KEY=$$(gcloud secrets versions access latest --secret="JWT_SECRET_KEY")
         export JWT_ALGORITHM=$$(gcloud secrets versions access latest --secret="JWT_ALGORITHM")
