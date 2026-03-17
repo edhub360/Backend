@@ -5,7 +5,7 @@ redis_client: aioredis.Redis = None
 
 def init_redis():
     global redis_client
-    # ✅ Convert redis:// → rediss:// for TLS (Upstash requires this)
+    # Convert redis:// → rediss:// for TLS (Upstash requires this)
     redis_url = settings.REDIS_URL.replace("redis://", "rediss://")
     redis_client = aioredis.from_url(
         redis_url,
