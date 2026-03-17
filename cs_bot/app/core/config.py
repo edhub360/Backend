@@ -6,11 +6,11 @@ class Settings(BaseSettings):
 
     GEMINI_API_KEY: str
     DATABASE_URL: str        # comes in as postgresql+asyncpg://...
-    REDIS_URL: str
+    REDIS_URL: str           # comes in as redis://... (Upstash provides this format)
 
     ADMIN_KEY: str = "edhub360-admin-secret"
     CHAT_MODEL: str = "gemini-2.5-flash"
-    EMBEDDING_MODEL: str = "models/gemini-embedding-001"   # ✅ matches your notebook service
+    EMBEDDING_MODEL: str = "models/gemini-embedding-001"   # matches your notebook service
     VECTOR_COLLECTION: str = "website_docs"
     RETRIEVER_TOP_K: int = 4
     SESSION_TTL_SECONDS: int = 3600
