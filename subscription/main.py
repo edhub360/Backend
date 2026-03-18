@@ -197,12 +197,14 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature")
     
+    webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
+    print(f"🔑 Webhook secret loaded: {bool(webhook_secret)} | starts with: {str(webhook_secret)[:10] if webhook_secret else 'NONE'}")
+    
     try:
-        event = StripeClient.get_webhook_event(
-            payload, sig_header, os.getenv("STRIPE_WEBHOOK_SECRET")
-        )
-    except Exception:
-        raise HTTPException(status_code=400, detail="Webhook signature failed")
+        event = StripeClient.get_webhook_event(payload, sig_header, webhook_secret)
+    except Exception as e:
+        print(f"❌ Webhook error: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
     
     print(f"🔔 Webhook Event: {event['type']}")
     
