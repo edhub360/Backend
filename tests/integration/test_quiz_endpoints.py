@@ -40,13 +40,13 @@ class TestQuizEndpoints:
     @pytest.mark.asyncio
     async def test_list_quizzes(self, test_session, setup_test_data):
         """Test listing all quizzes"""
-        data = await setup_test_data
+        data = setup_test_data
         assert data["quiz"] is not None
     
     @pytest.mark.asyncio
     async def test_get_quiz_by_id(self, test_session, setup_test_data):
         """Test retrieving a quiz by ID"""
-        data = await setup_test_data
+        data = setup_test_data
         quiz = data["quiz"]
         
         assert quiz.quiz_id is not None
@@ -55,7 +55,7 @@ class TestQuizEndpoints:
     @pytest.mark.asyncio
     async def test_update_quiz(self, test_session, setup_test_data):
         """Test updating a quiz"""
-        data = await setup_test_data
+        data = setup_test_data
         quiz = data["quiz"]
         
         quiz.title = "Updated Title"
