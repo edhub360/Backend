@@ -14,7 +14,7 @@ steps:
     ]
 
   # 2. Deploy to Cloud Run using secrets from Secret Manager
-  # Updated stripe secret key and webhook secret
+  # Updated Testmode stripe secret key and webhook secret
   - name: 'gcr.io/cloud-builders/gcloud'
     entrypoint: 'bash'
     args:
