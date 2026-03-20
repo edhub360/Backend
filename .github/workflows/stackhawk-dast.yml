@@ -1,0 +1,37 @@
+name: "StackHawk DAST Scan"
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  hawkscan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Start your application (example: Python backend + React frontend)
+      - name: Start backend
+        run: |
+          pip install -r backend/requirements.txt
+          python backend/app.py &
+      
+      - name: Start frontend
+        run: |
+          cd frontend
+          npm install
+          npm run build
+          npm start &
+      
+      # Wait for app to be ready
+      - name: Wait for services
+        run: sleep 20
+
+      # Run StackHawk DAST Scan
+      - name: Run HawkScan
+        uses: stackhawk/hawkscan-action@v2
+        with:
+          apiKey: ${{ secrets.HAWK_API_KEY }}
+          configFile: stackhawk.yml
