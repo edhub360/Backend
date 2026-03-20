@@ -15,7 +15,7 @@ jobs:
       # Start your application (example: Python backend + React frontend)
       - name: Start backend
         run: |
-          pip install -r backend/login/requirements.txt
+          pip install -r Backend/login/requirements.txt
           python backend/login/app/main.py &
       
       - name: Start frontend
