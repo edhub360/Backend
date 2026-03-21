@@ -1,5 +1,7 @@
 name: "CodeQL SAST Scan"
-on: [main]
+on: 
+  push: 
+    branches: [main]
 jobs:
   analyze:
     runs-on: ubuntu-latest
