@@ -10,8 +10,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  #    - name: Checkout code
+  #     uses: actions/checkout@v4
 
       # Start your application (example: Python backend + React frontend)
       - name: Start backend
