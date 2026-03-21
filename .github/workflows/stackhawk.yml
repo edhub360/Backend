@@ -1,7 +1,7 @@
 app:
-  applicationId: "your-app-id"
+  applicationId: "4b5f3a26-ac09-4399-a0d8-c6298a8c16ce"
   env: "development"
-  host: "https://edhub360.github.io/StudentHub"
+  host: "https://app.edhub360.com"
 
 hawk:
   spider:
