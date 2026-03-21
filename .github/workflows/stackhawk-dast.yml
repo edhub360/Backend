@@ -2,8 +2,9 @@ name: "StackHawk DAST Scan"
 
 on:
   push:
+    branches: [main]
   pull_request:
-
+    branches: [main]
 jobs:
   hawkscan:
     runs-on: ubuntu-latest
