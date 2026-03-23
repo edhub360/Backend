@@ -1,10 +1,10 @@
-name: DummyTests
+#name: DummyTests
 
-on:
-  push:
+#on:
+#  push:
 #    branches: [ feature ]
   # branches: [ main, staging, feature ]
-  pull_request:
+#  pull_request:
 #    branches: [ feature ]
 
 jobs:
