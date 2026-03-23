@@ -23,6 +23,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
+        working-directory: Backend
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements-test.txt
@@ -33,6 +34,7 @@ jobs:
 #         pip install pytest pytest-asyncio pytest-mock httpx
 
       - name: Run AIChat tests
+        working-directory: Backend
         env:
           PYTHONPATH: .   # fixes "No module named app"
         run: |
