@@ -2,10 +2,10 @@ name: Tests
 
 on:
   push:
-    branches: [ feature ]
+#    branches: [ feature ]
   # branches: [ main, staging, feature ]
   pull_request:
-    branches: [ feature ]
+#    branches: [ feature ]
 
 jobs:
   test:
