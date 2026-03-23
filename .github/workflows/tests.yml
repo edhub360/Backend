@@ -5,13 +5,15 @@ on:
     branches: [feature]
   pull_request:
     branches: [feature]
+
 jobs:
   tests:
     runs-on: ubuntu-latest
+
     strategy:
       matrix:
-            python-version: ['3.12']
-            
+        python-version: ['3.12']
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -22,14 +24,25 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
+        working-directory: Backend
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements-test.txt
 
-      - name: Set PYTHONPATH 
-      run: echo "PYTHONPATH=$PYTHONPATH:$(pwd)" >> $GITHUB_ENV
+      - name: Set PYTHONPATH
+        working-directory: Backend
+        run: echo "PYTHONPATH=$(pwd)" >> $GITHUB_ENV
+
       - name: Run AIChat tests
+        working-directory: Backend
         env:
-        PYTHONPATH: .   # fixes "No module named app"
+          PYTHONPATH: .
         run: |
-          pytest tests/ai_chat -vv
+          pytest tests/ai_chat -vv --cov=app --cov-report=xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: Backend/coverage.xml
+          flags: unittests
+          name: codecov-umbrella
