@@ -31,7 +31,7 @@ jobs:
         run: echo "PYTHONPATH=$(pwd)" >> $GITHUB_ENV
 
       - name: Debug paths
-        working-directory: Backend
+        working-directory: .
         run: |
           ls -R .
           python - << 'EOF'
