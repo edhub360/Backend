@@ -9,10 +9,9 @@ on:
 jobs:
   tests:
     runs-on: ubuntu-latest
-
     strategy:
       matrix:
-        python-version: ['3.12']
+        python-version: ['3.10','3.11','3.12']
 
     steps:
       - name: Checkout repository
@@ -24,19 +23,14 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
-        working-directory: Backend
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements-test.txt
 
       - name: Set PYTHONPATH
-        working-directory: Backend
         run: echo "PYTHONPATH=$(pwd)" >> $GITHUB_ENV
 
       - name: Run AIChat tests
-        working-directory: Backend
-        env:
-          PYTHONPATH: .
         run: |
           pytest tests/ai_chat -vv --cov=app --cov-report=xml
 
