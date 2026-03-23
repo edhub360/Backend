@@ -5,6 +5,9 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 from sqlalchemy.pool import StaticPool
 from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock, MagicMock
+from httpx import AsyncClient
+from app.main import app
+
 import sys
 
 # Add project root to path
@@ -20,6 +23,14 @@ def event_loop():
 
 # --- In-memory test database ---
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+
+
+
+@pytest.fixture
+async def client():
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        yield ac
+
 
 @pytest.fixture
 async def test_engine():
