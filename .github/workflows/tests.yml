@@ -30,6 +30,18 @@ jobs:
       - name: Set PYTHONPATH
         run: echo "PYTHONPATH=$(pwd)" >> $GITHUB_ENV
 
+      - name: Debug paths
+        working-directory: Backend
+        run: |
+          ls -R .
+          python - << 'EOF'
+          import sys
+          print("PYTHONPATH:", sys.path)
+          import app
+          print("App imported successfully:", app)
+          EOF
+
+
       - name: Run AIChat tests
         run: |
           pytest tests/ai_chat -vv --cov=app --cov-report=xml
