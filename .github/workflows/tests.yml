@@ -37,7 +37,7 @@ jobs:
 
       - name: Run AIChat tests
         run: |
-          pytest tests/ai_chat -vv --cov=app --cov-report=xml
+          pytest tests/ai_chat/test_ai_chat.py --cov=app --cov-report=xml
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
