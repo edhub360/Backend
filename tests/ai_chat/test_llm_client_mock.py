@@ -13,3 +13,4 @@ async def test_llm_client_mocked(mocker):
     result = await service.get_response("Hello")
 
     assert result == "Mocked LLM output"
+    mock_llm.assert_called_once()
