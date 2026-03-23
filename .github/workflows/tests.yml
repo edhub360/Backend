@@ -2,8 +2,9 @@ name: Run Backend Tests
 
 on:
   push:
+    branches: [feature]
   pull_request:
-
+    branches: [feature]
 jobs:
   backend-tests:
     runs-on: ubuntu-latest
