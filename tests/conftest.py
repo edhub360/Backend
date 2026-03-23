@@ -13,6 +13,14 @@ import sys
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+
+#------ llm client call code -------
+@pytest.fixture
+async def client():
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        yield ac
+'''
+
 # --- Event loop ---
 @pytest.fixture(scope="session")
 def event_loop():
@@ -26,10 +34,7 @@ TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 
 
-@pytest.fixture
-async def client():
-    async with AsyncClient(app=app, base_url="http://test") as ac:
-        yield ac
+
 
 
 @pytest.fixture
@@ -141,5 +146,5 @@ def sample_question_data():
         "difficulty": "beginner",
         "subject_tag": "Python",
     }
-
+'''
 # Additional pytest configurations can be added here.
