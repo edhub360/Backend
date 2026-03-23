@@ -1,0 +1,33 @@
+name: Run Backend Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: Backend   # ensures pytest runs inside Backend/
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio pytest-mock httpx
+
+      - name: Run AIChat tests
+        env:
+          PYTHONPATH: .   # fixes "No module named app"
+        run: |
+          pytest tests/ai_chat -vv
