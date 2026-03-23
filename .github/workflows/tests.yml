@@ -6,36 +6,30 @@ on:
   pull_request:
     branches: [feature]
 jobs:
-  backend-tests:
+  tests:
     runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        working-directory: Backend   # ensures pytest runs inside Backend/
-
+    strategy:
+      matrix:
+            python-version: ['3.12']
+            
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
-        working-directory: Backend
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements-test.txt
 
-#      - name: Install dependencies
-#        run: |
-#          pip install -r requirements.txt
-#         pip install pytest pytest-asyncio pytest-mock httpx
-
+      - name: Set PYTHONPATH 
+      run: echo "PYTHONPATH=$PYTHONPATH:$(pwd)" >> $GITHUB_ENV
       - name: Run AIChat tests
-        working-directory: Backend
         env:
-          PYTHONPATH: .   # fixes "No module named app"
+        PYTHONPATH: .   # fixes "No module named app"
         run: |
           pytest tests/ai_chat -vv
