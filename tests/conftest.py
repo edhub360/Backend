@@ -6,7 +6,7 @@ from sqlalchemy.pool import StaticPool
 from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock, MagicMock
 from httpx import AsyncClient
-from app.main import ai_chat/app
+#from app.main import ai_chat/app
 
 import sys
 
