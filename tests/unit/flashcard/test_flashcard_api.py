@@ -10,8 +10,16 @@ def mock_session():
     session.add = MagicMock()
     session.commit = AsyncMock()
     session.refresh = AsyncMock()
-    session.execute = AsyncMock()
     session.get = AsyncMock()
+
+    # Default execute result — overridable per test
+    mock_result = MagicMock()
+    mock_result.scalar.return_value = 0
+    mock_result.scalar_one_or_none.return_value = None
+    mock_result.scalars.return_value.all.return_value = []
+    mock_result.__iter__ = MagicMock(return_value=iter([]))
+    session.execute = AsyncMock(return_value=mock_result)
+
     return session
 
 
@@ -19,7 +27,11 @@ def mock_session():
 def client(mock_session):
     from flashcard.main import app
     from database import get_session
-    app.dependency_overrides[get_session] = lambda: mock_session
+
+    async def override_get_session():
+        yield mock_session
+
+    app.dependency_overrides[get_session] = override_get_session
     yield TestClient(app)
     app.dependency_overrides.clear()
 
@@ -38,27 +50,43 @@ class TestRootEndpoint:
 class TestFlashcardDecksListEndpoint:
 
     def test_returns_200(self, client, mock_session):
-        mock_session.execute.return_value.scalar.return_value = 0
-        mock_session.execute.return_value.fetchall.return_value = []
+        mock_result = MagicMock()
+        mock_result.scalar.return_value = 0
+        mock_result.scalars.return_value.all.return_value = []
+        mock_result.__iter__ = MagicMock(return_value=iter([]))
+        mock_session.execute = AsyncMock(return_value=mock_result)
+
         response = client.get("/flashcard-decks")
         assert response.status_code == 200
 
     def test_response_has_decks_and_pagination(self, client, mock_session):
-        mock_session.execute.return_value.scalar.return_value = 0
-        mock_session.execute.return_value.fetchall.return_value = []
+        mock_result = MagicMock()
+        mock_result.scalar.return_value = 0
+        mock_result.scalars.return_value.all.return_value = []
+        mock_result.__iter__ = MagicMock(return_value=iter([]))
+        mock_session.execute = AsyncMock(return_value=mock_result)
+
         data = client.get("/flashcard-decks").json()
         assert "decks" in data
         assert "pagination" in data
 
     def test_default_limit_is_6(self, client, mock_session):
-        mock_session.execute.return_value.scalar.return_value = 0
-        mock_session.execute.return_value.fetchall.return_value = []
+        mock_result = MagicMock()
+        mock_result.scalar.return_value = 0
+        mock_result.scalars.return_value.all.return_value = []
+        mock_result.__iter__ = MagicMock(return_value=iter([]))
+        mock_session.execute = AsyncMock(return_value=mock_result)
+
         data = client.get("/flashcard-decks").json()
         assert data["pagination"]["limit"] == 6
 
     def test_custom_offset_and_limit(self, client, mock_session):
-        mock_session.execute.return_value.scalar.return_value = 0
-        mock_session.execute.return_value.fetchall.return_value = []
+        mock_result = MagicMock()
+        mock_result.scalar.return_value = 0
+        mock_result.scalars.return_value.all.return_value = []
+        mock_result.__iter__ = MagicMock(return_value=iter([]))
+        mock_session.execute = AsyncMock(return_value=mock_result)
+
         data = client.get("/flashcard-decks?offset=6&limit=3").json()
         assert data["pagination"]["offset"] == 6
         assert data["pagination"]["limit"] == 3
@@ -72,19 +100,30 @@ class TestFlashcardDecksListEndpoint:
 class TestFlashcardDeckDetailEndpoint:
 
     def test_deck_not_found_returns_404(self, client, mock_session):
-        mock_session.get.return_value = None
+        mock_session.get = AsyncMock(return_value=None)
         response = client.get(f"/flashcard-decks/{str(uuid4())}")
         assert response.status_code == 404
 
     def test_deck_found_returns_200(self, client, mock_session):
         from flashcard.models import Quiz
         deck_id = str(uuid4())
-        mock_deck = Quiz(title="Biology", subject_tag="Bio",
-                        difficulty_level="easy", description="Test")
+
+        mock_deck = Quiz(
+            title="Biology",
+            subject_tag="Bio",
+            difficulty_level="easy",
+            description="Test",
+        )
         mock_deck.quiz_id = deck_id
-        mock_session.get.return_value = mock_deck
-        mock_session.execute.return_value.scalar.return_value = 0
-        mock_session.execute.return_value.scalars.return_value.all.return_value = []
+
+        mock_session.get = AsyncMock(return_value=mock_deck)
+
+        mock_result = MagicMock()
+        mock_result.scalar.return_value = 0
+        mock_result.scalars.return_value.all.return_value = []
+        mock_result.__iter__ = MagicMock(return_value=iter([]))
+        mock_session.execute = AsyncMock(return_value=mock_result)
+
         response = client.get(f"/flashcard-decks/{deck_id}")
         assert response.status_code == 200
         assert response.json()["deck_id"] == deck_id

@@ -64,9 +64,28 @@ for _attr in dir(_fc_models):
 
 sys.modules["models"] = _combined_models
 
+# Fix bare 'from schemas import' — merge quiz.schemas and flashcard.schemas into proxy
+import quiz.schemas as _qz_schemas
+import flashcard.schemas as _fc_schemas
+
+_combined_schemas = types.ModuleType("schemas")
+
+for _attr in dir(_qz_schemas):
+    if not _attr.startswith("__"):
+        setattr(_combined_schemas, _attr, getattr(_qz_schemas, _attr))
+
+for _attr in dir(_fc_schemas):
+    if not _attr.startswith("__"):
+        setattr(_combined_schemas, _attr, getattr(_fc_schemas, _attr))
+
+sys.modules["schemas"] = _combined_schemas
+
+
 # --- Fix bare 'from database import' used inside quiz/main.py ---
 import quiz.database as _qz_db
 sys.modules.setdefault("database", _qz_db)
+
+
 
 
 # ─────────────────────────────────────────────
@@ -85,14 +104,31 @@ TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 @pytest.fixture
 async def test_engine():
+    from sqlalchemy import String, event
+    from sqlalchemy.types import TypeDecorator, UUID
+
     engine = create_async_engine(
         TEST_DATABASE_URL,
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
         echo=False,
     )
+
+    # SQLite cannot render native UUID — override it to use String(36)
+    @event.listens_for(engine.sync_engine, "connect")
+    def set_sqlite_pragma(dbapi_conn, connection_record):
+        pass  # hook point if needed
+
     from quiz.models import Base as QuizBase
     from flashcard.models import Base as FlashcardBase
+
+    # Remap UUID → String(36) for all columns in both metadata
+    for metadata in [QuizBase.metadata, FlashcardBase.metadata]:
+        for table in metadata.tables.values():
+            for col in table.columns:
+                if hasattr(col.type, '__class__') and col.type.__class__.__name__ == 'UUID':
+                    col.type = String(36)
+
     async with engine.begin() as conn:
         await conn.run_sync(QuizBase.metadata.create_all)
         await conn.run_sync(FlashcardBase.metadata.create_all)
@@ -101,6 +137,7 @@ async def test_engine():
         await conn.run_sync(QuizBase.metadata.drop_all)
         await conn.run_sync(FlashcardBase.metadata.drop_all)
     await engine.dispose()
+
 
 
 @pytest.fixture
