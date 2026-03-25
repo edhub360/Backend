@@ -60,7 +60,7 @@ _google_cloud_mod.storage = _mock_gcs
 sys.modules["google"] = _google_mod
 sys.modules["google.cloud"] = _google_cloud_mod
 sys.modules["google.cloud.storage"] = _mock_gcs
-
+sys.modules["pandas"] = MagicMock()
 
 # --- Build a combined 'models' proxy from both quiz.models and flashcard.models ---
 # Both services use bare `from models import ...` — we merge both into one proxy module
@@ -135,6 +135,7 @@ async def test_engine():
     # Remap Postgres-only types → SQLite-compatible equivalents
     for metadata in [QuizBase.metadata, FlashcardBase.metadata]:
         for table in metadata.tables.values():
+            table.schema = None  # ← strip 'stud_hub_schema' — SQLite has no schemas
             for col in table.columns:
                 type_name = col.type.__class__.__name__
                 if type_name == "UUID":

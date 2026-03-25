@@ -69,7 +69,12 @@ class FlashcardAnalytics(Base):
     )
 
     user_id: Mapped[str] = mapped_column(String(64), nullable=False)
-    card_reviewed: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    card_reviewed: Mapped[bool] = mapped_column(
+        Boolean, 
+        default=True,          # ← Python-side default for in-memory objects
+        server_default="true", # ← DB-side default
+        nullable=False
+    )
     time_taken: Mapped[float] = mapped_column(Float, nullable=False)
     reviewed_at: Mapped[datetime] = mapped_column(
         TIMESTAMP, server_default=text("now()")
