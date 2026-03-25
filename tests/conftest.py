@@ -1,25 +1,39 @@
 import pytest
 import asyncio
 import os
+import sys
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.pool import StaticPool
-from fastapi.testclient import TestClient
-from unittest.mock import AsyncMock, MagicMock
-from httpx import AsyncClient
-#from app.main import ai_chat/app
+from unittest.mock import MagicMock
 
-import sys
+# --- Add all service roots to PYTHONPATH ---
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, ROOT)
+sys.path.insert(0, os.path.join(ROOT, "login"))
+sys.path.insert(0, os.path.join(ROOT, "ai_chat"))
+sys.path.insert(0, os.path.join(ROOT, "quiz"))
+sys.path.insert(0, os.path.join(ROOT, "flashcard"))
 
-# Add project root to path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Mock login app.config before any login imports
+_mock_cfg = MagicMock()
+_mock_cfg.settings.jwt_secret_key = "test-secret-key-do-not-use-in-production-abc123"
+_mock_cfg.settings.jwt_algorithm = "HS256"
+_mock_cfg.settings.access_token_expire_minutes = 15
+sys.modules["app"] = MagicMock()
+sys.modules["app.config"] = _mock_cfg
+sys.modules["app.utils"] = MagicMock(
+    generate_secure_token=MagicMock(return_value="fake-token"),
+    hash_token=MagicMock(return_value="fake-hash"),
+)
 
+# Fix bare 'from models import' used inside flashcard/main.py
+import flashcard.models as _fc_models
+sys.modules.setdefault("models", _fc_models)
 
-#------ llm client call code -------
-@pytest.fixture
-async def client():
-    async with AsyncClient(app=app, base_url="http://test") as ac:
-        yield ac
-'''
+# Fix bare 'from database import' used inside quiz/main.py and flashcard/main.py
+import quiz.database as _qz_db
+sys.modules.setdefault("database", _qz_db)
+
 
 # --- Event loop ---
 @pytest.fixture(scope="session")
@@ -33,84 +47,62 @@ def event_loop():
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 
-
-
-
-
 @pytest.fixture
 async def test_engine():
-    """Create test database engine with in-memory SQLite"""
     engine = create_async_engine(
         TEST_DATABASE_URL,
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
         echo=False,
     )
-    
-    # Import and create tables
     from quiz.models import Base as QuizBase
     from login.app.models import Base as LoginBase
-    
     async with engine.begin() as conn:
-        # Create all tables
         await conn.run_sync(QuizBase.metadata.create_all)
         await conn.run_sync(LoginBase.metadata.create_all)
-    
     yield engine
-    
     async with engine.begin() as conn:
         await conn.run_sync(QuizBase.metadata.drop_all)
         await conn.run_sync(LoginBase.metadata.drop_all)
-    
     await engine.dispose()
 
 
 @pytest.fixture
 async def test_session(test_engine):
-    """Create test database session"""
     async_session = async_sessionmaker(
         test_engine,
         class_=AsyncSession,
         expire_on_commit=False,
         autoflush=False,
     )
-    
     async with async_session() as session:
         yield session
 
 
 @pytest.fixture
 def mock_settings():
-    """Mock application settings"""
     return {
-        "jwt_secret_key": "test-secret-key-do-not-use-in-production",
+        "jwt_secret_key": "test-secret-key-do-not-use-in-production-abc123",
         "jwt_algorithm": "HS256",
         "access_token_expire_minutes": 15,
-        "google_client_id": "test-google-client-id",
+        "google_client_id": "fake-google-client-id",
     }
 
 
 @pytest.fixture
 def mock_google_verify(monkeypatch):
-    """Mock Google token verification"""
     async def mock_verify(*args, **kwargs):
         return {
             "google_id": "123456789",
             "email": "test@example.com",
             "name": "Test User",
-            "picture": "https://example.com/pic.jpg"
+            "picture": "https://example.com/pic.jpg",
         }
-    
-    monkeypatch.setattr(
-        "login.app.auth.verify_google_token",
-        mock_verify
-    )
+    monkeypatch.setattr("login.app.auth.verify_google_token", mock_verify)
 
 
-# --- Sample data fixtures ---
 @pytest.fixture
 def sample_user_data():
-    """Sample user creation data"""
     return {
         "email": "test@example.com",
         "name": "Test User",
@@ -121,7 +113,6 @@ def sample_user_data():
 
 @pytest.fixture
 def sample_quiz_data():
-    """Sample quiz creation data"""
     return {
         "title": "Python Basics Quiz",
         "description": "Test your Python knowledge",
@@ -133,18 +124,11 @@ def sample_quiz_data():
 
 @pytest.fixture
 def sample_question_data():
-    """Sample question creation data"""
     return {
         "question_text": "What is Python?",
         "correct_answer": "A programming language",
-        "incorrect_answers": [
-            "A snake species",
-            "A type of coffee",
-            "A brand of shoes"
-        ],
+        "incorrect_answers": ["A snake species", "A type of coffee", "A brand of shoes"],
         "explanation": "Python is a high-level programming language.",
         "difficulty": "beginner",
         "subject_tag": "Python",
     }
-'''
-# Additional pytest configurations can be added here.
