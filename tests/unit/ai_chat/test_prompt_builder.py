@@ -11,7 +11,6 @@ sys.modules["app.utils"] = MagicMock()
 # Import directly from the correct path (no 'modules' folder exists)
 from ai_chat.app.utils.prompt_builder import build_prompt
 
-
 @pytest.mark.unit
 def test_prompt_builder_includes_user_message():
     prompt = build_prompt("Explain photosynthesis", history=[])
