@@ -2,17 +2,21 @@ import pytest
 import sys
 from unittest.mock import MagicMock
 
-# --- Mock 'app.config' before importing login.app.auth ---
-# login/app/auth.py does "from app.config import settings"
-# which requires login/ to be treated as the root.
-# We mock it here to avoid ModuleNotFoundError in CI.
-mock_settings = MagicMock()
-mock_settings.jwt_secret_key = "test-secret-key-do-not-use-in-production"
-mock_settings.jwt_algorithm = "HS256"
-mock_settings.access_token_expire_minutes = 15
-
-sys.modules.setdefault("app", MagicMock())
-sys.modules.setdefault("app.config", MagicMock(settings=mock_settings))
+# Mock entire 'app' package and all its submodules
+_app_mock = MagicMock()
+sys.modules["app"] = _app_mock
+sys.modules["app.config"] = MagicMock(settings=MagicMock(
+    jwt_secret_key="test-secret-key-do-not-use-in-production-abc123",
+    jwt_algorithm="HS256",
+    access_token_expire_minutes=15,
+    google_client_id="fake-google-client-id",
+    google_client_secret="fake-google-client-secret",
+    refresh_token_expire_days=7,
+))
+sys.modules["app.utils"] = MagicMock(
+    generate_secure_token=MagicMock(return_value="fake-token-abc123"),
+    hash_token=MagicMock(return_value="fake-hashed-token"),
+)
 
 from login.app.auth import (
     hash_password,
