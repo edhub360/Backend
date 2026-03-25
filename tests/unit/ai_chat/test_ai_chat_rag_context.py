@@ -1,3 +1,4 @@
+import pytest
 @pytest.mark.asyncio
 async def test_ai_chat_rag_context(mocker):
     mocker.patch(

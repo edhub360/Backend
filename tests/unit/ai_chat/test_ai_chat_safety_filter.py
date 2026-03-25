@@ -1,3 +1,4 @@
+
 def test_ai_chat_safety_filter():
     from app.modules.ai_chat.safety import is_allowed
 

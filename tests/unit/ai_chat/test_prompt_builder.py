@@ -1,3 +1,4 @@
+import pytest
 from app.modules.ai_chat.prompt_builder import build_prompt
 
 def test_prompt_builder_includes_user_message():

@@ -1,3 +1,4 @@
+import pytest
 @pytest.mark.asyncio
 async def test_ai_chat_service_with_history(mocker):
     mocker.patch(

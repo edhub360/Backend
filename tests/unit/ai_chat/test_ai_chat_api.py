@@ -1,3 +1,6 @@
+import pytest
+from uuid import uuid4
+
 @pytest.mark.asyncio
 async def test_ai_chat_api(client, mocker):
     mocker.patch(

@@ -1,3 +1,5 @@
+import pytest
+
 @pytest.mark.asyncio
 async def test_ai_chat_handles_llm_error(mocker):
     mocker.patch(
