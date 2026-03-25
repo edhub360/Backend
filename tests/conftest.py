@@ -2,7 +2,9 @@ import pytest
 import asyncio
 import os
 import sys
+import types
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.pool import StaticPool
 from unittest.mock import MagicMock
 
@@ -14,35 +16,63 @@ sys.path.insert(0, os.path.join(ROOT, "ai_chat"))
 sys.path.insert(0, os.path.join(ROOT, "quiz"))
 sys.path.insert(0, os.path.join(ROOT, "flashcard"))
 
-# Set fake env vars BEFORE any module imports that read os.environ
+# --- Set fake env vars BEFORE any module imports that read os.environ ---
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 os.environ.setdefault("SECRET_KEY", "fake-secret-key-for-testing")
 os.environ.setdefault("GOOGLE_CLIENT_ID", "fake-google-client-id")
 os.environ.setdefault("GOOGLE_CLIENT_SECRET", "fake-google-client-secret")
 os.environ.setdefault("JWT_SECRET_KEY", "fake-jwt-secret-for-testing")
+os.environ.setdefault("GEMINI_API_KEY", "fake-gemini-api-key")
+os.environ.setdefault("STRIPE_SECRET_KEY", "fake-stripe-secret-key")
 
-# Mock login app.config
+# --- Mock app.db with a real DeclarativeBase so login/app/models.py can import it ---
+class _TestBase(DeclarativeBase):
+    pass
+
+_mock_db = MagicMock()
+_mock_db.Base = _TestBase
+
+# --- Mock app namespace BEFORE any login imports ---
 _mock_cfg = MagicMock()
 _mock_cfg.settings.jwt_secret_key = "fake-jwt-secret-for-testing"
 _mock_cfg.settings.jwt_algorithm = "HS256"
 _mock_cfg.settings.access_token_expire_minutes = 15
-sys.modules["app"] = MagicMock()
+
+_mock_app_pkg = types.ModuleType("app")
+sys.modules["app"] = _mock_app_pkg
 sys.modules["app.config"] = _mock_cfg
+sys.modules["app.db"] = _mock_db
 sys.modules["app.utils"] = MagicMock(
     generate_secure_token=MagicMock(return_value="fake-token"),
     hash_token=MagicMock(return_value="fake-hash"),
 )
 
-# Fix bare 'from models import' in flashcard/main.py
+# --- Build a combined 'models' proxy from both quiz.models and flashcard.models ---
+# Both services use bare `from models import ...` — we merge both into one proxy module
+import quiz.models as _qz_models
 import flashcard.models as _fc_models
-sys.modules.setdefault("models", _fc_models)
 
-# Fix bare 'from database import' in quiz/main.py and flashcard/main.py
+_combined_models = types.ModuleType("models")
+
+for _attr in dir(_qz_models):
+    if not _attr.startswith("__"):
+        setattr(_combined_models, _attr, getattr(_qz_models, _attr))
+
+for _attr in dir(_fc_models):
+    if not _attr.startswith("__"):
+        setattr(_combined_models, _attr, getattr(_fc_models, _attr))
+
+sys.modules["models"] = _combined_models
+
+# --- Fix bare 'from database import' used inside quiz/main.py ---
 import quiz.database as _qz_db
 sys.modules.setdefault("database", _qz_db)
 
 
-# --- Event loop ---
+# ─────────────────────────────────────────────
+# Fixtures
+# ─────────────────────────────────────────────
+
 @pytest.fixture(scope="session")
 def event_loop():
     loop = asyncio.get_event_loop_policy().new_event_loop()
@@ -50,7 +80,6 @@ def event_loop():
     loop.close()
 
 
-# --- In-memory test database ---
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 
@@ -63,14 +92,14 @@ async def test_engine():
         echo=False,
     )
     from quiz.models import Base as QuizBase
-    from login.app.models import Base as LoginBase
+    from flashcard.models import Base as FlashcardBase
     async with engine.begin() as conn:
         await conn.run_sync(QuizBase.metadata.create_all)
-        await conn.run_sync(LoginBase.metadata.create_all)
+        await conn.run_sync(FlashcardBase.metadata.create_all)
     yield engine
     async with engine.begin() as conn:
         await conn.run_sync(QuizBase.metadata.drop_all)
-        await conn.run_sync(LoginBase.metadata.drop_all)
+        await conn.run_sync(FlashcardBase.metadata.drop_all)
     await engine.dispose()
 
 
@@ -89,7 +118,7 @@ async def test_session(test_engine):
 @pytest.fixture
 def mock_settings():
     return {
-        "jwt_secret_key": "test-secret-key-do-not-use-in-production-abc123",
+        "jwt_secret_key": "fake-jwt-secret-for-testing",
         "jwt_algorithm": "HS256",
         "access_token_expire_minutes": 15,
         "google_client_id": "fake-google-client-id",
