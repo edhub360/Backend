@@ -47,6 +47,21 @@ sys.modules["app.utils"] = MagicMock(
     hash_token=MagicMock(return_value="fake-hash"),
 )
 
+# Add this block near the top of conftest.py, with the other sys.modules mocks
+import types as _types
+
+_mock_gcs = _types.ModuleType("google.cloud.storage")
+_mock_gcs.Client = MagicMock()
+
+_google_mod = sys.modules.get("google") or _types.ModuleType("google")
+_google_cloud_mod = sys.modules.get("google.cloud") or _types.ModuleType("google.cloud")
+_google_cloud_mod.storage = _mock_gcs
+
+sys.modules["google"] = _google_mod
+sys.modules["google.cloud"] = _google_cloud_mod
+sys.modules["google.cloud.storage"] = _mock_gcs
+
+
 # --- Build a combined 'models' proxy from both quiz.models and flashcard.models ---
 # Both services use bare `from models import ...` — we merge both into one proxy module
 import quiz.models as _qz_models
@@ -104,8 +119,8 @@ TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 @pytest.fixture
 async def test_engine():
-    from sqlalchemy import String, event
-    from sqlalchemy.types import TypeDecorator, UUID
+    from sqlalchemy import String, JSON
+    from sqlalchemy.dialects.postgresql import JSONB
 
     engine = create_async_engine(
         TEST_DATABASE_URL,
@@ -114,20 +129,18 @@ async def test_engine():
         echo=False,
     )
 
-    # SQLite cannot render native UUID — override it to use String(36)
-    @event.listens_for(engine.sync_engine, "connect")
-    def set_sqlite_pragma(dbapi_conn, connection_record):
-        pass  # hook point if needed
-
     from quiz.models import Base as QuizBase
     from flashcard.models import Base as FlashcardBase
 
-    # Remap UUID → String(36) for all columns in both metadata
+    # Remap Postgres-only types → SQLite-compatible equivalents
     for metadata in [QuizBase.metadata, FlashcardBase.metadata]:
         for table in metadata.tables.values():
             for col in table.columns:
-                if hasattr(col.type, '__class__') and col.type.__class__.__name__ == 'UUID':
+                type_name = col.type.__class__.__name__
+                if type_name == "UUID":
                     col.type = String(36)
+                elif type_name == "JSONB":
+                    col.type = JSON()
 
     async with engine.begin() as conn:
         await conn.run_sync(QuizBase.metadata.create_all)
@@ -137,7 +150,6 @@ async def test_engine():
         await conn.run_sync(QuizBase.metadata.drop_all)
         await conn.run_sync(FlashcardBase.metadata.drop_all)
     await engine.dispose()
-
 
 
 @pytest.fixture

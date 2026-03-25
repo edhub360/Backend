@@ -1,4 +1,4 @@
-# study_stats.py
+# quiz/study_stats.py
 from datetime import timedelta, date
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,7 +12,6 @@ async def update_user_study_stats(
     time_taken_seconds: int,
     study_date: date,
 ) -> None:
-    # Lock row if exists
     result = await db.execute(
         select(UserStudyStats).where(UserStudyStats.user_id == user_id).with_for_update()
     )
@@ -27,6 +26,7 @@ async def update_user_study_stats(
             last_study_date=study_date,
         )
         db.add(row)
+        await db.commit()  # ← was missing
         return
 
     # Update total time
@@ -35,15 +35,18 @@ async def update_user_study_stats(
     # Streak logic
     last_date = row.last_study_date
     if last_date is None or study_date > last_date + timedelta(days=1):
-        # streak broken or first record
+        # Streak broken
         row.current_streak_days = 1
     elif study_date == last_date:
-        # same day, keep streak
+        # Same day — no streak change
         pass
-    else:  # study_date == last_date + 1
+    else:
+        # Consecutive day
         row.current_streak_days += 1
 
+    # Only update longest when current exceeds it (never on reset)
     if row.current_streak_days > row.longest_streak_days:
         row.longest_streak_days = row.current_streak_days
 
     row.last_study_date = study_date
+    await db.commit()  # ← was missing
