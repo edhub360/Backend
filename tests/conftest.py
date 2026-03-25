@@ -14,9 +14,16 @@ sys.path.insert(0, os.path.join(ROOT, "ai_chat"))
 sys.path.insert(0, os.path.join(ROOT, "quiz"))
 sys.path.insert(0, os.path.join(ROOT, "flashcard"))
 
-# Mock login app.config before any login imports
+# Set fake env vars BEFORE any module imports that read os.environ
+os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+os.environ.setdefault("SECRET_KEY", "fake-secret-key-for-testing")
+os.environ.setdefault("GOOGLE_CLIENT_ID", "fake-google-client-id")
+os.environ.setdefault("GOOGLE_CLIENT_SECRET", "fake-google-client-secret")
+os.environ.setdefault("JWT_SECRET_KEY", "fake-jwt-secret-for-testing")
+
+# Mock login app.config
 _mock_cfg = MagicMock()
-_mock_cfg.settings.jwt_secret_key = "test-secret-key-do-not-use-in-production-abc123"
+_mock_cfg.settings.jwt_secret_key = "fake-jwt-secret-for-testing"
 _mock_cfg.settings.jwt_algorithm = "HS256"
 _mock_cfg.settings.access_token_expire_minutes = 15
 sys.modules["app"] = MagicMock()
@@ -26,11 +33,11 @@ sys.modules["app.utils"] = MagicMock(
     hash_token=MagicMock(return_value="fake-hash"),
 )
 
-# Fix bare 'from models import' used inside flashcard/main.py
+# Fix bare 'from models import' in flashcard/main.py
 import flashcard.models as _fc_models
 sys.modules.setdefault("models", _fc_models)
 
-# Fix bare 'from database import' used inside quiz/main.py and flashcard/main.py
+# Fix bare 'from database import' in quiz/main.py and flashcard/main.py
 import quiz.database as _qz_db
 sys.modules.setdefault("database", _qz_db)
 
