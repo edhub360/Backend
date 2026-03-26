@@ -8,6 +8,7 @@ from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.pool import StaticPool
 from unittest.mock import MagicMock
 
+
 # --- Add all service roots to PYTHONPATH ---
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -15,6 +16,7 @@ sys.path.insert(0, os.path.join(ROOT, "login"))
 sys.path.insert(0, os.path.join(ROOT, "ai_chat"))
 sys.path.insert(0, os.path.join(ROOT, "quiz"))
 sys.path.insert(0, os.path.join(ROOT, "flashcard"))
+
 
 # --- Set fake env vars BEFORE any module imports that read os.environ ---
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
@@ -25,18 +27,22 @@ os.environ.setdefault("JWT_SECRET_KEY", "fake-jwt-secret-for-testing")
 os.environ.setdefault("GEMINI_API_KEY", "fake-gemini-api-key")
 os.environ.setdefault("STRIPE_SECRET_KEY", "fake-stripe-secret-key")
 
+
 # --- Mock app.db with a real DeclarativeBase so login/app/models.py can import it ---
 class _TestBase(DeclarativeBase):
     pass
 
+
 _mock_db = MagicMock()
 _mock_db.Base = _TestBase
+
 
 # --- Mock app namespace BEFORE any login imports ---
 _mock_cfg = MagicMock()
 _mock_cfg.settings.jwt_secret_key = "fake-jwt-secret-for-testing"
 _mock_cfg.settings.jwt_algorithm = "HS256"
 _mock_cfg.settings.access_token_expire_minutes = 15
+
 
 _mock_app_pkg = types.ModuleType("app")
 sys.modules["app"] = _mock_app_pkg
@@ -47,7 +53,8 @@ sys.modules["app.utils"] = MagicMock(
     hash_token=MagicMock(return_value="fake-hash"),
 )
 
-# Add this block near the top of conftest.py, with the other sys.modules mocks
+
+# --- Mock google.cloud.storage ---
 import types as _types
 
 _mock_gcs = _types.ModuleType("google.cloud.storage")
@@ -62,8 +69,27 @@ sys.modules["google.cloud"] = _google_cloud_mod
 sys.modules["google.cloud.storage"] = _mock_gcs
 sys.modules["pandas"] = MagicMock()
 
+
+# --- Mock ai_chat external dependencies (langchain, gemini, etc.) ---
+# These must be mocked BEFORE ai_chat modules are imported
+_mock_langchain = MagicMock()
+_mock_langchain_core = MagicMock()
+_mock_langchain_google = MagicMock()
+
+sys.modules.setdefault("langchain", _mock_langchain)
+sys.modules.setdefault("langchain.chains", _mock_langchain)
+sys.modules.setdefault("langchain.memory", _mock_langchain)
+sys.modules.setdefault("langchain.prompts", _mock_langchain)
+sys.modules.setdefault("langchain_core", _mock_langchain_core)
+sys.modules.setdefault("langchain_core.messages", _mock_langchain_core)
+sys.modules.setdefault("langchain_core.prompts", _mock_langchain_core)
+sys.modules.setdefault("langchain_core.output_parsers", _mock_langchain_core)
+sys.modules.setdefault("langchain_google_genai", _mock_langchain_google)
+sys.modules.setdefault("google.generativeai", MagicMock())
+sys.modules.setdefault("google.generativeai.types", MagicMock())
+
+
 # --- Build a combined 'models' proxy from both quiz.models and flashcard.models ---
-# Both services use bare `from models import ...` — we merge both into one proxy module
 import quiz.models as _qz_models
 import flashcard.models as _fc_models
 
@@ -79,7 +105,8 @@ for _attr in dir(_fc_models):
 
 sys.modules["models"] = _combined_models
 
-# Fix bare 'from schemas import' — merge quiz.schemas and flashcard.schemas into proxy
+
+# --- Fix bare 'from schemas import' — merge quiz.schemas and flashcard.schemas ---
 import quiz.schemas as _qz_schemas
 import flashcard.schemas as _fc_schemas
 
@@ -101,8 +128,6 @@ import quiz.database as _qz_db
 sys.modules.setdefault("database", _qz_db)
 
 
-
-
 # ─────────────────────────────────────────────
 # Fixtures
 # ─────────────────────────────────────────────
@@ -119,7 +144,7 @@ TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 @pytest.fixture
 async def test_engine():
-    from sqlalchemy import String, JSON
+    from sqlalchemy import String, JSON, DateTime
     from sqlalchemy.dialects.postgresql import JSONB
 
     engine = create_async_engine(
@@ -132,16 +157,30 @@ async def test_engine():
     from quiz.models import Base as QuizBase
     from flashcard.models import Base as FlashcardBase
 
-    # Remap Postgres-only types → SQLite-compatible equivalents
     for metadata in [QuizBase.metadata, FlashcardBase.metadata]:
         for table in metadata.tables.values():
-            table.schema = None  # ← strip 'stud_hub_schema' — SQLite has no schemas
+            table.schema = None  # strip stud_hub_schema prefix
             for col in table.columns:
                 type_name = col.type.__class__.__name__
                 if type_name == "UUID":
                     col.type = String(36)
+                    col.server_default = None       # strip gen_random_uuid()
                 elif type_name == "JSONB":
                     col.type = JSON()
+                elif type_name in ("TIMESTAMP", "DateTime", "DATETIME"):
+                    col.type = DateTime()
+                    col.server_default = None       # strip now()
+
+                # Rewrite schema-qualified FK targets → bare table.column
+                for fk in list(col.foreign_keys):
+                    target = fk.target_fullname     # e.g. "stud_hub_schema.quizzes.quiz_id"
+                    parts = target.split(".")
+                    if len(parts) == 3:             # schema.table.column
+                        bare = f"{parts[1]}.{parts[2]}"   # → "quizzes.quiz_id"
+                        col.foreign_keys.discard(fk)
+                        from sqlalchemy import ForeignKey as FK
+                        new_fk = FK(bare, ondelete=fk.ondelete)
+                        new_fk._set_parent(col)
 
     async with engine.begin() as conn:
         await conn.run_sync(QuizBase.metadata.create_all)
@@ -151,6 +190,7 @@ async def test_engine():
         await conn.run_sync(QuizBase.metadata.drop_all)
         await conn.run_sync(FlashcardBase.metadata.drop_all)
     await engine.dispose()
+
 
 
 @pytest.fixture
@@ -218,3 +258,34 @@ def sample_question_data():
         "difficulty": "beginner",
         "subject_tag": "Python",
     }
+
+
+# ─────────────────────────────────────────────
+# AI Chat fixtures
+# ─────────────────────────────────────────────
+
+@pytest.fixture
+async def client():
+    """Async HTTP client for ai_chat FastAPI app (named 'client' to match test files)."""
+    from httpx import AsyncClient, ASGITransport
+    from ai_chat.app.main import app as ai_chat_app
+
+    async with AsyncClient(
+        transport=ASGITransport(app=ai_chat_app),
+        base_url="http://test"
+    ) as ac:
+        yield ac
+
+
+@pytest.fixture
+def mock_ai_chat_service(monkeypatch):
+    """Mock the AIChatService so tests never call real LLM."""
+    mock_service = MagicMock()
+    mock_service.get_response = MagicMock(return_value="Mocked AI response")
+    mock_service.stream_response = MagicMock(return_value=iter(["Mocked", " stream"]))
+    monkeypatch.setattr(
+        "ai_chat.app.modules.ai_chat.router.AIChatService",
+        MagicMock(return_value=mock_service)
+    )
+    return mock_service
+ 
