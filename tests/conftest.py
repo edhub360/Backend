@@ -144,8 +144,8 @@ TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 @pytest.fixture
 async def test_engine():
-    from sqlalchemy import String, JSON, DateTime
-    from sqlalchemy.dialects.postgresql import JSONB
+    from sqlalchemy import String, JSON, DateTime, event
+    from sqlalchemy.ext.asyncio import AsyncConnection
 
     engine = create_async_engine(
         TEST_DATABASE_URL,
@@ -154,12 +154,20 @@ async def test_engine():
         echo=False,
     )
 
+    # Disable FK enforcement in SQLite so cross-schema FK strings don't crash
+    @event.listens_for(engine.sync_engine, "connect")
+    def set_sqlite_pragma(dbapi_conn, _):
+        cursor = dbapi_conn.cursor()
+        cursor.execute("PRAGMA foreign_keys=OFF")
+        cursor.close()
+
     from quiz.models import Base as QuizBase
     from flashcard.models import Base as FlashcardBase
 
+    # Remap Postgres-only column types → SQLite-compatible equivalents
     for metadata in [QuizBase.metadata, FlashcardBase.metadata]:
         for table in metadata.tables.values():
-            table.schema = None  # strip stud_hub_schema prefix
+            table.schema = None
             for col in table.columns:
                 type_name = col.type.__class__.__name__
                 if type_name == "UUID":
@@ -171,24 +179,16 @@ async def test_engine():
                     col.type = DateTime()
                     col.server_default = None       # strip now()
 
-                # Rewrite schema-qualified FK targets → bare table.column
-                for fk in list(col.foreign_keys):
-                    target = fk.target_fullname     # e.g. "stud_hub_schema.quizzes.quiz_id"
-                    parts = target.split(".")
-                    if len(parts) == 3:             # schema.table.column
-                        bare = f"{parts[1]}.{parts[2]}"   # → "quizzes.quiz_id"
-                        col.foreign_keys.discard(fk)
-                        from sqlalchemy import ForeignKey as FK
-                        new_fk = FK(bare, ondelete=fk.ondelete)
-                        new_fk._set_parent(col)
+    async with engine.begin() as conn:
+        # create_all with checkfirst avoids duplicate table errors across tests
+        await conn.run_sync(QuizBase.metadata.create_all, checkfirst=True)
+        await conn.run_sync(FlashcardBase.metadata.create_all, checkfirst=True)
+
+    yield engine
 
     async with engine.begin() as conn:
-        await conn.run_sync(QuizBase.metadata.create_all)
-        await conn.run_sync(FlashcardBase.metadata.create_all)
-    yield engine
-    async with engine.begin() as conn:
-        await conn.run_sync(QuizBase.metadata.drop_all)
         await conn.run_sync(FlashcardBase.metadata.drop_all)
+        await conn.run_sync(QuizBase.metadata.drop_all)
     await engine.dispose()
 
 
