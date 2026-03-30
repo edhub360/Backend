@@ -42,8 +42,7 @@ async def not_found_handler(request: Request, exc: HTTPException):
     return JSONResponse(
         status_code=404,
         content={
-            "error": "Not Found",
-            "message": str(exc.detail) if hasattr(exc, "detail") else "Resource not found",
+            "detail": str(exc.detail) if hasattr(exc, "detail") else "Resource not found"
         },
     )
 

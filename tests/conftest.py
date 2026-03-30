@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.pool import StaticPool
 from unittest.mock import MagicMock
+from sqlalchemy import String, JSON
 
 
 # --- Add all service roots to PYTHONPATH ---
@@ -178,6 +179,9 @@ async def test_engine():
                 elif type_name in ("TIMESTAMP", "DateTime", "DATETIME"):
                     col.type = DateTime()
                     col.server_default = None       # strip now()
+                elif type_name == "ARRAY":
+                    col.type = JSON()
+                    col.server_default = None
 
     async with engine.begin() as conn:
         # create_all with checkfirst avoids duplicate table errors across tests

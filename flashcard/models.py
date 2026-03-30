@@ -54,28 +54,27 @@ class FlashcardAnalytics(Base):
     __tablename__ = "flashcard_analytics"
     __table_args__ = {"schema": "stud_hub_schema"}
 
-    # DB: analytics_id UUID PRIMARY KEY DEFAULT gen_random_uuid()
     analytics_id: Mapped[str] = mapped_column(
         UUID(as_uuid=False),
         primary_key=True,
         server_default=text("gen_random_uuid()"),
     )
-
-    # DB: deck_id UUID REFERENCES stud_hub_schema.quizzes(quiz_id)
     deck_id: Mapped[str] = mapped_column(
         UUID(as_uuid=False),
-        ForeignKey("stud_hub_schema.quizzes.quiz_id", ondelete="CASCADE"),
+        ForeignKey("stud_hub_schema.flashcard_decks.deck_id", ondelete="CASCADE"),
         nullable=False,
     )
-
     user_id: Mapped[str] = mapped_column(String(64), nullable=False)
     card_reviewed: Mapped[bool] = mapped_column(
-        Boolean, 
-        default=True,          # ← Python-side default for in-memory objects
-        server_default="true", # ← DB-side default
+        Boolean,
+        server_default="true",
         nullable=False
     )
     time_taken: Mapped[float] = mapped_column(Float, nullable=False)
     reviewed_at: Mapped[datetime] = mapped_column(
         TIMESTAMP, server_default=text("now()")
     )
+
+    def __init__(self, **kwargs):
+        kwargs.setdefault("card_reviewed", True)   # ← Python-side default
+        super().__init__(**kwargs)
