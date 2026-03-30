@@ -61,12 +61,13 @@ class FlashcardAnalytics(Base):
     )
     deck_id: Mapped[str] = mapped_column(
         UUID(as_uuid=False),
-        ForeignKey("stud_hub_schema.flashcard_decks.deck_id", ondelete="CASCADE"),
+        ForeignKey("stud_hub_schema.flashcard_decks.deck_id", ondelete="CASCADE", use_alter=True, name="fk_flashcard_analytics_deck_id"),
         nullable=False,
     )
     user_id: Mapped[str] = mapped_column(String(64), nullable=False)
     card_reviewed: Mapped[bool] = mapped_column(
         Boolean,
+        default=True, 
         server_default="true",
         nullable=False
     )
