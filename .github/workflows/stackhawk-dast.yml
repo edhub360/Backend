@@ -2,21 +2,22 @@ name: "StackHawk DAST Scan"
 
 on:
   push:
+    branches: [main]
   pull_request:
-
+    branches: [main]
 jobs:
   hawkscan:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  #    - name: Checkout code
+  #     uses: actions/checkout@v4
 
       # Start your application (example: Python backend + React frontend)
       - name: Start backend
         run: |
-          pip install -r login/requirements.txt
-          python backend/login/app/main.py &
+          pip install -r backend/requirements.txt
+          python backend/app.py &
       
       - name: Start frontend
         run: |
