@@ -66,6 +66,8 @@ class Subscription(Base):
     trial_ends_at = Column(DateTime(timezone=True))
     updated_at = Column(DateTime(timezone=True), server_default=func.now())
 
+    plan = relationship("Plan", lazy="noload")
+
 class Invoice(Base):
     __tablename__ = "invoices"
     __table_args__ = {"schema": "stud_hub_schema"}
