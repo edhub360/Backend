@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field, model_validator
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 from uuid import UUID
@@ -43,7 +43,6 @@ class SubscriptionOut(BaseModel):
     id: UUID
     customer_id: UUID
     plan_id: UUID
-    plan_name: str
     status: str
     stripe_subscription_id: str
     current_period_start: datetime
@@ -53,10 +52,20 @@ class SubscriptionOut(BaseModel):
     ended_at: Optional[datetime] = None
     trial_ends_at: Optional[datetime] = None
     updated_at: datetime
-    
-    class Config:
-        from_attributes = True
 
+    # Not a DB column — populated manually or via validator
+    plan_name: str = ""
+
+    model_config = {"from_attributes": True}
+
+    @model_validator(mode="before")
+    @classmethod
+    def extract_plan_name(cls, data: Any) -> Any:
+        # If data is an ORM object with a loaded `plan` relationship
+        if hasattr(data, "plan") and data.plan is not None:
+            # Sets plan_name from relationship before field validation
+            data.__dict__["plan_name"] = data.plan.name.lower().strip()
+        return data
 # ========== CANCEL SUBSCRIPTION SCHEMA ==========
 class CancelSubscriptionRequest(BaseModel):
     cancel_at_period_end: bool = True

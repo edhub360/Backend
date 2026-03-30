@@ -13,7 +13,6 @@ class UserBase(BaseModel):
     study_goals: Optional[Dict[str, Any]] = None
     device_info: Optional[Dict[str, Any]] = None
 
-
 class UserCreate(UserBase):
     pass
 
