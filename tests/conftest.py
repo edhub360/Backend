@@ -8,7 +8,7 @@ from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.pool import StaticPool
 from unittest.mock import MagicMock
 from sqlalchemy import String, JSON
-
+from flashcard.models import FlashcardDeck, FlashcardCard, FlashcardAnalytics 
 
 # --- Add all service roots to PYTHONPATH ---
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -129,6 +129,7 @@ import quiz.database as _qz_db
 sys.modules.setdefault("database", _qz_db)
 
 
+
 # ─────────────────────────────────────────────
 # Fixtures
 # ─────────────────────────────────────────────
@@ -161,6 +162,16 @@ async def test_engine():
         cursor = dbapi_conn.cursor()
         cursor.execute("PRAGMA foreign_keys=OFF")
         cursor.close()
+
+    # In conftest.py, before create_all
+    from sqlalchemy.dialects.postgresql import JSONB
+    from sqlalchemy import JSON
+    from sqlalchemy.dialects import sqlite
+
+    # Register JSONB → JSON for SQLite
+    JSONB.__init__ = lambda self, *a, **kw: super(JSONB, self).__init__(*a, **kw)
+
+    # Simpler: just switch to JSON in the model for non-PG dialects
 
     from quiz.models import Base as QuizBase
     from flashcard.models import Base as FlashcardBase
