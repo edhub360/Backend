@@ -182,12 +182,12 @@ async def get_flashcard_deck_detail(
     ]
 
     return {
-        "deck_id": quiz.quiz_id,
-        "title": quiz.title or "Untitled Deck",
-        "description": quiz.description or "No description available",
-        "subject_tag": quiz.subject_tag or "General",
-        "difficulty_level": quiz.difficulty_level or "Easy",
-        "estimated_time": quiz.estimated_time,
+        "deck_id": deck.quiz_id,
+        "title": deck.title or "Untitled Deck",
+        "description": deck.description or "No description available",
+        "subject_tag": deck.subject_tag or "General",
+        "difficulty_level": deck.difficulty_level or "Easy",
+        "estimated_time": deck.estimated_time,
         "total_cards": total_cards,
         "cards": cards,
         "pagination": {
