@@ -6,14 +6,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import select, text, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from models import FlashcardAnalytics
-from schemas import (
+from flashcard.models import FlashcardAnalytics
+from flashcard.schemas import (
     FlashcardAnalyticsCreate, FlashcardAnalyticsOut,
     FlashcardDeckListItem, FlashcardDeckDetail,
     FlashcardDecksResponse, PaginationMeta,
 )
-from database import get_session
-from models import Quiz, QuizQuestion
+from flashcard.database import get_session
+from flashcard.models import Quiz, QuizQuestion
 
 
 # ========== APP INITIALIZATION ==========

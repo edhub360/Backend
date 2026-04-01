@@ -8,7 +8,7 @@ from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.pool import StaticPool
 from unittest.mock import MagicMock
 from sqlalchemy import String, JSON
-from flashcard.models import FlashcardDeck, FlashcardCard, FlashcardAnalytics 
+from flashcard.models import Quiz, QuizQuestion, FlashcardAnalytics
 
 # --- Add all service roots to PYTHONPATH ---
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
