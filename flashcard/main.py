@@ -146,8 +146,8 @@ async def get_flashcard_deck_detail(
     offset: int = Query(0, ge=0, description="Number of cards to skip"),
     limit: int = Query(20, ge=1, le=100, description="Number of cards to return (max 100)"),
 ):
-    quiz = await session.get(Quiz, deck_id)
-    if not quiz:
+    deck = await session.get(Quiz, deck_id)
+    if not deck:
         raise HTTPException(
             status_code=404,
             detail=f"Flashcard deck with id '{deck_id}' not found",

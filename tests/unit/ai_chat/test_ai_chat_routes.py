@@ -67,7 +67,7 @@ def client():
          patch("app.routes.chat.get_faiss_store", return_value=mock_faiss), \
          patch("app.routes.chat.embed_query", return_value=[0.1] * 768), \
          patch("app.routes.chat.contains_harmful_content", return_value=False):
-        from app.routes.chat import router
+        from ai_chat.app.routes.chat import router
         app = FastAPI()
         app.include_router(router, prefix="/chat")
         return TestClient(app)
