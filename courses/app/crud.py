@@ -1,7 +1,7 @@
 from sqlalchemy import select, func, or_, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
-from app.models import Course
+from courses.app.models import Course
 
 async def get_course(session: AsyncSession, course_id: str):
     query = select(Course).where(Course.course_id == course_id)

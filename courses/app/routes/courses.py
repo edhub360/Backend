@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.schemas import PaginatedCourses, CourseDetail, CoursePreview
+from courses.app.schemas import PaginatedCourses, CourseDetail, CoursePreview
 from app.crud import get_course, list_courses
 from app.db import get_db
 from app.utils.pagination import validate_pagination

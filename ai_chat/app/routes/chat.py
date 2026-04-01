@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends, status, UploadFile, File
-from app.models.schemas import ChatRequest, ChatResponse, RetrievedChunk, ChatMode
+from ai_chat.app.models.schemas import ChatRequest, ChatResponse, RetrievedChunk, ChatMode
 from app.utils.embeddings import embed_query
 from app.utils.faiss_handler import get_faiss_store
 from app.utils.gemini_handler import get_gemini_handler
