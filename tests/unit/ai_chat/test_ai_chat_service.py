@@ -1,6 +1,6 @@
 # test_ai_chat_service.py
 import pytest
-from ai_chat.service import AIChatService   # ← drop the app.modules nesting
+from ai_chat.app.modules.ai_chat.service import AIChatService
 
 @pytest.mark.asyncio
 async def test_ai_chat_service_with_history(mocker):
