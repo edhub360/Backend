@@ -1,4 +1,4 @@
-from app.db.base import Base
+from study_planner.app.db.base import Base
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID, ENUM
 from uuid import uuid4
