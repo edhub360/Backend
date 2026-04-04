@@ -3,18 +3,18 @@ from fastapi import HTTPException, status
 from sqlalchemy import select, or_, desc, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from app.core.config import get_settings
-from app.models.study_plan import StudyPlan
-from app.models.study_item import StudyItem
-from app.models.user import User
-from app.models.courses import Course
-from app.schemas.study_plan import (
+from study_planner.app.core.config import get_settings
+from study_planner.app.models.study_plan import StudyPlan
+from study_planner.app.models.study_item import StudyItem
+from study_planner.app.models.user import User
+from study_planner.app.models.courses import Course
+from study_planner.app.schemas.study_plan import (
     StudyPlanCreate, StudyPlanUpdate, StudyPlanRead
 )
-from app.schemas.study_item import (
+from study_planner.app.schemas.study_item import (
     StudyItemCreate, StudyItemUpdate, StudyItemRead
 )
-from app.schemas.courses import CourseRead
+from study_planner.app.schemas.courses import CourseRead
 from typing import List
 from datetime import datetime
 
