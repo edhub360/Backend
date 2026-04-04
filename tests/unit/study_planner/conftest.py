@@ -7,6 +7,10 @@ import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../../study_planner"))
 
+os.environ.setdefault("JWT_ALGORITHM", "HS256")
+os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+os.environ.setdefault("JWT_SECRET", "jwt-secret-for-testing")
+
 from study_planner.app.main import app
 from study_planner.app.api.deps import DBSessionDep, CurrentUserDep
 from study_planner.app.core.security import CurrentUser
