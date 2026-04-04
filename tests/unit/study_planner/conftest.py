@@ -7,9 +7,9 @@ import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../../study_planner"))
 
-from app.main import app
-from app.api.deps import DBSessionDep, CurrentUserDep
-from app.core.security import CurrentUser
+from study_planner.app.main import app
+from study_planner.app.api.deps import DBSessionDep, CurrentUserDep
+from study_planner.app.core.security import CurrentUser
 
 ADMIN_USER_ID = "00000000-0000-0000-0000-000000000001"
 TEST_USER_ID = uuid4()
