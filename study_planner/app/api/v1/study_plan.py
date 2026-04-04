@@ -1,15 +1,15 @@
 from typing import List
 from uuid import UUID
 from fastapi import APIRouter, Depends, status, HTTPException, Query
-from app.api.deps import DBSessionDep, CurrentUserDep
-from app.schemas.study_plan import (
+from study_planner.app.api.deps import DBSessionDep, CurrentUserDep
+from study_planner.app.schemas.study_plan import (
     StudyPlanCreate, StudyPlanRead, StudyPlanUpdate
 )
-from app.schemas.study_item import (
+from study_planner.app.schemas.study_item import (
     StudyItemCreate, StudyItemRead, StudyItemUpdate
 )
-from app.schemas.courses import CourseRead
-from app.services import study_plan_service as svc
+from study_planner.app.schemas.courses import CourseRead
+from study_planner.app.services import study_plan_service as svc
 
 router = APIRouter(prefix="/study-plan", tags=["study-plan"])
 
