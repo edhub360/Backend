@@ -3,6 +3,10 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 from datetime import datetime
 from fastapi.testclient import TestClient
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../../study_planner"))
+
 from app.main import app
 from app.api.deps import DBSessionDep, CurrentUserDep
 from app.core.security import CurrentUser
