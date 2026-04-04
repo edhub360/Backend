@@ -7,7 +7,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 import jwt
 from pydantic import BaseModel
 
-from app.core.config import get_settings
+from study_planner.app.core.config import get_settings
 
 
 class CurrentUser(BaseModel):
