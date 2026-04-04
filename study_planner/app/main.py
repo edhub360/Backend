@@ -2,8 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 
-from app.core.config import get_settings
-from app.api.v1.study_plan import router as study_plan_router
+from study_planner.app.core.config import get_settings
+from study_planner.app.api.v1.study_plan import router as study_plan_router
 
 settings = get_settings()
 
