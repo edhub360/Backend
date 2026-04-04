@@ -2,10 +2,10 @@ import pytest
 from uuid import uuid4
 from datetime import datetime
 from pydantic import ValidationError
-from app.schemas.study_plan import StudyPlanBase, StudyPlanCreate, StudyPlanUpdate, StudyPlanRead
-from app.schemas.study_item import StudyItemBase, StudyItemCreate, StudyItemUpdate, StudyItemRead
-from app.schemas.courses import CourseBase, CourseRead
-from app.schemas.summary import TermSummary, PlanSummary
+from study_planner.app.schemas.study_plan import StudyPlanBase, StudyPlanCreate, StudyPlanUpdate, StudyPlanRead
+from study_planner.app.schemas.study_item import StudyItemBase, StudyItemCreate, StudyItemUpdate, StudyItemRead
+from study_planner.app.schemas.courses import CourseBase, CourseRead
+from study_planner.app.schemas.summary import TermSummary, PlanSummary
 
 
 class TestStudyPlanBase:

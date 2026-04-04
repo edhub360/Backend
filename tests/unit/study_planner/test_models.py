@@ -1,9 +1,9 @@
 import pytest
 from uuid import uuid4, UUID
-from app.models.study_plan import StudyPlan
-from app.models.study_item import StudyItem
-from app.models.courses import Course
-from app.models.user import User
+from study_planner.app.models.study_plan import StudyPlan
+from study_planner.app.models.study_item import StudyItem
+from study_planner.app.models.courses import Course
+from study_planner.app.models.user import User
 
 
 class TestStudyPlanModel:

@@ -3,9 +3,9 @@ from unittest.mock import patch, AsyncMock
 from uuid import uuid4
 from fastapi.testclient import TestClient
 from fastapi import HTTPException
-from app.main import app
-from app.api.deps import DBSessionDep, CurrentUserDep
-from tests.study_planner.conftest import make_mock_user, make_mock_db
+from study_planner.app.main import app
+from study_planner.app.api.deps import DBSessionDep, CurrentUserDep
+from tests.unit.study_planner.conftest import make_mock_user, make_mock_db
 
 USER_ID = uuid4()
 PLAN_ID = uuid4()

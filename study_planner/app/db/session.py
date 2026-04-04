@@ -4,7 +4,7 @@ from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.core.config import get_settings
+from study_planner.app.core.config import get_settings
 
 settings = get_settings()
 

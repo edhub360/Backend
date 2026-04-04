@@ -2,10 +2,10 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4, UUID
 from fastapi import HTTPException
-from app.services import study_plan_service as svc
-from app.schemas.study_plan import StudyPlanCreate, StudyPlanUpdate
-from app.schemas.study_item import StudyItemCreate, StudyItemUpdate
-from tests.study_planner.conftest import (
+from study_planner.app.services import study_plan_service as svc
+from study_planner.app.schemas.study_plan import StudyPlanCreate, StudyPlanUpdate
+from study_planner.app.schemas.study_item import StudyItemCreate, StudyItemUpdate
+from tests.unit.study_planner.conftest import (
     make_mock_db, make_mock_plan, make_mock_item, make_mock_course, ADMIN_USER_ID
 )
 
