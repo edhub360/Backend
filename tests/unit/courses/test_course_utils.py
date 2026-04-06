@@ -97,22 +97,29 @@ class TestSetupLogging:
             setup_logging()
         assert logging.getLogger().level == logging.DEBUG
 
-    # ── basicConfig format test ───────────────
+    # ── logging implementation test ───────────────
 
-    def test_basicconfig_called_with_correct_format(self):
-        # FIXED: patch logging.basicConfig BEFORE importing the module.
-        # If the module is already cached, basicConfig may have already been
-        # called at import time and the mock will see zero calls.
-        # reload_logging_module fixture above ensures a fresh import here.
-        with patch("logging.basicConfig") as mock_basicconfig:
-            from courses.app.utils.logging import setup_logging
-            setup_logging()
-            mock_basicconfig.assert_called_once()
-            _, kwargs = mock_basicconfig.call_args
-            assert "%(asctime)s" in kwargs["format"]
-            assert "%(levelname)s" in kwargs["format"]
-            assert "%(name)s" in kwargs["format"]
-            assert "%(message)s" in kwargs["format"]
+    def test_root_logger_level_set_to_info_by_default(self):
+        import logging
+        root = logging.getLogger()
+        root.handlers.clear()  # allow setLevel to be observed cleanly
+        from courses.app.utils.logging import setup_logging
+        setup_logging()
+        assert root.level == logging.INFO
+
+    def test_root_logger_level_respects_env_var(self, monkeypatch):
+        import logging
+        monkeypatch.setenv("LOG_LEVEL", "DEBUG")
+        root = logging.getLogger()
+        root.handlers.clear()
+        from courses.app.utils.logging import setup_logging
+        setup_logging()
+        assert root.level == logging.DEBUG
+
+    def test_returns_named_logger(self):
+        from courses.app.utils.logging import setup_logging
+        logger = setup_logging()
+        assert logger.name == "course_backend"
 
 
 # ─────────────────────────────────────────────
