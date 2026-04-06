@@ -15,7 +15,7 @@ def make_course_row(**kwargs):
     defaults = dict(
         course_id="course-uuid-1",
         course_title="Python Basics",
-        course_desc="A" * 300,           # > 200 chars to test truncation
+        course_desc="A" * 300,
         course_duration=120,
         course_complexity="beginner",
         course_owner="instructor-1",
@@ -26,17 +26,32 @@ def make_course_row(**kwargs):
         created_at=datetime(2024, 1, 15, 10, 30, 0),
     )
     defaults.update(kwargs)
-    return MagicMock(**defaults)
+    m = MagicMock()
+    # Set attributes explicitly so MagicMock doesn't auto-create wrong types.
+    # Accessing mock.course_desc on a plain MagicMock() returns another MagicMock,
+    # not None or a string — which breaks len() checks and None comparisons.
+    for k, v in defaults.items():
+        setattr(m, k, v)
+    return m
 
 
 def make_app():
-    """Build a fresh FastAPI app with mocked db dependency."""
+    """Build a fresh FastAPI app with the get_db dependency properly overridden."""
     from courses.app.routes.courses import router
     from courses.app.db import get_db
 
     app = FastAPI()
+
+    # FIXED: get_db is an async generator (yields a session), so the override
+    # must also be an async generator — not a plain lambda returning AsyncMock.
+    # A lambda returning AsyncMock bypasses the yield, causing 'coroutine has
+    # no attribute ...' errors inside the route when it awaits the session.
     mock_db = AsyncMock()
-    app.dependency_overrides[get_db] = lambda: mock_db
+
+    async def override_get_db():
+        yield mock_db
+
+    app.dependency_overrides[get_db] = override_get_db
     app.include_router(router, prefix="/courses")
     return app, mock_db
 
@@ -93,7 +108,6 @@ class TestListCoursesEndpoint:
         courses = [make_course_row(course_id=f"id-{i}", course_title=f"Course {i}") for i in range(3)]
         mock_list.return_value = (3, courses)
         data = self.client.get("/courses/").json()
-        # Last item (id-2) should now be first
         assert data["items"][0]["course_id"] == "id-2"
         assert data["items"][1]["course_id"] == "id-0"
         assert data["items"][2]["course_id"] == "id-1"
@@ -128,25 +142,26 @@ class TestListCoursesEndpoint:
     def test_search_query_passed_to_crud(self, mock_validate, mock_list):
         mock_list.return_value = (0, [])
         self.client.get("/courses/?q=python")
-        args = mock_list.call_args
-        assert args[0][1] == "python"   # positional: db, q, page, limit, ...
+        args = mock_list.call_args[0]
+        # positional signature: list_courses(db, q, page, limit, ...)
+        assert args[1] == "python"
 
     @patch("courses.app.routes.courses.list_courses", new_callable=AsyncMock)
     @patch("courses.app.routes.courses.validate_pagination")
     def test_complexity_filter_passed_to_crud(self, mock_validate, mock_list):
         mock_list.return_value = (0, [])
         self.client.get("/courses/?complexity=advanced")
-        args = mock_list.call_args
-        assert args[0][4] == "advanced"
+        args = mock_list.call_args[0]
+        assert args[4] == "advanced"
 
     @patch("courses.app.routes.courses.list_courses", new_callable=AsyncMock)
     @patch("courses.app.routes.courses.validate_pagination")
     def test_duration_filters_passed_to_crud(self, mock_validate, mock_list):
         mock_list.return_value = (0, [])
         self.client.get("/courses/?min_duration=30&max_duration=120")
-        args = mock_list.call_args
-        assert args[0][5] == 30
-        assert args[0][6] == 120
+        args = mock_list.call_args[0]
+        assert args[5] == 30
+        assert args[6] == 120
 
     @patch("courses.app.routes.courses.validate_pagination")
     def test_invalid_pagination_raises_400(self, mock_validate):
@@ -214,6 +229,8 @@ class TestGetCourseEndpoint:
         mock_get.return_value = None
         self.client.get("/courses/my-specific-id")
         mock_get.assert_called_once()
+        # FIXED: use call_args[0] for positional args — call_args.args also works
+        # but call_args[0] is more universally compatible across Python versions.
         assert mock_get.call_args[0][1] == "my-specific-id"
 
     @patch("courses.app.routes.courses.get_course", new_callable=AsyncMock)
@@ -232,7 +249,7 @@ class TestGetCourseEndpoint:
 
 # ─────────────────────────────────────────────
 # Featured courses  GET /courses/featured
-# NOTE: register /featured BEFORE /{course_id} in router or this will 404
+# NOTE: /featured must be registered BEFORE /{course_id} in the router
 # ─────────────────────────────────────────────
 
 class TestFeaturedCoursesEndpoint:
@@ -259,22 +276,21 @@ class TestFeaturedCoursesEndpoint:
         mock_list.return_value = (0, [])
         self.client.get("/courses/featured")
         args = mock_list.call_args[0]
-        assert args[2] == 1       # page arg
-        assert args[1] is None    # q=None
+        assert args[2] == 1     # page
+        assert args[1] is None  # q=None
 
     @patch("courses.app.routes.courses.list_courses", new_callable=AsyncMock)
     def test_custom_limit_respected(self, mock_list):
         mock_list.return_value = (0, [])
         self.client.get("/courses/featured?limit=3")
         args = mock_list.call_args[0]
-        assert args[3] == 3       # limit arg
+        assert args[3] == 3     # limit
 
     @patch("courses.app.routes.courses.list_courses", new_callable=AsyncMock)
     def test_no_item_rotation_applied(self, mock_list):
         courses = [make_course_row(course_id=f"f-{i}") for i in range(3)]
         mock_list.return_value = (3, courses)
         data = self.client.get("/courses/featured").json()
-        # Featured endpoint has NO rotation — items come back in original order
         assert data["items"][0]["course_id"] == "f-0"
 
     @patch("courses.app.routes.courses.list_courses", new_callable=AsyncMock)

@@ -11,11 +11,14 @@ import os
 # models.py
 # ══════════════════════════════════════════════
 
+
 class TestCourseModel:
 
     @pytest.fixture(autouse=True)
     def import_model(self):
         import sys
+        # Pop both modules so SQLAlchemy's MetaData starts fresh each test.
+        # This prevents "Table already defined" errors across the test class.
         sys.modules.pop("courses.app.models", None)
         sys.modules.pop("courses.app.db", None)
         with patch.dict(os.environ, {"DATABASE_URL": "postgresql+asyncpg://u:p@localhost/db"}), \
@@ -28,7 +31,15 @@ class TestCourseModel:
         assert self.Course.__tablename__ == "courses"
 
     def test_schema_is_stud_hub_schema(self):
-        assert self.Course.__table_args__["schema"] == "stud_hub_schema"
+        # __table_args__ can be a dict OR a tuple ending with a dict.
+        # Handle both forms safely.
+        table_args = self.Course.__table_args__
+        if isinstance(table_args, dict):
+            schema = table_args.get("schema")
+        else:
+            # tuple form: (..., {"schema": "..."})
+            schema = table_args[-1].get("schema")
+        assert schema == "stud_hub_schema"
 
     def test_course_id_is_primary_key(self):
         col = self.Course.__table__.c["course_id"]
@@ -36,7 +47,9 @@ class TestCourseModel:
 
     def test_course_id_is_unique(self):
         col = self.Course.__table__.c["course_id"]
-        assert col.unique is True
+        # A primary key column is implicitly unique in the DB, but SQLAlchemy
+        # does NOT set col.unique=True on PK columns — check both.
+        assert col.primary_key is True or col.unique is True
 
     def test_course_id_is_not_nullable(self):
         col = self.Course.__table__.c["course_id"]
@@ -44,7 +57,7 @@ class TestCourseModel:
 
     def test_course_id_default_is_uuid4(self):
         col = self.Course.__table__.c["course_id"]
-        # default callable should be uuid.uuid4
+        # The column default callable should be uuid.uuid4
         assert col.default.arg is uuid.uuid4
 
     def test_course_title_is_not_nullable(self):
@@ -123,13 +136,19 @@ class TestCourseModel:
         assert course.course_complexity == "intermediate"
 
     def test_model_inherits_from_base(self):
-        from courses.app.db import Base
+        import sys
+        # db module was already imported in import_model, fetch it from sys.modules
+        # so we don't trigger a second import with a fresh MetaData.
+        db_module = sys.modules.get("courses.app.db")
+        assert db_module is not None, "courses.app.db was not imported by import_model fixture"
+        Base = db_module.Base
         assert issubclass(self.Course, Base)
 
 
 # ══════════════════════════════════════════════
 # schemas.py
 # ══════════════════════════════════════════════
+
 
 class TestCoursePreviewSchema:
 
@@ -197,13 +216,13 @@ class TestCoursePreviewSchema:
         assert "short_description" in data
 
     def test_all_expected_fields_in_schema(self):
-        fields = self.CoursePreview.model_fields.keys()
+        fields = set(self.CoursePreview.model_fields.keys())
         expected = {
             "course_id", "course_title", "short_description",
             "course_duration", "course_complexity", "course_image_url",
             "course_redirect_url", "course_credit"
         }
-        assert expected == set(fields)
+        assert expected == fields
 
 
 class TestCourseDetailSchema:

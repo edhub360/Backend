@@ -2,6 +2,7 @@
 
 import logging
 import pytest
+import sys
 from unittest.mock import patch
 
 
@@ -10,6 +11,31 @@ from unittest.mock import patch
 # ─────────────────────────────────────────────
 
 class TestSetupLogging:
+
+    @pytest.fixture(autouse=True)
+    def reset_root_logger(self):
+        """
+        Isolate every test from root logger level changes made by setup_logging().
+        Without this, test_log_level_from_env_debug sets root to DEBUG and all
+        subsequent assertions against INFO/WARNING/ERROR will read the stale level.
+        """
+        original_level = logging.getLogger().level
+        yield
+        logging.getLogger().setLevel(original_level)
+
+    @pytest.fixture(autouse=True)
+    def reload_logging_module(self):
+        """
+        setup_logging() is typically called once at app startup. Python caches
+        the module, so a second import inside the same test session won't re-run
+        module-level code. Popping from sys.modules forces a fresh import each
+        test, which is required for the basicConfig mock test to work correctly.
+        """
+        sys.modules.pop("courses.app.utils.logging", None)
+        yield
+        sys.modules.pop("courses.app.utils.logging", None)
+
+    # ── Structural tests ──────────────────────
 
     def test_returns_logger_instance(self):
         from courses.app.utils.logging import setup_logging
@@ -21,57 +47,63 @@ class TestSetupLogging:
         logger = setup_logging()
         assert logger.name == "course_backend"
 
+    def test_returns_same_logger_on_repeated_calls(self):
+        from courses.app.utils.logging import setup_logging
+        logger1 = setup_logging()
+        logger2 = setup_logging()
+        assert logger1 is logger2  # logging.getLogger() returns cached instance
+
+    def test_logger_can_emit_info(self):
+        from courses.app.utils.logging import setup_logging
+        logger = setup_logging()
+        logger.info("test info message")  # should not raise
+
+    def test_logger_can_emit_error(self):
+        from courses.app.utils.logging import setup_logging
+        logger = setup_logging()
+        logger.error("test error message")  # should not raise
+
+    # ── Log level tests ───────────────────────
+
     def test_default_log_level_is_info(self):
+        import os
+        os.environ.pop("LOG_LEVEL", None)
         with patch.dict("os.environ", {}, clear=False):
-            # Ensure LOG_LEVEL is absent
-            import os
-            os.environ.pop("LOG_LEVEL", None)
             from courses.app.utils.logging import setup_logging
             setup_logging()
-            assert logging.getLogger().level == logging.INFO
+        assert logging.getLogger().level == logging.INFO
 
     def test_log_level_from_env_debug(self):
         with patch.dict("os.environ", {"LOG_LEVEL": "DEBUG"}):
             from courses.app.utils.logging import setup_logging
             setup_logging()
-            assert logging.getLogger().level == logging.DEBUG
+        assert logging.getLogger().level == logging.DEBUG
 
     def test_log_level_from_env_warning(self):
         with patch.dict("os.environ", {"LOG_LEVEL": "WARNING"}):
             from courses.app.utils.logging import setup_logging
             setup_logging()
-            assert logging.getLogger().level == logging.WARNING
+        assert logging.getLogger().level == logging.WARNING
 
     def test_log_level_from_env_error(self):
         with patch.dict("os.environ", {"LOG_LEVEL": "ERROR"}):
             from courses.app.utils.logging import setup_logging
             setup_logging()
-            assert logging.getLogger().level == logging.ERROR
+        assert logging.getLogger().level == logging.ERROR
 
     def test_log_level_env_is_case_insensitive(self):
         with patch.dict("os.environ", {"LOG_LEVEL": "debug"}):
             from courses.app.utils.logging import setup_logging
             setup_logging()
-            assert logging.getLogger().level == logging.DEBUG
+        assert logging.getLogger().level == logging.DEBUG
 
-    def test_returns_same_logger_on_repeated_calls(self):
-        from courses.app.utils.logging import setup_logging
-        logger1 = setup_logging()
-        logger2 = setup_logging()
-        assert logger1 is logger2   # logging.getLogger() returns cached instance
-
-    def test_logger_can_emit_info(self):
-        from courses.app.utils.logging import setup_logging
-        logger = setup_logging()
-        # Should not raise
-        logger.info("test info message")
-
-    def test_logger_can_emit_error(self):
-        from courses.app.utils.logging import setup_logging
-        logger = setup_logging()
-        logger.error("test error message")
+    # ── basicConfig format test ───────────────
 
     def test_basicconfig_called_with_correct_format(self):
+        # FIXED: patch logging.basicConfig BEFORE importing the module.
+        # If the module is already cached, basicConfig may have already been
+        # called at import time and the mock will see zero calls.
+        # reload_logging_module fixture above ensures a fresh import here.
         with patch("logging.basicConfig") as mock_basicconfig:
             from courses.app.utils.logging import setup_logging
             setup_logging()
@@ -97,7 +129,7 @@ class TestValidatePagination:
     # ── Happy path ────────────────────────────
 
     def test_valid_defaults_no_exception(self):
-        self.validate(1, 10)        # should not raise
+        self.validate(1, 10)
 
     def test_valid_page_and_limit(self):
         self.validate(5, 50, 100)
@@ -161,8 +193,7 @@ class TestValidatePagination:
     # ── Default max_page_limit ────────────────
 
     def test_default_max_is_100(self):
-        # limit=100 passes with default max
-        self.validate(1, 100)
+        self.validate(1, 100)  # passes with default max
 
     def test_limit_101_fails_with_default_max(self):
         with pytest.raises(ValueError):
