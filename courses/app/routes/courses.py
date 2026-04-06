@@ -12,6 +12,28 @@ router = APIRouter()
 MAX_PAGE_LIMIT = int(os.getenv("MAX_PAGE_LIMIT", 100))
 PAGE_DEFAULT_LIMIT = int(os.getenv("PAGE_DEFAULT_LIMIT", 10))
 
+@router.get("/featured", response_model=PaginatedCourses)
+async def featured_courses_endpoint(
+    limit: int = Query(PAGE_DEFAULT_LIMIT, ge=1, le=MAX_PAGE_LIMIT),
+    db: AsyncSession = Depends(get_db)
+):
+    # Return most recent courses as 'featured'
+    total, courses = await list_courses(db, None, 1, limit, None, None, None)
+    items = [
+        CoursePreview(
+            course_id=x.course_id,
+            course_title=x.course_title,
+            short_description=(x.course_desc[:200] if x.course_desc else ""),
+            course_duration=x.course_duration,
+            course_complexity=x.course_complexity,
+            course_image_url=x.course_image_url,
+            course_redirect_url=x.course_redirect_url,
+            course_credit=x.course_credit
+        )
+        for x in courses
+    ]
+    return PaginatedCourses(total=total, page=1, limit=limit, items=items)
+
 @router.get("/", response_model=PaginatedCourses)
 async def list_courses_endpoint(
     q: Optional[str] = Query(None, description="Keyword search"),
@@ -68,24 +90,4 @@ async def get_course_endpoint(
         created_at=course.created_at.isoformat()
     )
 
-@router.get("/featured", response_model=PaginatedCourses)
-async def featured_courses_endpoint(
-    limit: int = Query(PAGE_DEFAULT_LIMIT, ge=1, le=MAX_PAGE_LIMIT),
-    db: AsyncSession = Depends(get_db)
-):
-    # Return most recent courses as 'featured'
-    total, courses = await list_courses(db, None, 1, limit, None, None, None)
-    items = [
-        CoursePreview(
-            course_id=x.course_id,
-            course_title=x.course_title,
-            short_description=(x.course_desc[:200] if x.course_desc else ""),
-            course_duration=x.course_duration,
-            course_complexity=x.course_complexity,
-            course_image_url=x.course_image_url,
-            course_redirect_url=x.course_redirect_url,
-            course_credit=x.course_credit
-        )
-        for x in courses
-    ]
-    return PaginatedCourses(total=total, page=1, limit=limit, items=items)
+
