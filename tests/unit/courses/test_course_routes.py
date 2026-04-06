@@ -33,10 +33,6 @@ def make_course_row(**kwargs):
 
 
 def make_app():
-    import importlib
-    import courses.app.routes.courses as routes_module
-    importlib.reload(routes_module)  # force re-bind inside active patch context
-
     from courses.app.routes.courses import router
     from courses.app.db import get_db
 
@@ -65,8 +61,8 @@ class TestListCoursesEndpoint:
         self.mock_list = AsyncMock(return_value=(0, []))
         self.mock_validate = MagicMock()
 
-        with patch("courses.app.routes.courses.list_courses", self.mock_list), \
-             patch("courses.app.routes.courses.validate_pagination", self.mock_validate):
+        with patch("courses.app.crud.list_courses", self.mock_list), \
+            patch("courses.app.utils.pagination.validate_pagination", self.mock_validate):
             app, self.mock_db = make_app()
             self.client = TestClient(app, raise_server_exceptions=False)
             yield
@@ -168,7 +164,7 @@ class TestGetCourseEndpoint:
     def setup(self):
         self.mock_get = AsyncMock(return_value=None)
 
-        with patch("courses.app.routes.courses.get_course", self.mock_get):
+        with patch("courses.app.crud.get_course", self.mock_get):
             app, self.mock_db = make_app()
             self.client = TestClient(app, raise_server_exceptions=False)
             yield
@@ -228,7 +224,7 @@ class TestFeaturedCoursesEndpoint:
     def setup(self):
         self.mock_list = AsyncMock(return_value=(0, []))
 
-        with patch("courses.app.routes.courses.list_courses", self.mock_list):
+        with patch("courses.app.crud.list_courses", self.mock_list):
             app, self.mock_db = make_app()
             self.client = TestClient(app, raise_server_exceptions=False)
             yield
