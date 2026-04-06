@@ -1,0 +1,11 @@
+# .coveragerc
+[run]
+branch = False
+
+[report]
+omit =
+    tests/*
+    */conftest.py
+    */__pycache__/*
+    */deploy_*.py
+    */test_gemini.py
