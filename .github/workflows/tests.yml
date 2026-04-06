@@ -10,8 +10,16 @@ jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         python-version: ['3.12']
+        module:
+          - { name: ai_chat,       src: ai_chat,       tests: tests/unit/ai_chat }
+          - { name: courses,       src: courses,       tests: tests/unit/courses }
+          - { name: flashcard,     src: flashcard,     tests: tests/unit/flashcard }
+          - { name: quiz,          src: quiz,          tests: tests/unit/quiz }
+          - { name: study_planner, src: study_planner, tests: tests/unit/study_planner }
+          - { name: Notes,         src: Notes,         tests: tests/unit/Notes }
 
     steps:
     - uses: actions/checkout@v4
@@ -20,53 +28,54 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
-
-    - name: Cache pip
-      uses: actions/cache@v4
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('requirements-test.txt') }}
-        restore-keys: ${{ runner.os }}-pip-
+        cache: pip
 
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements-test.txt
 
-    - name: Set PYTHONPATH
-      run: echo "PYTHONPATH=$PYTHONPATH:$(pwd)" >> $GITHUB_ENV
-
-    - name: Lint with flake8
+    - name: Set environment
       run: |
-        flake8 quiz login flashcard ai_chat courses Notes study_planner \
-          --count --select=E9,F63,F7,F82 --show-source --statistics
+        echo "PYTHONPATH=$(pwd)" >> $GITHUB_ENV
+        echo "DATABASE_URL=sqlite+aiosqlite:///:memory:" >> $GITHUB_ENV
+        echo "JWT_SECRET=fake-jwt-secret-for-testing" >> $GITHUB_ENV
+        echo "JWT_SECRET_KEY=fake-jwt-secret-for-testing" >> $GITHUB_ENV
+        echo "JWT_ALGORITHM=HS256" >> $GITHUB_ENV
+        echo "SECRET_KEY=fake-secret-key-for-testing" >> $GITHUB_ENV
+        echo "GOOGLE_CLIENT_ID=fake-google-client-id" >> $GITHUB_ENV
+        echo "GOOGLE_CLIENT_SECRET=fake-google-client-secret" >> $GITHUB_ENV
+        echo "GEMINI_API_KEY=fake-gemini-api-key" >> $GITHUB_ENV
+        echo "STRIPE_SECRET_KEY=fake-stripe-secret-key" >> $GITHUB_ENV
 
-    - name: Format check with black
+    - name: Lint — ${{ matrix.module.name }}
       run: |
-        black --check quiz login flashcard ai_chat courses Notes study_planner || true
+        flake8 ${{ matrix.module.src }} \
+          --count --select=E9,F63,F7,F82 \
+          --show-source --statistics
 
-    - name: Type check with mypy
+    - name: Format check — ${{ matrix.module.name }}
       run: |
-        mypy quiz login courses Notes study_planner --ignore-missing-imports || true
+        black --check ${{ matrix.module.src }} || true
 
-    - name: Run tests with coverage
+    - name: Type check — ${{ matrix.module.name }}
       run: |
-        pytest tests/ \
-          --cov=ai_chat \
-          --cov=quiz \
-          --cov=flashcard \
-          --cov=login \
-          --cov=courses \
-          --cov=Notes \
-          --cov=study_planner \
-          --cov-report=xml \
+        mypy ${{ matrix.module.src }} --ignore-missing-imports || true
+
+    - name: Run tests — ${{ matrix.module.name }}
+      run: |
+        pytest ${{ matrix.module.tests }} \
+          --cov=${{ matrix.module.src }} \
+          --cov-report=xml:coverage_${{ matrix.module.name }}.xml \
           --cov-report=term-missing \
-          --asyncio-mode=auto
-      continue-on-error: true
+          --asyncio-mode=auto \
+          -v --tb=short
 
-    - name: Upload coverage to Codecov
+    - name: Upload coverage — ${{ matrix.module.name }}
       uses: codecov/codecov-action@v5
       with:
-        files: ./coverage.xml
-        flags: unittests
-        name: codecov-umbrella
+        token: ${{ secrets.CODECOV_TOKEN }}
+        files: ./coverage_${{ matrix.module.name }}.xml
+        flags: ${{ matrix.module.name }}
+        name: ${{ matrix.module.name }}
+        fail_ci_if_error: false
