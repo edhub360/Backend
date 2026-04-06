@@ -14,6 +14,12 @@ from fastapi.security import HTTPAuthorizationCredentials
 SECRET = "your-secret-key"
 ALGORITHM = "HS256"
 
+# ── NEW: force the correct secret in every test in this file ─────────────────
+@pytest.fixture(autouse=True)
+def patch_jwt_secret(monkeypatch):
+    monkeypatch.setenv("JWT_SECRET_KEY", SECRET)
+    monkeypatch.setattr("ai_chat.app.utils.auth.JWT_SECRET_KEY", SECRET)
+# ─────────────────────────────────────────────────────────────────────────────
 
 def make_token(
     user_id: int = 1,

@@ -1,10 +1,11 @@
-import jwt
+# ai_chat/app/utils/auth.py — the full corrected file
+
 import os
+from datetime import datetime, timezone
 from fastapi import HTTPException, Depends, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from datetime import datetime, timezone
+import jwt
 from typing import Dict
-
 
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-secret-key")
 JWT_ALGORITHM = "HS256"
@@ -22,12 +23,11 @@ class AuthUser:
 
 def verify_token(token: str) -> Dict:
     try:
-        # Disable PyJWT's built-in exp check so we control the error message
         payload = jwt.decode(
             token,
             JWT_SECRET_KEY,
             algorithms=[JWT_ALGORITHM],
-            options={"verify_exp": False},  # ← key change
+            options={"verify_exp": False},  # ← disable built-in exp check
         )
     except jwt.PyJWTError:
         raise HTTPException(
@@ -35,13 +35,12 @@ def verify_token(token: str) -> Dict:
             detail="Invalid token",
         )
 
-    # Manual exp check — now runs for ALL tokens including expired ones
-    # payload.get("exp", 0) handles tokens with no exp field (treats as already expired)
+    # Manual exp check — handles both expired tokens AND missing exp field
     now = datetime.now(timezone.utc).timestamp()
     if payload.get("exp", 0) < now:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token expired",
+            detail="Token expired",       # ← distinct message the test asserts
         )
 
     return payload
