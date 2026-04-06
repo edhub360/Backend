@@ -33,6 +33,10 @@ def make_course_row(**kwargs):
 
 
 def make_app():
+    import importlib
+    import courses.app.routes.courses as routes_module
+    importlib.reload(routes_module)  # force re-bind inside active patch context
+
     from courses.app.routes.courses import router
     from courses.app.db import get_db
 
@@ -49,7 +53,6 @@ def make_app():
     app.dependency_overrides[get_db] = override_get_db
     app.include_router(router, prefix="/courses")
     return app, mock_db
-
 
 # ─────────────────────────────────────────────
 # List courses  GET /courses/
