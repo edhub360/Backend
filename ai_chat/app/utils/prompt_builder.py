@@ -17,3 +17,12 @@ def build_prompt(user_message: str, history: List[Dict] = []) -> str:
     prompt_parts.append(f"User: {user_message}")
 
     return "\n".join(prompt_parts)
+
+def count_tokens(text: str) -> int:
+    """
+    Approximate token count by whitespace-splitting.
+    Replace with tiktoken or a model-specific tokenizer for accuracy.
+    """
+    if not text:
+        return 0
+    return len(text.split())

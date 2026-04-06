@@ -35,42 +35,57 @@ mock_faiss.search.return_value = [
 ]
 
 PATCHES = {
-    "app.routes.chat.get_current_user": lambda: mock_user,
-    "app.routes.chat.session_memory": mock_session_memory,
-    "app.routes.chat.get_gemini_handler": lambda: mock_gemini,
-    "app.routes.chat.get_faiss_store": lambda: mock_faiss,
-    "app.routes.chat.embed_query": MagicMock(return_value=[0.1] * 768),
-    "app.routes.chat.contains_harmful_content": MagicMock(return_value=False),
+    "ai_chat.app.routes.chat.get_current_user": lambda: mock_user,
+    "ai_chat.app.routes.chat.session_memory": mock_session_memory,
+    "ai_chat.app.routes.chat.get_gemini_handler": lambda: mock_gemini,
+    "ai_chat.app.routes.chat.get_faiss_store": lambda: mock_faiss,
+    "ai_chat.app.routes.chat.embed_query": MagicMock(return_value=[0.1] * 768),
+    "ai_chat.app.routes.chat.contains_harmful_content": MagicMock(return_value=False),
 }
 
 
+# ---------------------------------------------------------------------------
+# autouse: patch all module-level globals in every test
+# ---------------------------------------------------------------------------
+
 @pytest.fixture(autouse=True)
 def apply_patches():
-    with patch.multiple("app.routes.chat", **{
-        k.replace("app.routes.chat.", ""): v for k, v in {
-            "get_current_user": lambda: mock_user,
-            "session_memory": mock_session_memory,
-            "get_gemini_handler": lambda: mock_gemini,
-            "get_faiss_store": lambda: mock_faiss,
-            "embed_query": MagicMock(return_value=[0.1] * 768),
-            "contains_harmful_content": MagicMock(return_value=False),
-        }.items()
-    }):
+    # ← FIXED: full package path "ai_chat.app.routes.chat.*"
+    with patch("ai_chat.app.routes.chat.session_memory", mock_session_memory), \
+         patch("ai_chat.app.routes.chat.get_gemini_handler", return_value=mock_gemini), \
+         patch("ai_chat.app.routes.chat.get_faiss_store", return_value=mock_faiss), \
+         patch("ai_chat.app.routes.chat.embed_query", MagicMock(return_value=[0.1] * 768)), \
+         patch("ai_chat.app.routes.chat.contains_harmful_content", MagicMock(return_value=False)):
+        # Reset call counts before each test so assertions are isolated
+        mock_gemini.generate_response.reset_mock()
+        mock_session_memory.get_history.return_value = []
+        mock_session_memory.append_message.reset_mock()
         yield
 
 
+# ---------------------------------------------------------------------------
+# client fixture — router-level app, auth bypassed via dependency_overrides
+# ---------------------------------------------------------------------------
+
 @pytest.fixture
 def client():
-    with patch("app.routes.chat.get_current_user", return_value=mock_user), \
-         patch("app.routes.chat.session_memory", mock_session_memory), \
-         patch("app.routes.chat.get_gemini_handler", return_value=mock_gemini), \
-         patch("app.routes.chat.get_faiss_store", return_value=mock_faiss), \
-         patch("app.routes.chat.embed_query", return_value=[0.1] * 768), \
-         patch("app.routes.chat.contains_harmful_content", return_value=False):
-        from ai_chat.app.routes.chat import router
-        app = FastAPI()
-        app.include_router(router, prefix="/chat")
-        return TestClient(app)
+    from ai_chat.app.routes.chat import router
+    from ai_chat.app.utils.auth import get_current_user
+
+    app = FastAPI()
+    app.include_router(router, prefix="/chat")
+
+    # Override the dependency — this is what actually bypasses auth
+    app.dependency_overrides[get_current_user] = lambda: mock_user
+
+    with patch("ai_chat.app.routes.chat.session_memory", mock_session_memory), \
+         patch("ai_chat.app.routes.chat.get_gemini_handler", return_value=mock_gemini), \
+         patch("ai_chat.app.routes.chat.get_faiss_store", return_value=mock_faiss), \
+         patch("ai_chat.app.routes.chat.embed_query", return_value=[0.1] * 768), \
+         patch("ai_chat.app.routes.chat.contains_harmful_content", return_value=False):
+        yield TestClient(app)
+
+    app.dependency_overrides.clear()
 
 
 # ===========================================================================
@@ -272,7 +287,7 @@ class TestChatRAGMode:
         long_query = "Describe the concept in depth: " + "neural network " * 300
         assert len(long_query) > 5_000
 
-        with patch("app.routes.chat.embed_query", return_value=[0.1] * 768) as mock_embed:
+        with patch("ai_chat.app.routes.chat.embed_query", return_value=[0.1] * 768) as mock_embed:
             response = client.post("/chat", json={
                 "query": long_query,
                 "mode": "rag"
@@ -288,7 +303,7 @@ class TestChatRAGMode:
 class TestContentModeration:
 
     def test_harmful_query_blocked_before_llm(self, client):
-        with patch("app.routes.chat.contains_harmful_content", return_value=True):
+        with patch("ai_chat.app.routes.chat.contains_harmful_content", return_value=True):
             response = client.post("/chat", json={
                 "query": "something harmful",
                 "mode": "general"
@@ -300,7 +315,7 @@ class TestContentModeration:
 
     def test_harmful_llm_output_replaced(self, client):
         mock_gemini.generate_response.return_value = "harmful output text"
-        with patch("app.routes.chat.contains_harmful_content", side_effect=[False, True]):
+        with patch("ai_chat.app.routes.chat.contains_harmful_content", side_effect=[False, True]):
             response = client.post("/chat", json={
                 "query": "innocent query",
                 "mode": "general"
