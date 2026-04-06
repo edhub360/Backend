@@ -35,18 +35,17 @@ def make_course_row(**kwargs):
     return m
 
 
-def make_app():
-    """Build a fresh FastAPI app with the get_db dependency properly overridden."""
+def make_app(mock_courses=None):
     from courses.app.routes.courses import router
     from courses.app.db import get_db
 
     app = FastAPI()
-
-    # FIXED: get_db is an async generator (yields a session), so the override
-    # must also be an async generator — not a plain lambda returning AsyncMock.
-    # A lambda returning AsyncMock bypasses the yield, causing 'coroutine has
-    # no attribute ...' errors inside the route when it awaits the session.
     mock_db = AsyncMock()
+
+    # Properly set up the execute() → scalars() → all() chain
+    mock_result = MagicMock()
+    mock_result.scalars.return_value.all.return_value = mock_courses or []
+    mock_db.execute = AsyncMock(return_value=mock_result)
 
     async def override_get_db():
         yield mock_db

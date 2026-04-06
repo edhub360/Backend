@@ -10,7 +10,7 @@ import os
 # ══════════════════════════════════════════════
 # models.py
 # ══════════════════════════════════════════════
-
+from courses.app.models import Course
 
 class TestCourseModel:
 
@@ -24,7 +24,6 @@ class TestCourseModel:
         with patch.dict(os.environ, {"DATABASE_URL": "postgresql+asyncpg://u:p@localhost/db"}), \
              patch("sqlalchemy.ext.asyncio.create_async_engine"), \
              patch("sqlalchemy.ext.asyncio.async_sessionmaker"):
-            from courses.app.models import Course
             self.Course = Course
 
     def test_tablename_is_courses(self):
