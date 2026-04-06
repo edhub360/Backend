@@ -4,7 +4,7 @@ import types
 from unittest.mock import MagicMock
 from sqlalchemy.orm import DeclarativeBase
 
-# ── Env vars (before any service imports) ──────────────────────────
+# ── Env vars ──────────────────────────────────────────────────────
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 os.environ.setdefault("SECRET_KEY", "fake-secret-key-for-testing")
 os.environ.setdefault("GOOGLE_CLIENT_ID", "fake-google-client-id")
@@ -15,7 +15,7 @@ os.environ.setdefault("JWT_ALGORITHM", "HS256")
 os.environ.setdefault("GEMINI_API_KEY", "fake-gemini-api-key")
 os.environ.setdefault("STRIPE_SECRET_KEY", "fake-stripe-secret-key")
 
-# ── Mock `app.*` bare imports (login service) ─────────────────────
+# ── Mock `app.*` bare imports (login service) ────────────────────
 class _TestBase(DeclarativeBase):
     pass
 
@@ -36,7 +36,7 @@ sys.modules["app.utils"] = MagicMock(
     hash_token=MagicMock(return_value="fake-hash"),
 )
 
-# ── Mock google.cloud.storage ─────────────────────────────────────
+# ── Mock google.cloud.storage ────────────────────────────────────
 _mock_gcs = types.ModuleType("google.cloud.storage")
 _mock_gcs.Client = MagicMock()
 _google_mod = sys.modules.get("google") or types.ModuleType("google")
@@ -48,7 +48,6 @@ sys.modules["google.cloud.storage"] = _mock_gcs
 sys.modules["pandas"] = MagicMock()
 
 # ── Mock LLM/LangChain dependencies ──────────────────────────────
-_mock_langchain = MagicMock()
 for _mod in [
     "langchain", "langchain.chains", "langchain.memory", "langchain.prompts",
     "langchain_core", "langchain_core.messages", "langchain_core.prompts",
@@ -57,21 +56,5 @@ for _mod in [
 ]:
     sys.modules.setdefault(_mod, MagicMock())
 
-# ── Combined bare `models`, `schemas`, `database` shims ──────────
-import quiz.models as _qz_models
-import flashcard.models as _fc_models
-import quiz.schemas as _qz_schemas
-import flashcard.schemas as _fc_schemas
-import quiz.database as _qz_db
-
-def _merge_modules(name, *sources):
-    mod = types.ModuleType(name)
-    for src in sources:
-        for attr in dir(src):
-            if not attr.startswith("__"):
-                setattr(mod, attr, getattr(src, attr))
-    sys.modules[name] = mod
-
-_merge_modules("models", _qz_models, _fc_models)
-_merge_modules("schemas", _qz_schemas, _fc_schemas)
-sys.modules.setdefault("database", _qz_db)
+# ── NOTHING BELOW THIS LINE ───────────────────────────────────────
+# quiz/flashcard shims belong in tests/unit/quiz/conftest.py only

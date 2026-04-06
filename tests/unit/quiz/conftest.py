@@ -1,8 +1,27 @@
 import pytest
 import asyncio
+import sys
+import types
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.pool import StaticPool
 from sqlalchemy import String, JSON, DateTime
+import quiz.models as _qz_models
+import flashcard.models as _fc_models
+import quiz.schemas as _qz_schemas
+import flashcard.schemas as _fc_schemas
+import quiz.database as _qz_db
+
+def _merge(name, *sources):
+    mod = types.ModuleType(name)
+    for src in sources:
+        for attr in dir(src):
+            if not attr.startswith("__"):
+                setattr(mod, attr, getattr(src, attr))
+    sys.modules[name] = mod
+
+_merge("models", _qz_models, _fc_models)
+_merge("schemas", _qz_schemas, _fc_schemas)
+sys.modules.setdefault("database", _qz_db)
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
