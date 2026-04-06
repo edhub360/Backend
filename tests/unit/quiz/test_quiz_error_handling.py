@@ -15,7 +15,7 @@ def mock_session():
 @pytest.fixture
 def client(mock_session):
     from quiz.main import app
-    from database import get_session
+    from quiz.database import get_session
     app.dependency_overrides[get_session] = lambda: mock_session
     yield TestClient(app)
     app.dependency_overrides.clear()

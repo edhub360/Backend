@@ -16,7 +16,7 @@ from quiz.schemas import (
     UserQuizHistory, QuizStatistics, QuizDashboardSummary, WeeklyActivityDay, WeeklyActivityResponse
 )
 
-from study_stats import update_user_study_stats
+from quiz.study_stats import update_user_study_stats
 from google.cloud import storage
 import pandas as pd
 import io
