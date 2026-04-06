@@ -1,7 +1,7 @@
 # tests/unit/ai_chat/test_ai_chat_api.py
 
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 from fastapi.testclient import TestClient
 from fastapi import FastAPI
 
@@ -24,10 +24,19 @@ def client():
     app.dependency_overrides.clear()
 
 
-def test_ai_chat_api(client, mocker):  # ← drop @pytest.mark.asyncio + async
+def test_ai_chat_api(client, mocker):
+    # ← FIXED: patch what the route actually calls — get_gemini_handler()
+    mock_gemini = MagicMock()
+    mock_gemini.generate_response.return_value = "Mocked API response"
     mocker.patch(
-        "ai_chat.app.routes.chat.AIChatService.get_response",
-        return_value="Mocked API response"
+        "ai_chat.app.routes.chat.get_gemini_handler",
+        return_value=mock_gemini
+    )
+    # Also patch session_memory and moderation so they don't interfere
+    mocker.patch("ai_chat.app.routes.chat.session_memory")
+    mocker.patch(
+        "ai_chat.app.routes.chat.contains_harmful_content",
+        return_value=False
     )
 
     response = client.post("/chat", json={"query": "Hello", "mode": "general"})

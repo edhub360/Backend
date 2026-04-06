@@ -284,7 +284,7 @@ class TestChatRAGMode:
         mock_faiss.index.ntotal = 1
         mock_faiss.search.return_value = [("chunk", "doc.pdf", 0.9)]
 
-        long_query = "Describe the concept in depth: " + "neural network " * 300
+        long_query = "Describe the concept in depth: " + "neural network " * 340
         assert len(long_query) > 5_000
 
         with patch("ai_chat.app.routes.chat.embed_query", return_value=[0.1] * 768) as mock_embed:
