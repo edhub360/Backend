@@ -1,6 +1,7 @@
-# models.py
 from datetime import datetime
 from typing import Optional, List
+
+# REMOVED: from altair import Column  ← this was the root cause
 from sqlalchemy import String, Integer, Text, TIMESTAMP, ForeignKey, text, Boolean, Float
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID, JSONB
@@ -11,7 +12,6 @@ class Base(DeclarativeBase):
     pass
 
 
-# ---------------- Quizzes (Used as Flashcard Decks) ----------------
 class Quiz(Base):
     __tablename__ = "quizzes"
     __table_args__ = {"schema": "stud_hub_schema"}
@@ -27,7 +27,7 @@ class Quiz(Base):
     subject_tag: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     difficulty_level: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     estimated_time: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    is_active: Mapped[bool] = mapped_column(Boolean, server_default="true", nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)  # ← "true" → True
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=text("now()"))
 
     questions: Mapped[List["QuizQuestion"]] = relationship(
@@ -43,7 +43,6 @@ class Quiz(Base):
         super().__init__(**kwargs)
 
 
-# ---------------- Quiz Questions (Used as Flashcard Items) ----------------
 class QuizQuestion(Base):
     __tablename__ = "questions"
     __table_args__ = {"schema": "stud_hub_schema"}
@@ -60,7 +59,6 @@ class QuizQuestion(Base):
     )
     question_text: Mapped[str] = mapped_column(Text, nullable=False)
     correct_answer: Mapped[str] = mapped_column(String(500), nullable=False)
-    # Not used in flashcards — stored as JSONB to avoid ARRAY portability issues
     incorrect_answers: Mapped[Optional[list]] = mapped_column(JSONB, nullable=True, default=None)
     explanation: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     difficulty: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
@@ -73,7 +71,6 @@ class QuizQuestion(Base):
         super().__init__(**kwargs)
 
 
-# ---------------- Flashcard Analytics ----------------
 class FlashcardAnalytics(Base):
     __tablename__ = "flashcard_analytics"
     __table_args__ = {"schema": "stud_hub_schema"}
@@ -90,11 +87,8 @@ class FlashcardAnalytics(Base):
         nullable=False,
     )
     user_id: Mapped[str] = mapped_column(String(64), nullable=False)
-    card_reviewed: Mapped[bool] = mapped_column(
-        Boolean,
-        server_default="true",
-        nullable=False,
-    )
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)      # ← fixed
+    card_reviewed: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)  # ← fixed
     time_taken: Mapped[float] = mapped_column(Float, nullable=False)
     reviewed_at: Mapped[datetime] = mapped_column(
         TIMESTAMP, server_default=text("now()")

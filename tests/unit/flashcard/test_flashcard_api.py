@@ -26,7 +26,7 @@ def mock_session():
 @pytest.fixture
 def client(mock_session):
     from flashcard.main import app
-    from database import get_session
+    from flashcard.database import get_session
 
     async def override_get_session():
         yield mock_session
