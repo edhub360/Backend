@@ -1,9 +1,9 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from typing import List
 from ai_chat.app.models.schemas import UploadResponse
-from app.utils.text_processing import extract_text, chunk_text
-from app.utils.embeddings import embed_texts
-from app.utils.faiss_handler import get_faiss_store
+from ai_chat.app.utils.text_processing import extract_text, chunk_text
+from ai_chat.app.utils.embeddings import embed_texts
+from ai_chat.app.utils.faiss_handler import get_faiss_store
 
 router = APIRouter()
 

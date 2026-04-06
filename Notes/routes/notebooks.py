@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from db import get_session
+from Notes.db import get_session
 from sqlalchemy import select
-from models import Notebook
-from schemas import NotebookCreate, Notebook as NotebookSchema
-from utils.auth import get_current_user, AuthUser
+from Notes.models import Notebook
+from Notes.schemas import NotebookCreate, Notebook as NotebookSchema
+from Notes.utils.auth import get_current_user, AuthUser
 
 router = APIRouter()
 

@@ -2,9 +2,9 @@ from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 import uvicorn
-from utils.logging import setup_logging
-from routes import notebooks, sources, embeddings
-from routes import chat
+from Notes.utils.logging import setup_logging
+from Notes.routes import notebooks, sources, embeddings
+from Notes.routes import chat
 
 app = FastAPI(title="NotebookLM Backend", version="1.0.0")
 

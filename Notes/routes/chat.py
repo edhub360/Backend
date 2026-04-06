@@ -6,10 +6,10 @@ import logging
 from utils.auth import get_current_user, AuthUser
 
 from db import get_session
-from services.gemini_service import GeminiService
-from services.embedding_service import get_relevant_chunks_for_notebook
-from utils.session_memory import SessionMemory
-from schemas import ChatRequest, ChatResponse, ChatMessage, ContextChunk
+from Notes.services.gemini_service import GeminiService
+from Notes.services.embedding_service import get_relevant_chunks_for_notebook
+from Notes.utils.session_memory import SessionMemory
+from Notes.schemas import ChatRequest, ChatResponse, ChatMessage, ContextChunk
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

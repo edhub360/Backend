@@ -4,9 +4,9 @@ from sqlalchemy import select, func, literal_column,delete
 from sqlalchemy.sql import text
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
-from models import Embedding, Source, Notebook
-from db import AsyncSessionLocal
-from schemas import SemanticSearchRequest
+from Notes.models import Embedding, Source, Notebook
+from Notes.db import AsyncSessionLocal
+from Notes.schemas import SemanticSearchRequest
 import numpy as np
 from typing import List, Optional, Dict, Any
 from uuid import UUID

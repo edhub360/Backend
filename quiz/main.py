@@ -5,9 +5,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select, update, delete, func, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import get_session, engine
-from models import Base, User, QuizQuestion, Quiz, QuizAttempt, UserStudyStats  # FIXED: Changed Question to QuizQuestion
-from schemas import (
+from quiz.database import get_session, engine
+from quiz.models import Base, User, QuizQuestion, Quiz, QuizAttempt, UserStudyStats  # FIXED: Changed Question to QuizQuestion
+from quiz.schemas import (
     UserCreate, UserUpdate, UserOut,
     QuestionCreate, QuestionOut,
     QuizCreate, QuizOut, QuizListResponse,  # Legacy

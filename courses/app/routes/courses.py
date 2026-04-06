@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, Query, HTTPException
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from courses.app.schemas import PaginatedCourses, CourseDetail, CoursePreview
-from app.crud import get_course, list_courses
-from app.db import get_db
-from app.utils.pagination import validate_pagination
+from courses.app.crud import get_course, list_courses
+from courses.app.db import get_db
+from courses.app.utils.pagination import validate_pagination
 import os
 
 router = APIRouter()

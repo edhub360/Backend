@@ -1,11 +1,11 @@
 from fastapi import APIRouter, HTTPException, Depends, status, UploadFile, File
 from ai_chat.app.models.schemas import ChatRequest, ChatResponse, RetrievedChunk, ChatMode
-from app.utils.embeddings import embed_query
-from app.utils.faiss_handler import get_faiss_store
-from app.utils.gemini_handler import get_gemini_handler
-from app.utils.auth import get_current_user, AuthUser
-from app.utils.session_memory import session_memory
-from app.utils.moderation import contains_harmful_content 
+from ai_chat.app.utils.embeddings import embed_query
+from ai_chat.app.utils.faiss_handler import get_faiss_store
+from ai_chat.app.utils.gemini_handler import get_gemini_handler
+from ai_chat.app.utils.auth import get_current_user, AuthUser
+from ai_chat.app.utils.session_memory import session_memory
+from ai_chat.app.utils.moderation import contains_harmful_content 
 
 router = APIRouter()
 

@@ -5,13 +5,13 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy import select
 from typing import Optional
 from uuid import UUID
-from utils.auth import get_current_user, AuthUser
-from db import get_session
-from models import Source, Notebook
-from schemas import Source as SourceSchema
-from services.extract_service import extract_text_from_file_content, extract_from_url, extract_from_youtube
-from services.gcs_service import get_gcs_client, upload_file_to_gcs
-from services.embedding_service import store_embeddings_for_source
+from Notes.utils.auth import get_current_user, AuthUser
+from Notes.db import get_session
+from Notes.models import Source, Notebook
+from Notes.schemas import Source as SourceSchema
+from Notes.services.extract_service import extract_text_from_file_content, extract_from_url, extract_from_youtube
+from Notes.services.gcs_service import get_gcs_client, upload_file_to_gcs
+from Notes.services.embedding_service import store_embeddings_for_source
 
 router = APIRouter()
 

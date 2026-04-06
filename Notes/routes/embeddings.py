@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from db import get_session
-from schemas import SemanticSearchRequest, SemanticSearchResponse
-from services.embedding_service import semantic_search
-from utils.auth import get_current_user, AuthUser
+from Notes.db import get_session
+from Notes.schemas import SemanticSearchRequest, SemanticSearchResponse
+from Notes.services.embedding_service import semantic_search
+from Notes.utils.auth import get_current_user, AuthUser
 
 router = APIRouter()
 
