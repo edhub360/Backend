@@ -9,10 +9,10 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
-from app.config import settings
-from app.db import init_db
-from app.routes.auth_routes import router as auth_router
-from app.routes.password_reset_routes import password_reset_router
+from login.app.config import settings
+from login.app.db import init_db
+from login.app.routes.auth_routes import router as auth_router
+from login.app.routes.password_reset_routes import password_reset_router
 
 
 # Configure logging

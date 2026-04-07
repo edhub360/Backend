@@ -8,14 +8,14 @@ from starlette.requests import Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.db import get_db
-from app.models import User, AuthCredential, PasswordResetToken
-from app.schemas import ForgotPasswordRequest, ResetPasswordRequest
-from app.auth import hash_password
-from app.utils import generate_secure_token, hash_token
-from app.config import settings
-from app.email_utils import send_reset_password_email
-from app.routes.auth_routes import limiter  # or wherever you expose Limiter
+from login.app.db import get_db
+from login.app.models import User, AuthCredential, PasswordResetToken
+from login.app.schemas import ForgotPasswordRequest, ResetPasswordRequest
+from login.app.auth import hash_password
+from login.app.utils import generate_secure_token, hash_token
+from login.app.config import settings
+from login.app.email_utils import send_reset_password_email
+from login.app.routes.auth_routes import limiter  # or wherever you expose Limiter
 
 logger = logging.getLogger(__name__)
 

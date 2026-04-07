@@ -13,17 +13,17 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from app.utils import generate_secure_token, hash_token
 
-from app.db import get_db
-from app.models import User, AuthCredential, RefreshToken, PasswordResetToken
-from app.schemas import (
+from login.app.db import get_db
+from login.app.models import User, AuthCredential, RefreshToken, PasswordResetToken
+from login.app.schemas import (
     GoogleSignInRequest, EmailRegisterRequest, EmailLoginRequest,
     TokenResponse, RefreshTokenRequest, LogoutRequest, UserResponse, UserUpdate
 )
-from app.auth import (
+from login.app.auth import (
     verify_google_token, hash_password, verify_password,
     create_access_token, create_refresh_token, decode_jwt_token
 )
-from app.config import settings
+from login.app.config import settings
 
 logger = logging.getLogger(__name__)
 

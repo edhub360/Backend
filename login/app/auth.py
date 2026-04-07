@@ -8,8 +8,8 @@ from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 from fastapi import HTTPException, status
 
-from app.config import settings
-from app.utils import generate_secure_token, hash_token
+from login.app.config import settings
+from login.app.utils import generate_secure_token, hash_token
 
 logger = logging.getLogger(__name__)
 
