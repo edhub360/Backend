@@ -21,6 +21,23 @@ from login.app.email_utils import send_reset_password_email
 TO_EMAIL  = "user@example.com"
 RESET_URL = "http://localhost:3000/reset-password?token=abc123"
 
+from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
+
+FAKE_SETTINGS = SimpleNamespace(
+    smtp_host       = "smtp.example.com",
+    smtp_port       = 587,
+    smtp_username   = "test@example.com",
+    smtp_password   = "smtp-password",
+    smtp_from_email = "noreply@example.com",
+    smtp_from_name  = "EdHub360",
+)
+
+def _patch_smtp(smtp_mock):
+    return patch("app.email_utils.smtplib.SMTP", return_value=smtp_mock)  # ← module-local ref
+
+def _patch_settings():
+    return patch("app.email_utils.settings", FAKE_SETTINGS)  # ← real strings, not MagicMock
 
 def _make_smtp_mock():
     """Returns a mock SMTP context manager instance."""
@@ -37,11 +54,9 @@ class TestSendResetPasswordEmailSuccess:
 
     @pytest.fixture(autouse=True)
     def setup(self):
-        self.smtp_mock = _make_smtp_mock()
-        self.smtp_patcher = patch("smtplib.SMTP", return_value=self.smtp_mock)
-        self.mock_smtp_cls = self.smtp_patcher.start()
-        yield
-        self.smtp_patcher.stop()
+        self.smtp = _make_smtp_mock()
+        with _patch_settings(), _patch_smtp(self.smtp):
+            yield                        # ← every test method runs inside both patches
 
     def test_does_not_raise_on_success(self):
         send_reset_password_email(TO_EMAIL, RESET_URL)  # must not raise
