@@ -1,12 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from Notes.db import get_session
 from sqlalchemy import select
-from Notes.models import Notebook
-from Notes.schemas import NotebookCreate, Notebook as NotebookSchema
-from Notes.utils.auth import get_current_user, AuthUser
+
+from db import get_session
+from models import Notebook
+from schemas import NotebookCreate, Notebook as NotebookSchema
+from utils.auth import get_current_user, AuthUser
+
 
 router = APIRouter()
+
 
 @router.post("/", response_model=NotebookSchema)
 async def create_notebook(
@@ -20,6 +23,7 @@ async def create_notebook(
     await session.refresh(notebook)
     return notebook
 
+
 @router.get("/", response_model=list[NotebookSchema])
 async def list_notebooks(
     session: AsyncSession = Depends(get_session),
@@ -30,6 +34,7 @@ async def list_notebooks(
     )
     return q.scalars().all()
 
+
 @router.patch("/{notebook_id}", response_model=NotebookSchema)
 async def update_notebook(
     notebook_id: str,
@@ -38,14 +43,19 @@ async def update_notebook(
     user: AuthUser = Depends(get_current_user),
 ):
     q = await session.execute(
-        select(Notebook).where(Notebook.id == notebook_id, Notebook.user_id == user.user_id)
+        select(Notebook).where(
+            Notebook.id == notebook_id,
+            Notebook.user_id == user.user_id,
+        )
     )
     notebook = q.scalar_one_or_none()
     if not notebook:
-        raise HTTPException(404, "Notebook not found")
+        raise HTTPException(status_code=404, detail="Notebook not found")
+
     notebook.title = data.title
     await session.commit()
     return notebook
+
 
 @router.delete("/{notebook_id}", status_code=204)
 async def delete_notebook(
@@ -54,11 +64,15 @@ async def delete_notebook(
     user: AuthUser = Depends(get_current_user),
 ):
     q = await session.execute(
-        select(Notebook).where(Notebook.id == notebook_id, Notebook.user_id == user.user_id)
+        select(Notebook).where(
+            Notebook.id == notebook_id,
+            Notebook.user_id == user.user_id,
+        )
     )
     notebook = q.scalar_one_or_none()
     if not notebook:
-        raise HTTPException(404, "Notebook not found")
+        raise HTTPException(status_code=404, detail="Notebook not found")
+
     await session.delete(notebook)
     await session.commit()
     return None
