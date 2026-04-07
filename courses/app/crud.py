@@ -1,3 +1,5 @@
+from requests import session
+
 from sqlalchemy import select, func, or_, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
@@ -41,7 +43,7 @@ async def list_courses(
     # Pagination
     offset = (page - 1) * limit
     query = base_query.offset(offset).limit(limit)
-    result = await session.execute(query)
-    courses = result.scalars().all()
+    # With (avoids the coroutine issue):
+    courses = (await session.execute(query)).scalars().all()
 
     return total, courses
