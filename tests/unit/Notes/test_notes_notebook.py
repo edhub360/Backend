@@ -4,9 +4,10 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from uuid import UUID
 
-USER_ID = "user_abc"
-NOTEBOOK_ID = "nb-uuid-001"
+USER_ID     = UUID("00000000-0000-0000-0000-000000000001")
+NOTEBOOK_ID = UUID("00000000-0000-0000-0000-000000000002")  # also fix this-001"
 
 MOCK_NOTEBOOK = MagicMock()
 MOCK_NOTEBOOK.id = NOTEBOOK_ID
@@ -17,6 +18,8 @@ MOCK_NOTEBOOK.user_id = USER_ID
 def make_app():
     from Notes.routes.notebooks import router
     from Notes.utils.auth import get_current_user
+    from Notes.db import get_session          # ✅ import the REAL function object
+                                              #    (aliases ensure this == db.get_session)
 
     app = FastAPI()
     app.include_router(router)
@@ -26,11 +29,18 @@ def make_app():
 
     mock_session = AsyncMock()
 
-    app.dependency_overrides[get_current_user] = lambda: mock_user
-    app.dependency_overrides[__import__("db").get_session] = lambda: mock_session
+    # ✅ real named function — FastAPI can read __name__
+    def fake_user():
+        return mock_user
+
+    # ✅ async generator — matches the yield-dependency contract
+    async def fake_session():
+        yield mock_session
+
+    app.dependency_overrides[get_current_user] = fake_user
+    app.dependency_overrides[get_session]      = fake_session
 
     return app, mock_session
-
 
 # ══════════════════════════════════════════════════════════════════════════════
 # POST /  — create_notebook
@@ -65,12 +75,14 @@ class TestCreateNotebook:
         nb.title = "My Notebook"
         nb.user_id = USER_ID
         MockNotebook.return_value = nb
-
         self.session.commit = AsyncMock()
         self.session.refresh = AsyncMock()
 
         self.client.post(self.url, json=self.payload)
+
+        # ✅ asserts both title and user_id in one line
         MockNotebook.assert_called_once_with(title="My Notebook", user_id=USER_ID)
+
 
     @patch("routes.notebooks.Notebook")
     def test_notebook_created_with_correct_user_id(self, MockNotebook):
@@ -79,13 +91,13 @@ class TestCreateNotebook:
         nb.title = "My Notebook"
         nb.user_id = USER_ID
         MockNotebook.return_value = nb
-
         self.session.commit = AsyncMock()
         self.session.refresh = AsyncMock()
 
         self.client.post(self.url, json=self.payload)
-        _, kwargs = MockNotebook.call_args
-        assert kwargs["user_id"] == USER_ID
+
+        # ✅ .kwargs is explicit, no positional/keyword ambiguity
+        assert MockNotebook.call_args.kwargs["user_id"] == USER_ID
 
     @patch("routes.notebooks.Notebook")
     def test_session_add_called(self, MockNotebook):
