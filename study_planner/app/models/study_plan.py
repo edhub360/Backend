@@ -23,3 +23,9 @@ class StudyPlan(Base):
     # Relationships
     study_items = relationship("StudyItem", back_populates="study_plan")
 
+    def __init__(self, **kwargs):
+        kwargs.setdefault("id", uuid4())          # UUID generated at Python init time
+        kwargs.setdefault("is_predefined", False)  # not None
+        kwargs.setdefault("course_count", 0)       # not None
+        kwargs.setdefault("duration", 0)           # not None
+        super().__init__(**kwargs)

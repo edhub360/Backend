@@ -18,6 +18,10 @@ router = APIRouter(prefix="/study-plan", tags=["study-plan"])
 async def create_plan(data: StudyPlanCreate, db: DBSessionDep, current_user: CurrentUserDep):
     return await svc.create_study_plan(db, current_user.id, data)
 
+@router.get("/", response_model=List[StudyPlanRead])
+async def list_plans(db: DBSessionDep, current_user: CurrentUserDep):
+    return await svc.list_study_plans(db, current_user.id)
+
 ## NEW: Courses Dropdown Endpoint (public-ish, user auth optional) ##
 @router.get("/courses", response_model=List[CourseRead])
 async def list_courses(
@@ -27,34 +31,10 @@ async def list_courses(
     """Public courses for study plan UI dropdown."""
     return await svc.list_courses(db, q or "")
 
-## Add this NEW endpoint (after create_plan):
-@router.post("/{plan_id}/from-predefined", response_model=StudyPlanRead, status_code=status.HTTP_201_CREATED)
-async def create_from_predefined_plan(
-    plan_id: str,
-    data: StudyPlanCreate,  # Only name + description needed
-    db: DBSessionDep, 
-    current_user: CurrentUserDep
-):
-    """Copy predefined study plan → create user copy with custom name/desc."""
-    return await svc.create_from_predefined(
-        db, current_user.id, data, UUID(plan_id)
-    )
-
-@router.get("/", response_model=List[StudyPlanRead])
-async def list_plans(db: DBSessionDep, current_user: CurrentUserDep):
-    return await svc.list_study_plans(db, current_user.id)
-
-@router.get("/{plan_id}", response_model=StudyPlanRead)
-async def get_plan(plan_id: str, db: DBSessionDep, current_user: CurrentUserDep):
-    return await svc.get_study_plan_or_404(db, current_user.id, UUID(plan_id))
-
-@router.patch("/{plan_id}", response_model=StudyPlanRead)
-async def update_plan(plan_id: str, data: StudyPlanUpdate, db: DBSessionDep, current_user: CurrentUserDep):
-    return await svc.update_study_plan(db, current_user.id, UUID(plan_id), data)
-
-@router.delete("/{plan_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_plan(plan_id: str, db: DBSessionDep, current_user: CurrentUserDep):
-    await svc.delete_study_plan(db, current_user.id, UUID(plan_id))
+## Summary ##
+@router.get("/summary", response_model=dict)
+async def get_summary(db: DBSessionDep, current_user: CurrentUserDep):
+    return await svc.compute_summary(db, current_user.id)
 
 
 ## Study Items (flat) ##
@@ -78,6 +58,32 @@ async def update_item(item_id: str, data: StudyItemUpdate, db: DBSessionDep, cur
 async def delete_item(item_id: str, db: DBSessionDep, current_user: CurrentUserDep):
     await svc.delete_study_item(db, current_user.id, UUID(item_id))
 
+
+@router.get("/{plan_id}", response_model=StudyPlanRead)
+async def get_plan(plan_id: str, db: DBSessionDep, current_user: CurrentUserDep):
+    return await svc.get_study_plan_or_404(db, current_user.id, UUID(plan_id))
+
+@router.patch("/{plan_id}", response_model=StudyPlanRead)
+async def update_plan(plan_id: str, data: StudyPlanUpdate, db: DBSessionDep, current_user: CurrentUserDep):
+    return await svc.update_study_plan(db, current_user.id, UUID(plan_id), data)
+
+@router.delete("/{plan_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_plan(plan_id: str, db: DBSessionDep, current_user: CurrentUserDep):
+    await svc.delete_study_plan(db, current_user.id, UUID(plan_id))
+
+## Add this NEW endpoint (after create_plan):
+@router.post("/{plan_id}/from-predefined", response_model=StudyPlanRead, status_code=status.HTTP_201_CREATED)
+async def create_from_predefined_plan(
+    plan_id: str,
+    data: StudyPlanCreate,  # Only name + description needed
+    db: DBSessionDep, 
+    current_user: CurrentUserDep
+):
+    """Copy predefined study plan → create user copy with custom name/desc."""
+    return await svc.create_from_predefined(
+        db, current_user.id, data, UUID(plan_id)
+    )
+
 ## Study Items by Plan ##
 @router.get("/{plan_id}/items", response_model=List[StudyItemRead])
 async def get_items_by_plan(
@@ -89,7 +95,3 @@ async def get_items_by_plan(
     return await svc.get_study_items_by_plan_id(db, current_user.id, UUID(plan_id))
 
 
-## Summary ##
-@router.get("/summary", response_model=dict)
-async def get_summary(db: DBSessionDep, current_user: CurrentUserDep):
-    return await svc.compute_summary(db, current_user.id)

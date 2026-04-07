@@ -142,35 +142,34 @@ class TestCreateFromPredefined:
         item = make_mock_item()
         predefined = make_mock_plan(is_predefined=True, study_items=[item])
         user_plan = make_mock_plan(is_predefined=False)
-        call_count = 0
 
-        async def side_effect(stmt):
-            nonlocal call_count
-            call_count += 1
-            return scalar_result(predefined if call_count == 1 else user_plan)
-
-        db.execute.side_effect = side_effect
-        with patch("study_planner.app.services.study_plan_service.StudyPlan", return_value=user_plan), \
-             patch("study_planner.app.services.study_plan_service.StudyItem", return_value=item):
+        with patch("study_planner.app.services.study_plan_service.get_study_plan_by_id",
+                   new=AsyncMock(return_value=predefined)), \
+             patch("study_planner.app.services.study_plan_service.StudyPlan",
+                   return_value=user_plan), \
+             patch("study_planner.app.services.study_plan_service.StudyItem",
+                   return_value=item):
             await svc.create_from_predefined(db, USER_ID, StudyPlanCreate(name="Copy"), PLAN_ID)
+
         db.add.assert_called()
 
     @pytest.mark.asyncio
     async def test_404_not_found(self):
         db = make_mock_db()
-        db.execute.return_value = scalar_result(None)
-        with pytest.raises(HTTPException) as exc:
-            await svc.create_from_predefined(db, USER_ID, StudyPlanCreate(name="Copy"), PLAN_ID)
+        with patch("study_planner.app.services.study_plan_service.get_study_plan_by_id",
+                   new=AsyncMock(return_value=None)):
+            with pytest.raises(HTTPException) as exc:
+                await svc.create_from_predefined(db, USER_ID, StudyPlanCreate(name="Copy"), PLAN_ID)
         assert exc.value.status_code == 404
 
     @pytest.mark.asyncio
     async def test_404_not_predefined(self):
         db = make_mock_db()
-        db.execute.return_value = scalar_result(make_mock_plan(is_predefined=False))
-        with pytest.raises(HTTPException) as exc:
-            await svc.create_from_predefined(db, USER_ID, StudyPlanCreate(name="Copy"), PLAN_ID)
+        with patch("study_planner.app.services.study_plan_service.get_study_plan_by_id",
+                   new=AsyncMock(return_value=make_mock_plan(is_predefined=False))):
+            with pytest.raises(HTTPException) as exc:
+                await svc.create_from_predefined(db, USER_ID, StudyPlanCreate(name="Copy"), PLAN_ID)
         assert exc.value.status_code == 404
-
 
 class TestListStudyItems:
     @pytest.mark.asyncio
