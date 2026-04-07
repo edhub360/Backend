@@ -37,9 +37,9 @@ def make_mock_source(type="file"):
 
 
 def make_app():
-    from routes.sources import router
-    from utils.auth import get_current_user
-    from db import get_session
+    from Notes.routes.sources import router
+    from Notes.utils.auth import get_current_user
+    from Notes.db import get_session
 
     app = FastAPI()
     app.include_router(router)
