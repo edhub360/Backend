@@ -44,10 +44,7 @@ def make_course_row(**kwargs):
 
 def make_app():
     from courses.app.routes.courses import router
-    from courses.app.db import get_db as test_get_db   # ← alias it correctly
-
-    import courses.app.routes.courses as routes_mod
-    print("SAME?", test_get_db is routes_mod.get_db)   # ← now valid
+    from courses.app.db import get_db
 
     app = FastAPI()
     mock_db = MagicMock()
@@ -57,7 +54,9 @@ def make_app():
     async def override_get_db():
         yield mock_db
 
-    app.dependency_overrides[test_get_db] = override_get_db
+    # Use the get_db reference that the router module actually holds
+    import courses.app.routes.courses as routes_mod
+    app.dependency_overrides[routes_mod.get_db] = override_get_db
     app.include_router(router, prefix="/courses")
     return app, mock_db
 
@@ -69,8 +68,24 @@ class TestListCoursesEndpoint:
 
     @pytest.fixture(autouse=True)
     def setup(self):
-        self.app, self.mock_db = make_app()
-        self.client = TestClient(self.app, raise_server_exceptions=False)
+        self.mock_db = MagicMock()
+        self.mock_db.execute = AsyncMock()
+        self.mock_db.scalar = AsyncMock(return_value=0)
+
+        async def override_get_db():
+            yield self.mock_db
+
+        from courses.app.routes.courses import router
+        import courses.app.db as db_mod
+
+        app = FastAPI()
+        app.dependency_overrides[db_mod.get_db] = override_get_db
+        app.include_router(router, prefix="/courses")
+
+        with patch("courses.app.crud.get_db", override_get_db), \
+            patch("courses.app.routes.courses.get_db", override_get_db):
+            self.client = TestClient(app, raise_server_exceptions=False)
+            yield
 
     def test_returns_200_with_courses(self):
         course = make_course_row()
@@ -179,9 +194,24 @@ class TestGetCourseEndpoint:
 
     @pytest.fixture(autouse=True)
     def setup(self):
-        self.app, self.mock_db = make_app()
-        self.client = TestClient(self.app, raise_server_exceptions=False)
+        self.mock_db = MagicMock()
+        self.mock_db.execute = AsyncMock()
+        self.mock_db.scalar = AsyncMock(return_value=0)
 
+        async def override_get_db():
+            yield self.mock_db
+
+        from courses.app.routes.courses import router
+        import courses.app.db as db_mod
+
+        app = FastAPI()
+        app.dependency_overrides[db_mod.get_db] = override_get_db
+        app.include_router(router, prefix="/courses")
+
+        with patch("courses.app.crud.get_db", override_get_db), \
+            patch("courses.app.routes.courses.get_db", override_get_db):
+            self.client = TestClient(app, raise_server_exceptions=False)
+            yield
     def test_returns_200_when_found(self):
         self.mock_db.execute.return_value.scalar_one_or_none.return_value = make_course_row()
         response = self.client.get(f"/courses/{COURSE_UUID_1}")
@@ -232,8 +262,24 @@ class TestFeaturedCoursesEndpoint:
 
     @pytest.fixture(autouse=True)
     def setup(self):
-        self.app, self.mock_db = make_app()
-        self.client = TestClient(self.app, raise_server_exceptions=False)
+        self.mock_db = MagicMock()
+        self.mock_db.execute = AsyncMock()
+        self.mock_db.scalar = AsyncMock(return_value=0)
+
+        async def override_get_db():
+            yield self.mock_db
+
+        from courses.app.routes.courses import router
+        import courses.app.db as db_mod
+
+        app = FastAPI()
+        app.dependency_overrides[db_mod.get_db] = override_get_db
+        app.include_router(router, prefix="/courses")
+
+        with patch("courses.app.crud.get_db", override_get_db), \
+            patch("courses.app.routes.courses.get_db", override_get_db):
+            self.client = TestClient(app, raise_server_exceptions=False)
+            yield
 
     def test_returns_200(self):
         self.mock_db.execute.return_value.scalars.return_value.all.return_value = [make_course_row() for _ in range(3)]
