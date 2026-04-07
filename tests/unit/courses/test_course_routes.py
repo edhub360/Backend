@@ -1,11 +1,22 @@
-# tests/unit/courses/test_routes_courses.py
-
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi.testclient import TestClient
 from fastapi import FastAPI
 from datetime import datetime
 
+# ─────────────────────────────────────────────
+# UUID constants — all valid UUIDs
+# ─────────────────────────────────────────────
+
+COURSE_UUID_1  = "8473e11c-629a-4fed-b545-23f804709594"
+UUID_ID_0      = "58479b99-417b-454a-b5e1-c600a1d3538b"
+UUID_ID_1      = "8b6871c5-b184-42e2-b376-705943f46c16"
+UUID_ID_2      = "f0d4d121-b79a-4cfa-b5c1-ce6336be5744"
+UUID_ONLY      = "fd2a0b64-0b19-45a4-bd4b-1dd197ab5b0e"
+UUID_SPECIFIC  = "c2c39058-c9aa-4c50-865b-10de3655db53"
+UUID_F0        = "7c9785ea-bb7f-45e5-b55e-126089bad6ef"
+UUID_F1        = "99605c02-bfaf-446d-bac2-414eace422c8"
+UUID_F2        = "f4b854ca-3918-4bad-a5a7-25299df1b2a2"
 
 # ─────────────────────────────────────────────
 # Helpers
@@ -13,7 +24,7 @@ from datetime import datetime
 
 def make_course_row(**kwargs):
     defaults = dict(
-        course_id="course-uuid-1",
+        course_id=COURSE_UUID_1,
         course_title="Python Basics",
         course_desc="A" * 300,
         course_duration=120,
@@ -31,7 +42,6 @@ def make_course_row(**kwargs):
         setattr(m, k, v)
     return m
 
-
 def make_app():
     from courses.app.routes.courses import router
     from courses.app.db import get_db
@@ -39,13 +49,10 @@ def make_app():
     app = FastAPI()
     mock_db = AsyncMock()
 
-    # list_courses uses session.execute().scalars().all() for rows
     mock_result = MagicMock()
     mock_result.scalars.return_value.all.return_value = []
-    mock_result.scalar_one_or_none.return_value = None  # get_course path
+    mock_result.scalar_one_or_none.return_value = None
     mock_db.execute = AsyncMock(return_value=mock_result)
-
-    # list_courses uses session.scalar() for COUNT — was missing entirely
     mock_db.scalar = AsyncMock(return_value=0)
 
     async def override_get_db():
@@ -56,7 +63,7 @@ def make_app():
     return app, mock_db
 
 # ─────────────────────────────────────────────
-# List courses  GET /courses/
+# List courses GET /courses/
 # ─────────────────────────────────────────────
 
 class TestListCoursesEndpoint:
@@ -95,19 +102,23 @@ class TestListCoursesEndpoint:
         assert data["items"][0]["short_description"] == ""
 
     def test_last_item_rotated_to_first(self):
-        courses = [make_course_row(course_id=f"id-{i}", course_title=f"Course {i}") for i in range(3)]
+        courses = [
+            make_course_row(course_id=UUID_ID_0, course_title="Course 0"),
+            make_course_row(course_id=UUID_ID_1, course_title="Course 1"),
+            make_course_row(course_id=UUID_ID_2, course_title="Course 2"),
+        ]
         self.mock_db.execute.return_value.scalars.return_value.all.return_value = courses
         self.mock_db.scalar.return_value = 3
         data = self.client.get("/courses/").json()
-        assert data["items"][0]["course_id"] == "id-2"
-        assert data["items"][1]["course_id"] == "id-0"
-        assert data["items"][2]["course_id"] == "id-1"
+        assert data["items"][0]["course_id"] == UUID_ID_2
+        assert data["items"][1]["course_id"] == UUID_ID_0
+        assert data["items"][2]["course_id"] == UUID_ID_1
 
     def test_single_item_rotation_is_stable(self):
-        self.mock_db.execute.return_value.scalars.return_value.all.return_value = [make_course_row(course_id="only-one")]
+        self.mock_db.execute.return_value.scalars.return_value.all.return_value = [make_course_row(course_id=UUID_ONLY)]
         self.mock_db.scalar.return_value = 1
         data = self.client.get("/courses/").json()
-        assert data["items"][0]["course_id"] == "only-one"
+        assert data["items"][0]["course_id"] == UUID_ONLY
 
     def test_empty_items_list(self):
         self.mock_db.execute.return_value.scalars.return_value.all.return_value = []
@@ -128,7 +139,6 @@ class TestListCoursesEndpoint:
         self.mock_db.execute.return_value.scalars.return_value.all.return_value = []
         self.mock_db.scalar.return_value = 0
         self.client.get("/courses/?q=python")
-        # verify execute was called (query was built with filter)
         self.mock_db.execute.assert_called()
 
     def test_complexity_filter_passed_to_crud(self):
@@ -146,8 +156,8 @@ class TestListCoursesEndpoint:
     def test_invalid_pagination_raises_400(self):
         with patch("courses.app.routes.courses.validate_pagination", side_effect=ValueError("limit exceeds max")):
             response = self.client.get("/courses/")
-        assert response.status_code == 400
-        assert "limit exceeds max" in response.json()["detail"]
+            assert response.status_code == 400
+            assert "limit exceeds max" in response.json()["detail"]
 
     def test_page_less_than_1_returns_422(self):
         response = self.client.get("/courses/?page=0")
@@ -162,6 +172,10 @@ class TestListCoursesEndpoint:
         assert response.status_code == 422
 
 
+# ─────────────────────────────────────────────
+# Get course GET /courses/{course_id}
+# ─────────────────────────────────────────────
+
 class TestGetCourseEndpoint:
 
     @pytest.fixture(autouse=True)
@@ -171,18 +185,18 @@ class TestGetCourseEndpoint:
 
     def test_returns_200_when_found(self):
         self.mock_db.execute.return_value.scalar_one_or_none.return_value = make_course_row()
-        response = self.client.get("/courses/course-uuid-1")
+        response = self.client.get(f"/courses/{COURSE_UUID_1}")
         assert response.status_code == 200
 
     def test_returns_404_when_not_found(self):
         self.mock_db.execute.return_value.scalar_one_or_none.return_value = None
-        response = self.client.get("/courses/nonexistent")
+        response = self.client.get(f"/courses/{UUID_SPECIFIC}")
         assert response.status_code == 404
         assert response.json()["detail"] == "Course not found"
 
     def test_response_contains_all_fields(self):
         self.mock_db.execute.return_value.scalar_one_or_none.return_value = make_course_row()
-        data = self.client.get("/courses/course-uuid-1").json()
+        data = self.client.get(f"/courses/{COURSE_UUID_1}").json()
         for field in [
             "course_id", "course_title", "course_desc", "course_duration",
             "course_complexity", "course_owner", "course_url",
@@ -192,24 +206,28 @@ class TestGetCourseEndpoint:
 
     def test_created_at_is_isoformat_string(self):
         self.mock_db.execute.return_value.scalar_one_or_none.return_value = make_course_row(created_at=datetime(2024, 6, 1, 12, 0, 0))
-        data = self.client.get("/courses/course-uuid-1").json()
+        data = self.client.get(f"/courses/{COURSE_UUID_1}").json()
         assert data["created_at"] == "2024-06-01T12:00:00"
 
     def test_course_id_passed_to_crud(self):
         self.mock_db.execute.return_value.scalar_one_or_none.return_value = None
-        self.client.get("/courses/my-specific-id")
+        self.client.get(f"/courses/{UUID_SPECIFIC}")
         self.mock_db.execute.assert_called_once()
 
     def test_full_desc_returned_not_truncated(self):
         self.mock_db.execute.return_value.scalar_one_or_none.return_value = make_course_row(course_desc="D" * 500)
-        data = self.client.get("/courses/course-uuid-1").json()
+        data = self.client.get(f"/courses/{COURSE_UUID_1}").json()
         assert len(data["course_desc"]) == 500
 
     def test_course_credit_value(self):
         self.mock_db.execute.return_value.scalar_one_or_none.return_value = make_course_row(course_credit=5)
-        data = self.client.get("/courses/course-uuid-1").json()
+        data = self.client.get(f"/courses/{COURSE_UUID_1}").json()
         assert data["course_credit"] == 5
 
+
+# ─────────────────────────────────────────────
+# Featured courses GET /courses/featured
+# ─────────────────────────────────────────────
 
 class TestFeaturedCoursesEndpoint:
 
@@ -243,11 +261,15 @@ class TestFeaturedCoursesEndpoint:
         assert response.status_code == 200
 
     def test_no_item_rotation_applied(self):
-        courses = [make_course_row(course_id=f"f-{i}") for i in range(3)]
+        courses = [
+            make_course_row(course_id=UUID_F0),
+            make_course_row(course_id=UUID_F1),
+            make_course_row(course_id=UUID_F2),
+        ]
         self.mock_db.execute.return_value.scalars.return_value.all.return_value = courses
         self.mock_db.scalar.return_value = 3
         data = self.client.get("/courses/featured").json()
-        assert data["items"][0]["course_id"] == "f-0"
+        assert data["items"][0]["course_id"] == UUID_F0
 
     def test_short_description_truncated(self):
         self.mock_db.execute.return_value.scalars.return_value.all.return_value = [make_course_row(course_desc="Y" * 300)]
