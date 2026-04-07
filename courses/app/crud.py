@@ -43,7 +43,8 @@ async def list_courses(
     # Pagination
     offset = (page - 1) * limit
     query = base_query.offset(offset).limit(limit)
-    # With (avoids the coroutine issue):
-    courses = (await session.execute(query)).scalars().all()
+    result = await session.execute(query)   # AsyncMock awaited → returns mock_result (MagicMock)
+    scalars = result.scalars()              # MagicMock call → returns scalars.return_value (MagicMock)
+    courses = scalars.all()                 # MagicMock call → returns all.return_value (your list)
 
     return total, courses
