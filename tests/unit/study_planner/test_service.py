@@ -33,7 +33,7 @@ class TestCreateStudyPlan:
     async def test_regular_user(self):
         db = make_mock_db()
         plan = make_mock_plan(user_id=USER_ID, is_predefined=False)
-        with patch("app.services.study_plan_service.StudyPlan", return_value=plan):
+        with patch("study_planner.app.services.study_plan_service.StudyPlan", return_value=plan):
             result = await svc.create_study_plan(db, USER_ID, StudyPlanCreate(name="P"))
         db.add.assert_called_once()
         db.commit.assert_called_once()
@@ -43,8 +43,8 @@ class TestCreateStudyPlan:
     async def test_admin_is_predefined(self):
         db = make_mock_db()
         plan = make_mock_plan(user_id=ADMIN_UUID, is_predefined=True)
-        with patch("app.services.study_plan_service.StudyPlan", return_value=plan), \
-             patch("app.services.study_plan_service.ADMIN_USER_ID", ADMIN_UUID):
+        with patch("study_planner.app.services.study_plan_service.StudyPlan", return_value=plan), \
+             patch("study_planner.app.services.study_plan_service.ADMIN_USER_ID", ADMIN_UUID):
             result = await svc.create_study_plan(db, ADMIN_UUID, StudyPlanCreate(name="P"))
         assert result.is_predefined is True
 
@@ -150,8 +150,8 @@ class TestCreateFromPredefined:
             return scalar_result(predefined if call_count == 1 else user_plan)
 
         db.execute.side_effect = side_effect
-        with patch("app.services.study_plan_service.StudyPlan", return_value=user_plan), \
-             patch("app.services.study_plan_service.StudyItem", return_value=item):
+        with patch("study_planner.app.services.study_plan_service.StudyPlan", return_value=user_plan), \
+             patch("study_planner.app.services.study_plan_service.StudyItem", return_value=item):
             await svc.create_from_predefined(db, USER_ID, StudyPlanCreate(name="Copy"), PLAN_ID)
         db.add.assert_called()
 
@@ -191,7 +191,7 @@ class TestCreateStudyItem:
     async def test_creates_without_plan(self):
         db = make_mock_db()
         item = make_mock_item()
-        with patch("app.services.study_plan_service.StudyItem", return_value=item):
+        with patch("study_planner.app.services.study_plan_service.StudyItem", return_value=item):
             result = await svc.create_study_item(db, USER_ID, StudyItemCreate(course_code="CS101", title="T"))
         db.add.assert_called_once()
         assert result == item

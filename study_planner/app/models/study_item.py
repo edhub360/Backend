@@ -29,3 +29,11 @@ class StudyItem(Base):
 
 
     study_plan = relationship("StudyPlan", back_populates="study_items")
+
+    def __init__(self, **kwargs):
+        kwargs.setdefault("item_id", uuid4())
+        kwargs.setdefault("status", "planned")
+        kwargs.setdefault("position_index", 0)
+        kwargs.setdefault("term_name", "Unknown")
+        kwargs.setdefault("course_category", "Uncategorized")
+        super().__init__(**kwargs)

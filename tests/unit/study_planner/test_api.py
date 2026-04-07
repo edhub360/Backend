@@ -10,7 +10,7 @@ from tests.unit.study_planner.conftest import make_mock_user, make_mock_db
 USER_ID = uuid4()
 PLAN_ID = uuid4()
 ITEM_ID = uuid4()
-SVC = "app.api.v1.study_plan.svc"
+SVC = "study_planner.app.api.v1.study_plan.svc"
 
 
 def setup_client():
