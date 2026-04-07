@@ -131,7 +131,15 @@ def client():
     sys.modules.pop("courses.app.main", None)
     sys.modules.pop("courses.app.db", None)
 
-    mock_db = AsyncMock()
+    # ← FIX: plain MagicMock for the session object, AsyncMock only on awaited methods
+    mock_db = MagicMock()
+
+    mock_result = MagicMock()
+    mock_result.scalars.return_value.all.return_value = []
+    mock_result.scalar_one_or_none.return_value = None
+    mock_db.execute = AsyncMock(return_value=mock_result)
+    mock_db.scalar = AsyncMock(return_value=0)
+
     mock_ctx = MagicMock()
     mock_ctx.__aenter__ = AsyncMock(return_value=mock_db)
     mock_ctx.__aexit__ = AsyncMock(return_value=False)
