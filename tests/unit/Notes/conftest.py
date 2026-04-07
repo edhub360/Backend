@@ -1,57 +1,41 @@
 """
 conftest.py for tests/unit/Notes/
 
-Two problems this file solves:
-1. sys.path — test files use BOTH bare imports (`from db import ...`) AND
-   package-prefixed imports (`from Notes.db import ...`).  Both work only when:
-     a) The Notes app root is in sys.path  →  bare `from db import ...` works
-     b) The repo root is in sys.path       →  `from Notes.db import ...` works
-   We add both here so no test file needs to be touched.
-
-2. SQLite test engine — any test that imports the real `db` module at module
-   level will trigger create_async_engine with PostgreSQL pool kwargs
-   (pool_size, max_overflow, pool_timeout) that SQLite's StaticPool rejects.
-   We patch create_async_engine before `db` is imported so the kwargs are
-   silently accepted.
+Fixes:
+1. sys.path — supports BOTH bare imports (`from db import ...`) AND
+   package-prefixed imports (`from Notes.db import ...`)
+2. Module aliasing — ensures `Notes.x` and bare `x` resolve to the SAME
+   object, so dependency_overrides and patches work correctly
+3. Third-party stubs — heavy/unavailable packages are mocked before any
+   app code loads (fitz, pgvector, bs4, asyncpg, etc.)
+4. create_async_engine shim — strips PostgreSQL-only pool kwargs when
+   SQLite is used in tests
+5. Eager submodule imports — ensures `services.extract_service` etc. are
+   accessible as attributes of their parent package
 """
 
 import sys
 import os
+import types
 import importlib
-from unittest.mock import MagicMock, AsyncMock, patch
-import pytest
+from unittest.mock import MagicMock
 
 # ---------------------------------------------------------------------------
-# 1.  Resolve paths
+# 1. Resolve paths
 # ---------------------------------------------------------------------------
-# Expected layout:
-#   <repo_root>/
-#       Notes/               ← Notes app root (contains db.py, models.py, etc.)
-#           services/
-#           routes/
-#           utils/
-#           schemas.py
-#           main.py
-#           ...
-#       tests/
-#           unit/
-#               Notes/       ← this conftest lives here
-#                   conftest.py
-
-_THIS_DIR = os.path.dirname(os.path.abspath(__file__))           # tests/unit/Notes
-_REPO_ROOT = os.path.abspath(os.path.join(_THIS_DIR, "../../.."))  # repo root
-_NOTES_ROOT = os.path.join(_REPO_ROOT, "Notes")                  # Notes app root
+_THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+_REPO_ROOT = os.path.abspath(os.path.join(_THIS_DIR, "../../.."))
+_NOTES_ROOT = os.path.join(_REPO_ROOT, "Notes")
 
 for _p in (_NOTES_ROOT, _REPO_ROOT):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
 # ---------------------------------------------------------------------------
-# 2.  Stub heavy / unavailable third-party modules before any app code loads
+# 2. Stub heavy / unavailable third-party modules BEFORE any app import
 # ---------------------------------------------------------------------------
 
 def _stub(name: str, **attrs):
-    """Insert a MagicMock for `name` and all missing parent packages."""
     parts = name.split(".")
     for i in range(1, len(parts) + 1):
         key = ".".join(parts[:i])
@@ -62,68 +46,115 @@ def _stub(name: str, **attrs):
         setattr(mod, k, v)
     return mod
 
-# PyMuPDF (fitz) — PDF extraction
 _stub("fitz")
 
-# pgvector — vector column type
-_pgvector = _stub("pgvector")
 _pgvector_sa = _stub("pgvector.sqlalchemy")
 _pgvector_sa.Vector = lambda dim=768: MagicMock()
 
-# google-generativeai
-_stub("google")
-_stub("google.generativeai")
+_stub("asyncpg")
 
-# youtube_transcript_api
+_bs4 = _stub("bs4")
+_bs4.BeautifulSoup = MagicMock()
+
+_stub("requests")
 _stub("youtube_transcript_api")
-
-# python-docx
 _stub("docx")
-
-# python-pptx
 _stub("pptx")
-
-# openpyxl
 _stub("openpyxl")
-
-# google-cloud-storage
-_stub("google.cloud")
 _stub("google.cloud.storage")
 
-# ---------------------------------------------------------------------------
-# 3.  Patch create_async_engine so PostgreSQL-only pool kwargs don't blow up
-#     when SQLite + StaticPool is used in tests that reload `db`.
-# ---------------------------------------------------------------------------
-# We wrap the real function and strip unsupported kwargs when the URL is SQLite.
+# Intentionally do NOT stub google.generativeai here.
+# test_gemini_services.py patches the module directly.
 
+# ---------------------------------------------------------------------------
+# 3. create_async_engine shim
+# ---------------------------------------------------------------------------
 try:
     from sqlalchemy.ext.asyncio import create_async_engine as _real_cae
+    import sqlalchemy.ext.asyncio as _sa_async
 
     def _safe_create_async_engine(url, **kwargs):
-        url_str = str(url)
-        if "sqlite" in url_str:
-            # SQLite + StaticPool does not accept these kwargs
-            for key in ("pool_size", "max_overflow", "pool_timeout",
-                        "pool_recycle", "pool_pre_ping"):
+        if "sqlite" in str(url):
+            for key in (
+                "pool_size",
+                "max_overflow",
+                "pool_timeout",
+                "pool_recycle",
+                "pool_pre_ping",
+            ):
                 kwargs.pop(key, None)
         return _real_cae(url, **kwargs)
 
-    # Patch it into the db module's namespace after db is imported
-    import sqlalchemy.ext.asyncio as _sa_async
     _sa_async.create_async_engine = _safe_create_async_engine
-
 except ImportError:
-    pass  # SQLAlchemy not installed — tests that need it will fail naturally
-
+    pass
 
 # ---------------------------------------------------------------------------
-# 4.  Ensure Notes is a proper package (add __init__ if missing)
-#     so `from Notes.x import y` works without an __init__.py on disk
+# 4. Register Notes as a package
 # ---------------------------------------------------------------------------
-import types as _types
-
 if "Notes" not in sys.modules:
-    _notes_pkg = _types.ModuleType("Notes")
+    _notes_pkg = types.ModuleType("Notes")
     _notes_pkg.__path__ = [_NOTES_ROOT]
     _notes_pkg.__package__ = "Notes"
     sys.modules["Notes"] = _notes_pkg
+
+# ---------------------------------------------------------------------------
+# 5. Eagerly import app submodules
+# ---------------------------------------------------------------------------
+_SUBMODULES = [
+    "db",
+    "models",
+    "schemas",
+    "main",
+    "services.embedding_service",
+    "services.extract_service",
+    "services.gemini_service",
+    "services.file_service",
+    "services.gcs_service",
+    "services.session_memory",
+    "utils.logging",
+    "utils.auth",
+    "routes.notebooks",
+    "routes.sources",
+    "routes.embeddings",
+    "routes.chat",
+]
+
+for _submod in _SUBMODULES:
+    try:
+        importlib.import_module(_submod)
+    except Exception:
+        pass
+
+# ---------------------------------------------------------------------------
+# 6. Alias Notes.x <-> x
+# ---------------------------------------------------------------------------
+_ALIASES = [
+    ("db", "Notes.db"),
+    ("models", "Notes.models"),
+    ("schemas", "Notes.schemas"),
+    ("main", "Notes.main"),
+    ("services", "Notes.services"),
+    ("services.embedding_service", "Notes.services.embedding_service"),
+    ("services.extract_service", "Notes.services.extract_service"),
+    ("services.gemini_service", "Notes.services.gemini_service"),
+    ("services.file_service", "Notes.services.file_service"),
+    ("services.gcs_service", "Notes.services.gcs_service"),
+    ("services.session_memory", "Notes.services.session_memory"),
+    ("utils", "Notes.utils"),
+    ("utils.logging", "Notes.utils.logging"),
+    ("utils.auth", "Notes.utils.auth"),
+    ("routes", "Notes.routes"),
+    ("routes.notebooks", "Notes.routes.notebooks"),
+    ("routes.sources", "Notes.routes.sources"),
+    ("routes.embeddings", "Notes.routes.embeddings"),
+    ("routes.chat", "Notes.routes.chat"),
+]
+
+for _bare, _prefixed in _ALIASES:
+    _mod = sys.modules.get(_bare)
+    if _mod is not None:
+        sys.modules.setdefault(_prefixed, _mod)
+    _mod2 = sys.modules.get(_prefixed)
+    if _mod2 is not None:
+        sys.modules.setdefault(_bare, _mod2)
