@@ -44,19 +44,20 @@ def make_course_row(**kwargs):
 
 def make_app():
     from courses.app.routes.courses import router
-    from courses.app.db import get_db
+    from courses.app.db import get_db as test_get_db   # ← alias it correctly
+
+    import courses.app.routes.courses as routes_mod
+    print("SAME?", test_get_db is routes_mod.get_db)   # ← now valid
 
     app = FastAPI()
     mock_db = MagicMock()
-
-    # No return_value set here — tests control the chain fully
     mock_db.execute = AsyncMock()
     mock_db.scalar = AsyncMock(return_value=0)
 
     async def override_get_db():
         yield mock_db
 
-    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[test_get_db] = override_get_db
     app.include_router(router, prefix="/courses")
     return app, mock_db
 
