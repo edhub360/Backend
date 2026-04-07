@@ -47,18 +47,10 @@ def make_app():
     from courses.app.db import get_db
 
     app = FastAPI()
-
-    # ← KEY FIX: mock_db must be plain MagicMock, not AsyncMock
-    # AsyncMock as the session itself causes FastAPI's dependency injector
-    # to treat the yielded object itself as a coroutine
     mock_db = MagicMock()
 
-    mock_result = MagicMock()
-    mock_result.scalars.return_value.all.return_value = []
-    mock_result.scalar_one_or_none.return_value = None
-
-    # Only the methods that are awaited need AsyncMock
-    mock_db.execute = AsyncMock(return_value=mock_result)
+    # No return_value set here — tests control the chain fully
+    mock_db.execute = AsyncMock()
     mock_db.scalar = AsyncMock(return_value=0)
 
     async def override_get_db():
