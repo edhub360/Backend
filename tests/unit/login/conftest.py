@@ -1,33 +1,19 @@
-import pytest
+"""
+tests/unit/login/conftest.py
+Sets required env vars before any app module is imported.
+"""
+import os
 
-
-@pytest.fixture
-def mock_settings():
-    return {
-        "jwt_secret_key": "fake-jwt-secret-for-testing",
-        "jwt_algorithm": "HS256",
-        "access_token_expire_minutes": 15,
-        "google_client_id": "fake-google-client-id",
-    }
-
-
-@pytest.fixture
-def mock_google_verify(monkeypatch):
-    async def mock_verify(*args, **kwargs):
-        return {
-            "google_id": "123456789",
-            "email": "test@example.com",
-            "name": "Test User",
-            "picture": "https://example.com/pic.jpg",
-        }
-    monkeypatch.setattr("login.app.auth.verify_google_token", mock_verify)
-
-
-@pytest.fixture
-def sample_user_data():
-    return {
-        "email": "test@example.com",
-        "name": "Test User",
-        "language": "en",
-        "subscription_tier": "free",
-    }
+os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-32-bytes-minimum!!")
+os.environ.setdefault("JWT_ALGORITHM", "HS256")
+os.environ.setdefault("ACCESS_TOKEN_EXPIRE_MINUTES", "30")
+os.environ.setdefault("REFRESH_TOKEN_EXPIRE_DAYS", "7")
+os.environ.setdefault("GOOGLE_CLIENT_ID", "fake-google-client-id.apps.googleusercontent.com")
+os.environ.setdefault("DATABASE_URL", "postgresql+asyncpg://user:pass@localhost/testdb")
+os.environ.setdefault("RATE_LIMIT_REQUESTS", "100")
+os.environ.setdefault("FRONTEND_BASE_URL", "http://localhost:3000")
+os.environ.setdefault("SMTP_HOST", "smtp.example.com")
+os.environ.setdefault("SMTP_PORT", "587")
+os.environ.setdefault("SMTP_USER", "test@example.com")
+os.environ.setdefault("SMTP_PASSWORD", "smtp-password")
+os.environ.setdefault("EMAILS_FROM_EMAIL", "noreply@example.com")
