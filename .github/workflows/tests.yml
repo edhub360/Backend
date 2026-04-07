@@ -20,6 +20,7 @@ jobs:
           - { name: quiz,          src: quiz,          tests: tests/unit/quiz }
           - { name: study_planner, src: study_planner, tests: tests/unit/study_planner }
           - { name: Notes,         src: Notes,         tests: tests/unit/Notes }
+          - { name: login,         src: login,         tests: tests/unit/login }   # ← added
 
     steps:
     - uses: actions/checkout@v4
@@ -40,13 +41,25 @@ jobs:
         echo "PYTHONPATH=$(pwd)" >> $GITHUB_ENV
         echo "DATABASE_URL=sqlite+aiosqlite:///:memory:" >> $GITHUB_ENV
         echo "JWT_SECRET=fake-jwt-secret-for-testing" >> $GITHUB_ENV
-        echo "JWT_SECRET_KEY=fake-jwt-secret-for-testing" >> $GITHUB_ENV
+        echo "JWT_SECRET_KEY=fake-jwt-secret-for-testing-32bytes!!" >> $GITHUB_ENV
         echo "JWT_ALGORITHM=HS256" >> $GITHUB_ENV
         echo "SECRET_KEY=fake-secret-key-for-testing" >> $GITHUB_ENV
-        echo "GOOGLE_CLIENT_ID=fake-google-client-id" >> $GITHUB_ENV
+        echo "GOOGLE_CLIENT_ID=fake-google-client-id.apps.googleusercontent.com" >> $GITHUB_ENV
         echo "GOOGLE_CLIENT_SECRET=fake-google-client-secret" >> $GITHUB_ENV
         echo "GEMINI_API_KEY=fake-gemini-api-key" >> $GITHUB_ENV
         echo "STRIPE_SECRET_KEY=fake-stripe-secret-key" >> $GITHUB_ENV
+        echo "ACCESS_TOKEN_EXPIRE_MINUTES=30" >> $GITHUB_ENV
+        echo "REFRESH_TOKEN_EXPIRE_DAYS=7" >> $GITHUB_ENV
+        echo "RATE_LIMIT_REQUESTS=100" >> $GITHUB_ENV
+        echo "FRONTEND_BASE_URL=http://localhost:3000" >> $GITHUB_ENV
+        echo "SMTP_HOST=smtp.example.com" >> $GITHUB_ENV
+        echo "SMTP_PORT=587" >> $GITHUB_ENV
+        echo "SMTP_USER=test@example.com" >> $GITHUB_ENV
+        echo "SMTP_USERNAME=test@example.com" >> $GITHUB_ENV
+        echo "SMTP_PASSWORD=smtp-password" >> $GITHUB_ENV
+        echo "EMAILS_FROM_EMAIL=noreply@example.com" >> $GITHUB_ENV
+        echo "SMTP_FROM_EMAIL=noreply@example.com" >> $GITHUB_ENV
+        echo "SMTP_FROM_NAME=EdHub360" >> $GITHUB_ENV
 
     - name: Lint — ${{ matrix.module.name }}
       run: |
