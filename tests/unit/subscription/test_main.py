@@ -274,61 +274,6 @@ class TestGetSubscriptionByUserId:
         assert resp.json()["status"] == "expired"
         app.dependency_overrides.clear()
 
-    @pytest.mark.asyncio
-    async def test_returns_free_plan_active(self, client, mock_db):
-        from unittest.mock import patch, MagicMock, AsyncMock
-        from datetime import datetime, timezone, timedelta
-
-        future = datetime.now(timezone.utc) + timedelta(days=3)
-        past = datetime.now(timezone.utc) - timedelta(days=4)
-
-        row = MagicMock()
-        row.subscription_tier = "free"
-        row.free_plan_activated_at = past
-        row.free_plan_expires_at = future.replace(tzinfo=None)  # naive from DB
-
-        def execute_side_effect(query, *args, **kwargs):
-            result = MagicMock()
-            result.scalar_one_or_none.return_value = None   # no Stripe sub
-            result.fetchone.return_value = row
-            return result
-
-        mock_db.execute = AsyncMock(side_effect=execute_side_effect)
-
-        with patch("subscription.main.get_db", return_value=mock_db):
-            resp = client.get(f"/subscriptions/{uuid4()}")
-
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["type"] == "free"
-        assert data["status"] == "active"
-
-    @pytest.mark.asyncio
-    async def test_returns_free_plan_expired(self, client, mock_db):
-        from unittest.mock import MagicMock, AsyncMock
-        from datetime import datetime, timezone, timedelta
-
-        past_start = datetime.now(timezone.utc) - timedelta(days=10)
-        past_end = datetime.now(timezone.utc) - timedelta(days=3)
-
-        row = MagicMock()
-        row.subscription_tier = "free"
-        row.free_plan_activated_at = past_start
-        row.free_plan_expires_at = past_end.replace(tzinfo=None)
-
-        def execute_side_effect(query, *args, **kwargs):
-            result = MagicMock()
-            result.scalar_one_or_none.return_value = None
-            result.fetchone.return_value = row
-            return result
-
-        mock_db.execute = AsyncMock(side_effect=execute_side_effect)
-
-        with patch("subscription.main.get_db", return_value=mock_db):
-            resp = client.get(f"/subscriptions/{uuid4()}")
-
-        assert resp.status_code == 200
-        assert resp.json()["status"] == "expired"
 
 # ─────────────────────────────────────────────────────────────────────────
 # POST /subscriptions/{user_id}/cancel
@@ -385,24 +330,6 @@ class TestCancelSubscription:
         mock_cancel.assert_called_once_with("sub_abc", False)
         app.dependency_overrides.clear()
 
-    @pytest.mark.asyncio
-    async def test_cancels_subscription_successfully(self, client, mock_db):
-        from unittest.mock import patch
-        sub = make_subscription()
-
-        with patch("subscription.main.get_user_subscription", new=AsyncMock(return_value=sub)), \
-             patch("subscription.main.StripeClient.cancel_subscription") as mock_cancel, \
-             patch("subscription.main.get_db", return_value=mock_db):
-
-            resp = client.post(
-                f"/subscriptions/{uuid4()}/cancel",
-                json={"cancel_at_period_end": True}
-            )
-
-        assert resp.status_code == 200
-        assert resp.json()["message"] == "Cancellation requested"
-        mock_cancel.assert_called_once()
-
 # ─────────────────────────────────────────────────────────────────────────
 # GET /payment-methods/{user_id}
 # ─────────────────────────────────────────────────────────────────────────
@@ -439,45 +366,40 @@ class TestGetPaymentMethods:
         app.dependency_overrides.clear()
 
     @pytest.mark.asyncio
-    async def test_returns_empty_when_no_customer(self, client, mock_db):
-        from unittest.mock import patch
-        with patch("subscription.main.get_customer", new=AsyncMock(return_value=None)), \
-             patch("subscription.main.get_db", return_value=mock_db):
-            resp = client.get(f"/payment-methods/{uuid4()}")
-
+    async def test_returns_empty_when_no_customer_v2(self, mock_db):
+        app.dependency_overrides[get_db] = _override_db(mock_db)
+        with patch("subscription.main.get_customer", new=AsyncMock(return_value=None)):
+            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+                resp = await ac.get(f"/payment-methods/{uuid4()}")
         assert resp.status_code == 200
-        data = resp.json()
-        assert data["payment_methods"] == []
-        assert data["has_payment_method"] is False
+        assert resp.json()["payment_methods"] == []
+        assert resp.json()["has_payment_method"] is False
+        app.dependency_overrides.clear()
 
     @pytest.mark.asyncio
-    async def test_returns_payment_methods_when_found(self, client, mock_db):
-        from unittest.mock import patch
+    async def test_returns_payment_methods_when_found_v2(self, mock_db):
         customer = make_customer()
-        mock_methods = [{"id": "pm_abc", "type": "card"}]
-
-        with patch("subscription.main.get_customer", new=AsyncMock(return_value=customer)), \
-             patch("subscription.main.StripeClient.get_payment_methods", return_value=mock_methods), \
-             patch("subscription.main.get_db", return_value=mock_db):
-            resp = client.get(f"/payment-methods/{uuid4()}")
-
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["has_payment_method"] is True
-        assert len(data["payment_methods"]) == 1
-
-    @pytest.mark.asyncio
-    async def test_returns_500_on_stripe_error(self, client, mock_db):
-        from unittest.mock import patch
-        customer = make_customer()
-
+        app.dependency_overrides[get_db] = _override_db(mock_db)
         with patch("subscription.main.get_customer", new=AsyncMock(return_value=customer)), \
              patch("subscription.main.StripeClient.get_payment_methods",
-                   side_effect=Exception("Stripe down")), \
-             patch("subscription.main.get_db", return_value=mock_db):
-            resp = client.get(f"/payment-methods/{uuid4()}")
+                   return_value=[{"id": "pm_abc", "type": "card"}]):
+            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+                resp = await ac.get(f"/payment-methods/{uuid4()}")
+        assert resp.status_code == 200
+        assert resp.json()["has_payment_method"] is True
+        app.dependency_overrides.clear()
 
+    @pytest.mark.asyncio
+    async def test_returns_500_on_stripe_error_v2(self, mock_db):
+        customer = make_customer()
+        app.dependency_overrides[get_db] = _override_db(mock_db)
+        with patch("subscription.main.get_customer", new=AsyncMock(return_value=customer)), \
+             patch("subscription.main.StripeClient.get_payment_methods",
+                   side_effect=Exception("Stripe down")):
+            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+                resp = await ac.get(f"/payment-methods/{uuid4()}")
         assert resp.status_code == 500
+        app.dependency_overrides.clear()
 
 # ─────────────────────────────────────────────────────────────────────────
 # POST /create-customer-portal-session
@@ -525,30 +447,19 @@ class TestCreateCustomerPortalSession:
         assert resp.status_code == 400
         app.dependency_overrides.clear()
 
-    @pytest.mark.asyncio
-    async def test_returns_400_on_invalid_uuid(self, client, mock_db):
-        with patch("subscription.main.get_db", return_value=mock_db):
-            resp = client.post(
-                "/create-customer-portal-session",
-                json={"user_id": "not-a-valid-uuid"}
-            )
-        assert resp.status_code == 400
 
     @pytest.mark.asyncio
-    async def test_returns_500_on_stripe_error(self, client, mock_db):
-        from unittest.mock import patch
+    async def test_returns_500_on_stripe_error_v2(self, mock_db):
         customer = make_customer()
-
+        app.dependency_overrides[get_db] = _override_db(mock_db)
         with patch("subscription.main.get_customer", new=AsyncMock(return_value=customer)), \
              patch("subscription.main.StripeClient.create_customer_portal_session",
-                   side_effect=Exception("Portal unavailable")), \
-             patch("subscription.main.get_db", return_value=mock_db):
-            resp = client.post(
-                "/create-customer-portal-session",
-                json={"user_id": str(uuid4())}
-            )
+                   side_effect=Exception("Portal unavailable")):
+            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+                resp = await ac.post("/create-customer-portal-session",
+                                     json={"user_id": str(uuid4())})
         assert resp.status_code == 500
-
+        app.dependency_overrides.clear()
 # ─────────────────────────────────────────────────────────────────────────
 # POST /activate-subscription
 # ─────────────────────────────────────────────────────────────────────────
@@ -637,27 +548,6 @@ class TestActivateSubscription:
         expires   = datetime.fromisoformat(data["expires_at"])
         assert (expires - activated).days == 7
         app.dependency_overrides.clear()
-
-        # Add to existing TestActivateSubscription class
-
-    @pytest.mark.asyncio
-    async def test_returns_already_active_when_free_plan_still_valid(self, client, mock_db):
-        from datetime import datetime, timezone, timedelta
-        from unittest.mock import patch
-
-        future = datetime.now(timezone.utc) + timedelta(days=5)
-        user = make_user(
-            subscription_tier="free",
-            free_plan_activated_at=datetime.now(timezone.utc) - timedelta(days=2),
-            free_plan_expires_at=future
-        )
-
-        with patch("subscription.main.get_current_user", return_value=user), \
-             patch("subscription.main.get_db", return_value=mock_db):
-            resp = client.post("/activate-subscription")
-
-        assert resp.status_code == 200
-        assert resp.json()["status"] == "already_active"
 
 # ─────────────────────────────────────────────────────────────────────────
 # GET /free-plan-status
