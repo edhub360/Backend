@@ -1,7 +1,5 @@
-"""
-tests/unit/subscription/conftest.py
-Bootstraps sys.path + shared model factories + mock_db fixture.
-"""
+# tests/unit/subscription/conftest.py
+
 import os
 import sys
 from uuid import uuid4
@@ -11,23 +9,26 @@ import pytest
 
 _here      = os.path.dirname(__file__)
 _repo_root = os.path.abspath(os.path.join(_here, "../../.."))
-_svc_root  = os.path.join(_repo_root, "subscription")
 
-if _svc_root not in sys.path:
-    sys.path.insert(0, _svc_root)
+if _repo_root not in sys.path:
+    sys.path.insert(0, _repo_root)
 
-os.environ.setdefault("DATABASE_URL",            "postgresql://user:pass@localhost/testdb")
-os.environ.setdefault("JWT_SECRET_KEY",          "test-secret-key-subscription-32b!")
-os.environ.setdefault("JWT_ALGORITHM",           "HS256")
-os.environ.setdefault("STRIPE_SECRET_KEY",       "sk_test_fake")
-os.environ.setdefault("STRIPE_WEBHOOK_SECRET",   "whsec_fake")
+os.environ.setdefault("DATABASE_URL",           "postgresql://user:pass@localhost/testdb")
+os.environ.setdefault("JWT_SECRET_KEY",         "test-secret-key-subscription-32b!")
+os.environ.setdefault("JWT_ALGORITHM",          "HS256")
+os.environ.setdefault("STRIPE_SECRET_KEY",      "sk_test_fake")
+os.environ.setdefault("STRIPE_WEBHOOK_SECRET",  "whsec_fake")
+
+# ── Import ALL models once here, at module load time ──────────────────────
+# This ensures SQLAlchemy's MetaData registers each table exactly once
+# across the entire test session, regardless of how many test files import them.
+from subscription.models import Plan, PlanPrice, Customer, Subscription, User  # noqa: E402
 
 
 # ── factories ─────────────────────────────────────────────────────────────
 
 def make_plan(name="Pro", active=True):
-    from subscription.models import Plan
-    p = Plan()
+    p = Plan()                          # ← no local import needed
     p.id                = uuid4()
     p.name              = name
     p.description       = f"{name} plan"
@@ -39,7 +40,6 @@ def make_plan(name="Pro", active=True):
 
 def make_price(plan_id=None, billing_period="monthly", amount=499,
                stripe_price_id="price_test_monthly", active=True):
-    from subscription.models import PlanPrice
     pp = PlanPrice()
     pp.id              = uuid4()
     pp.plan_id         = plan_id or uuid4()
@@ -52,7 +52,6 @@ def make_price(plan_id=None, billing_period="monthly", amount=499,
 
 
 def make_customer(user_id=None):
-    from subscription.models import Customer
     c = Customer()
     c.id                 = uuid4()
     c.user_id            = user_id or uuid4()
@@ -62,7 +61,6 @@ def make_customer(user_id=None):
 
 def make_subscription(customer_id=None, plan_id=None, status="active",
                       stripe_sub_id="sub_test_fake"):
-    from subscription.models import Subscription
     s = Subscription()
     s.id                     = uuid4()
     s.customer_id            = customer_id or uuid4()
@@ -82,7 +80,6 @@ def make_subscription(customer_id=None, plan_id=None, status="active",
 
 def make_user(subscription_tier=None, free_plan_activated_at=None,
               free_plan_expires_at=None):
-    from subscription.models import User
     u = User()
     u.user_id                = uuid4()
     u.email                  = "user@example.com"

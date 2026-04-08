@@ -10,7 +10,7 @@ import uuid
 
 class Plan(Base):
     __tablename__ = "plans"
-    __table_args__ = {"schema": "stud_hub_schema"}
+    __table_args__ = {"schema": "stud_hub_schema", "extend_existing": True}
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String(100), nullable=False)
@@ -25,7 +25,7 @@ class Plan(Base):
 
 class PlanPrice(Base):
     __tablename__ = "plan_prices"
-    __table_args__ = {"schema": "stud_hub_schema"}
+    __table_args__ = {"schema": "stud_hub_schema", "extend_existing": True}
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     plan_id = Column(UUID(as_uuid=True), ForeignKey("stud_hub_schema.plans.id"), nullable=False)
@@ -42,7 +42,7 @@ class PlanPrice(Base):
 
 class Customer(Base):
     __tablename__ = "customers"
-    __table_args__ = {"schema": "stud_hub_schema"}
+    __table_args__ = {"schema": "stud_hub_schema", "extend_existing": True}
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("stud_hub_schema.users.user_id"), nullable=False)
@@ -51,7 +51,7 @@ class Customer(Base):
 
 class Subscription(Base):
     __tablename__ = "subscriptions"
-    __table_args__ = {"schema": "stud_hub_schema"}
+    __table_args__ = {"schema": "stud_hub_schema", "extend_existing": True}
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     customer_id = Column(UUID(as_uuid=True), ForeignKey("stud_hub_schema.customers.id"), nullable=False)
@@ -68,7 +68,7 @@ class Subscription(Base):
 
 class Invoice(Base):
     __tablename__ = "invoices"
-    __table_args__ = {"schema": "stud_hub_schema"}
+    __table_args__ = {"schema": "stud_hub_schema", "extend_existing": True}
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     subscription_id = Column(UUID(as_uuid=True), ForeignKey("stud_hub_schema.subscriptions.id"), nullable=False)
@@ -83,7 +83,7 @@ class Invoice(Base):
 
 class InvoiceLineItem(Base):
     __tablename__ = "invoice_line_items"
-    __table_args__ = {"schema": "stud_hub_schema"}
+    __table_args__ = {"schema": "stud_hub_schema", "extend_existing": True}
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     invoice_id = Column(UUID(as_uuid=True), ForeignKey("stud_hub_schema.invoices.id"), nullable=False)
@@ -98,7 +98,7 @@ class InvoiceLineItem(Base):
 class User(Base):
     """User model for subscription updates."""
     __tablename__ = "users"
-    __table_args__ = {"schema": "stud_hub_schema"}
+    __table_args__ = {"schema": "stud_hub_schema", "extend_existing": True}
 
     user_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email = Column(String, unique=True, nullable=False)
