@@ -4,7 +4,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
-from db import Base
+from subscription.db import Base
 
 import uuid
 

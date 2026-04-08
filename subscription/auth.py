@@ -8,8 +8,8 @@ import os
 from typing import Optional, Dict, Any
 from datetime import datetime, timezone
 
-from db import get_db
-from models import User
+from subscription.db import get_db
+from subscription.models import User
 
 # Configuration
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-secret-key-here") # Should match login service
