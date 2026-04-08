@@ -21,6 +21,7 @@ jobs:
           - { name: study_planner, src: study_planner, tests: tests/unit/study_planner }
           - { name: Notes,         src: Notes,         tests: tests/unit/Notes }
           - { name: login,         src: login,         tests: tests/unit/login }   # ← added
+          - { name: subscription,  src: subscription,  tests: tests/unit/subscription }   # ← added
 
     steps:
     - uses: actions/checkout@v4

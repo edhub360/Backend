@@ -3,7 +3,7 @@
         test-study_planner test-Notes test-login test-all-modules
 
 
-SERVICES = ai_chat courses flashcard quiz study_planner Notes login
+SERVICES = ai_chat courses flashcard quiz study_planner Notes login subscription
 
 
 # Install test dependencies
@@ -80,6 +80,14 @@ test-login:
 		--cov=login \
 		--cov-report=term-missing \
 		--cov-report=html:htmlcov/login \
+		--asyncio-mode=auto \
+		-v
+
+test-subscription:
+	pytest tests/unit/subscription/ \
+		--cov=subscription \
+		--cov-report=term-missing \
+		--cov-report=html:htmlcov/subscription \
 		--asyncio-mode=auto \
 		-v
 
