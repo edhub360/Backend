@@ -8,7 +8,8 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 from datetime import datetime, timezone, timedelta
-from httpx import AsyncClient, ASGITransport
+from httpx import AsyncClient
+from httpx._transports.asgi import ASGITransport
 
 from conftest import (
     make_customer, make_subscription, make_price,
