@@ -21,7 +21,7 @@ steps:
       - '-c'
       - |
         export DATABASE_URL=$(gcloud secrets versions access latest --secret="DATABASE_URL")
-        export GEMINI_API_KEY=$(gcloud secrets versions access latest --secret="APIKEY_EDHUB360")
+        export GEMINI_API_KEY=$(gcloud secrets versions access latest --secret="GENAI_API_KEY")
         export REDIS_URL=$(gcloud secrets versions access latest --secret="REDIS_URL")
         export ADMIN_KEY=$(gcloud secrets versions access latest --secret="ADMIN_KEY")
 
