@@ -1,0 +1,50 @@
+[
+  {
+    "page": "Home",
+    "content": "Edhub360 is an AI-powered educational platform that helps students learn smarter. It offers features like AI Chat, Quizzes, Flashcards, Notes, Study Planner, Courses, and Screenshot Solve. The platform is available at app.edhub360.com."
+  },
+  {
+    "page": "AI Chat",
+    "content": "The AI Chat feature allows students to have intelligent conversations with an AI tutor. Students can ask subject-related questions and get instant, detailed answers powered by Gemini AI."
+  },
+  {
+    "page": "Quiz Mode",
+    "content": "Quiz Mode lets students practice topic-wise questions with instant feedback. Teachers can create custom quizzes. Students can track their scores and performance over time."
+  },
+  {
+    "page": "Flashcards",
+    "content": "Flashcards help students memorize key concepts using active recall. Students can create, edit, and review flashcards by subject. The spaced repetition technique is used to improve retention."
+  },
+  {
+    "page": "Courses",
+    "content": "The Courses feature provides structured learning paths. Students can enroll in courses, watch video content, and track their progress chapter by chapter."
+  },
+  {
+    "page": "Study Planner",
+    "content": "Study Planner helps students organize their study schedule. Students can set daily goals, track study time, and monitor their weekly activity and subject mastery."
+  },
+  {
+    "page": "Notes",
+    "content": "The Notes feature (also called Notebook) allows students to create and manage study notes. Notes support rich text editing and are organized by subject."
+  },
+  {
+    "page": "Screenshot Solve",
+    "content": "Screenshot Solve allows students to upload an image of a problem or question and get an AI-powered solution instantly. It supports math, science, and other subjects."
+  },
+  {
+    "page": "Subscription",
+    "content": "Edhub360 offers Free and Pro subscription plans. The Free plan gives access to basic features. The Pro Max plan unlocks all premium features including unlimited AI Chat, Study Planner, and Screenshot Solve. Subscriptions are managed via Stripe."
+  },
+  {
+    "page": "Dashboard",
+    "content": "The Dashboard shows students their study streak, today's goal progress, total study time, badges earned, average quiz score, weekly activity chart, and subject mastery overview."
+  },
+  {
+    "page": "Login and Register",
+    "content": "Students can sign up and log in to Edhub360 using their email and password or Google OAuth. Forgot password and reset password flows are supported."
+  },
+  {
+    "page": "FAQ",
+    "content": "How do I reset my password? Click Forgot Password on the login page and follow the email instructions. How do I upgrade my plan? Go to Settings and click on Subscription. How do I cancel my subscription? Go to Settings, Subscription, and click Cancel. How do I contact support? Use the chat assistant on the platform."
+  }
+]
