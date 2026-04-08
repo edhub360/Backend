@@ -9,16 +9,18 @@ import pytest
 
 _here      = os.path.dirname(__file__)
 _repo_root = os.path.abspath(os.path.join(_here, "../../.."))
-_svc_root  = os.path.join(_repo_root, "subscription")
 
-# Repo root must be on path so `subscription.*` works
+# ── ONLY repo root on sys.path — NOT subscription/ ────────────────────────
+# Adding subscription/ causes models.py to load twice:
+#   once as `models` (via file lookup) and once as `subscription.models`
+# That creates duplicate SQLAlchemy mapper registrations → "Multiple classes" error
 if _repo_root not in sys.path:
     sys.path.insert(0, _repo_root)
 
-# subscription/ must ALSO be on path so bare imports inside source files work
-# (e.g. `from models import ...` inside crud.py, `from db import Base` in models.py)
-if _svc_root not in sys.path:
-    sys.path.insert(0, _svc_root)
+# Remove subscription/ if something else already added it
+_svc_root = os.path.join(_repo_root, "subscription")
+if _svc_root in sys.path:
+    sys.path.remove(_svc_root)
 
 os.environ.setdefault("DATABASE_URL",           "postgresql://user:pass@localhost/testdb")
 os.environ.setdefault("JWT_SECRET_KEY",         "test-secret-key-subscription-32b!")
@@ -26,25 +28,25 @@ os.environ.setdefault("JWT_ALGORITHM",          "HS256")
 os.environ.setdefault("STRIPE_SECRET_KEY",      "sk_test_fake")
 os.environ.setdefault("STRIPE_WEBHOOK_SECRET",  "whsec_fake")
 
-# ── Import all source modules ONCE here ───────────────────────────────────
-# Import via dotted path first so Python registers them under subscription.*
-import subscription.db           as _sub_db
-import subscription.models       as _sub_models
-import subscription.schema       as _sub_schema
-import subscription.crud         as _sub_crud
-import subscription.auth         as _sub_auth
+# ── Load all source modules ONCE via dotted path ──────────────────────────
+import subscription.db            as _sub_db
+import subscription.models        as _sub_models
+import subscription.schema        as _sub_schema
+import subscription.crud          as _sub_crud
+import subscription.auth          as _sub_auth
 import subscription.stripe_client as _sub_stripe_client
 
-# Alias each under its bare name so internal flat imports resolve from cache
-# e.g. `from models import Plan` inside crud.py hits sys.modules["models"]
-sys.modules.setdefault("db",            _sub_db)
-sys.modules.setdefault("models",        _sub_models)
-sys.modules.setdefault("schema",        _sub_schema)
-sys.modules.setdefault("crud",          _sub_crud)
-sys.modules.setdefault("auth",          _sub_auth)
-sys.modules.setdefault("stripe_client", _sub_stripe_client)
+# ── Alias under bare names so internal flat imports hit the cache ─────────
+# e.g. `from models import Plan` inside crud.py → sys.modules["models"]
+# No second file load happens — same object, same mapper registry entry
+sys.modules["db"]            = _sub_db
+sys.modules["models"]        = _sub_models
+sys.modules["schema"]        = _sub_schema
+sys.modules["crud"]          = _sub_crud
+sys.modules["auth"]          = _sub_auth
+sys.modules["stripe_client"] = _sub_stripe_client
 
-# ── Now safe to pull model classes ────────────────────────────────────────
+# ── Safe to import model classes now (single registry entry each) ─────────
 from subscription.models import Plan, PlanPrice, Customer, Subscription, User
 
 
