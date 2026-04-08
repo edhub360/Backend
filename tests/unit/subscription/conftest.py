@@ -10,43 +10,50 @@ import pytest
 _here      = os.path.dirname(__file__)
 _repo_root = os.path.abspath(os.path.join(_here, "../../.."))
 
-# ── ONLY repo root on sys.path — NOT subscription/ ────────────────────────
-# Adding subscription/ causes models.py to load twice:
-#   once as `models` (via file lookup) and once as `subscription.models`
-# That creates duplicate SQLAlchemy mapper registrations → "Multiple classes" error
+# Only repo root on sys.path — subscription/ must NOT be added
+# (adding it causes models to load twice → duplicate SQLAlchemy mapper error)
 if _repo_root not in sys.path:
     sys.path.insert(0, _repo_root)
 
-# Remove subscription/ if something else already added it
+# Defensively strip subscription/ if pytest or another plugin added it
 _svc_root = os.path.join(_repo_root, "subscription")
-if _svc_root in sys.path:
+while _svc_root in sys.path:
     sys.path.remove(_svc_root)
 
-os.environ.setdefault("DATABASE_URL",           "postgresql://user:pass@localhost/testdb")
-os.environ.setdefault("JWT_SECRET_KEY",         "test-secret-key-subscription-32b!")
-os.environ.setdefault("JWT_ALGORITHM",          "HS256")
-os.environ.setdefault("STRIPE_SECRET_KEY",      "sk_test_fake")
-os.environ.setdefault("STRIPE_WEBHOOK_SECRET",  "whsec_fake")
+os.environ.setdefault("DATABASE_URL",          "postgresql://user:pass@localhost/testdb")
+os.environ.setdefault("JWT_SECRET_KEY",        "test-secret-key-subscription-32b!")
+os.environ.setdefault("JWT_ALGORITHM",         "HS256")
+os.environ.setdefault("STRIPE_SECRET_KEY",     "sk_test_fake")
+os.environ.setdefault("STRIPE_WEBHOOK_SECRET", "whsec_fake")
 
-# ── Load all source modules ONCE via dotted path ──────────────────────────
-import subscription.db            as _sub_db
-import subscription.models        as _sub_models
-import subscription.schema        as _sub_schema
-import subscription.crud          as _sub_crud
-import subscription.auth          as _sub_auth
-import subscription.stripe_client as _sub_stripe_client
+# ── STEP 1: alias bare names BEFORE any subscription module is imported ───
+# crud.py line 4:  `from models import ...`   fires during `import subscription.crud`
+# auth.py line 11: `from db import get_db`    fires during `import subscription.auth`
+# We must put the real modules into sys.modules["db"] / sys.modules["models"]
+# BEFORE those dotted imports trigger the source file to execute.
 
-# ── Alias under bare names so internal flat imports hit the cache ─────────
-# e.g. `from models import Plan` inside crud.py → sys.modules["models"]
-# No second file load happens — same object, same mapper registry entry
-sys.modules["db"]            = _sub_db
-sys.modules["models"]        = _sub_models
-sys.modules["schema"]        = _sub_schema
-sys.modules["crud"]          = _sub_crud
-sys.modules["auth"]          = _sub_auth
-sys.modules["stripe_client"] = _sub_stripe_client
+import subscription.db as _db          # db.py has no internal flat imports → safe first
+sys.modules["db"] = _db                # now `from db import ...` resolves from cache
 
-# ── Safe to import model classes now (single registry entry each) ─────────
+import subscription.models as _models  # models.py only needs `db` → now resolved above
+sys.modules["models"] = _models
+
+import subscription.schema as _schema  # schema.py has no internal flat imports
+sys.modules["schema"] = _schema
+
+# crud.py needs models + schema — both aliased above ✓
+import subscription.crud as _crud
+sys.modules["crud"] = _crud
+
+# auth.py needs db + models — both aliased above ✓
+import subscription.auth as _auth
+sys.modules["auth"] = _auth
+
+# stripe_client.py has no internal flat imports
+import subscription.stripe_client as _stripe_client
+sys.modules["stripe_client"] = _stripe_client
+
+# ── STEP 2: pull model classes (single registry entry guaranteed) ─────────
 from subscription.models import Plan, PlanPrice, Customer, Subscription, User
 
 
