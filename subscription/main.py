@@ -526,6 +526,8 @@ async def create_customer_portal_session(
     except ValueError as e:
         print(f"❌ Invalid user_id format: {str(e)}")
         raise HTTPException(status_code=400, detail="Invalid user_id format")
+    except HTTPException:          # ← ADD THIS LINE
+        raise                      # ← AND THIS — lets 404/400 pass through untouched
     except Exception as e:
         print(f"❌ Error creating portal session: {str(e)}")
         import traceback
