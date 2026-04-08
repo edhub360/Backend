@@ -210,6 +210,265 @@ class TestGetSubscriptionByStripeId:
         _exec_returns(mock_db, None)
         assert await get_subscription_by_stripe_id(mock_db, "sub_unknown") is None
 
+# ── add after TestGetSubscriptionByStripeId ─────────────────────────────────
+
+class TestGetPlanPriceByStripeId:
+
+    @pytest.mark.asyncio
+    async def test_returns_price_when_found(self, mock_db):
+        from subscription.crud import get_plan_price_by_stripe_id
+        price = make_price()
+        _exec_returns(mock_db, price)
+        assert await get_plan_price_by_stripe_id(mock_db, "price_abc") is price
+
+    @pytest.mark.asyncio
+    async def test_returns_none_when_not_found(self, mock_db):
+        from subscription.crud import get_plan_price_by_stripe_id
+        _exec_returns(mock_db, None)
+        assert await get_plan_price_by_stripe_id(mock_db, "price_unknown") is None
+
+
+class TestCreatePlanFromStripe:
+
+    def _stripe_product(self, product_id="prod_123", active=True):
+        return {
+            "id": product_id,
+            "name": "Pro Plan",
+            "description": "All pro features",
+            "active": active,
+            "metadata": {"tier": "pro", "max_students": "500"},
+        }
+
+    @pytest.mark.asyncio
+    async def test_creates_new_plan_when_not_existing(self, mock_db):
+        from subscription.crud import create_plan_from_stripe
+
+        # First execute → no existing plan; second execute → refresh
+        _exec_returns(mock_db, None)
+        async def fake_refresh(obj): pass
+        mock_db.refresh = fake_refresh
+
+        result = await create_plan_from_stripe(mock_db, self._stripe_product())
+
+        mock_db.add.assert_called_once()
+        mock_db.commit.assert_called_once()
+        added = mock_db.add.call_args[0][0]
+        assert added.stripe_product_id == "prod_123"
+        assert added.name == "Pro Plan"
+        assert added.features_json == {"tier": "pro", "max_students": "500"}
+        assert added.is_active is True
+
+    @pytest.mark.asyncio
+    async def test_returns_existing_plan_without_creating(self, mock_db):
+        from subscription.crud import create_plan_from_stripe
+        existing = make_plan()
+        _exec_returns(mock_db, existing)
+
+        result = await create_plan_from_stripe(mock_db, self._stripe_product())
+
+        mock_db.add.assert_not_called()
+        mock_db.commit.assert_not_called()
+        assert result is existing
+
+    @pytest.mark.asyncio
+    async def test_inactive_product_creates_inactive_plan(self, mock_db):
+        from subscription.crud import create_plan_from_stripe
+        _exec_returns(mock_db, None)
+        async def fake_refresh(obj): pass
+        mock_db.refresh = fake_refresh
+
+        await create_plan_from_stripe(mock_db, self._stripe_product(active=False))
+
+        added = mock_db.add.call_args[0][0]
+        assert added.is_active is False
+
+
+class TestUpdatePlanFromStripe:
+
+    def _stripe_product(self, product_id="prod_123", name="Updated Plan", active=True):
+        return {
+            "id": product_id,
+            "name": name,
+            "description": "Updated desc",
+            "active": active,
+            "metadata": {"tier": "updated"},
+        }
+
+    @pytest.mark.asyncio
+    async def test_updates_existing_plan_fields(self, mock_db):
+        from subscription.crud import update_plan_from_stripe
+        plan = make_plan(name="Old Name", active=True)
+        _exec_returns(mock_db, plan)
+        async def fake_refresh(obj): pass
+        mock_db.refresh = fake_refresh
+
+        result = await update_plan_from_stripe(mock_db, self._stripe_product(name="Updated Plan"))
+
+        assert result.name == "Updated Plan"
+        assert result.description == "Updated desc"
+        assert result.features_json == {"tier": "updated"}
+        mock_db.commit.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_creates_plan_when_not_found(self, mock_db):
+        from subscription.crud import update_plan_from_stripe
+        # Both execute calls return None (check-existing + create's check)
+        _exec_returns(mock_db, None)
+        async def fake_refresh(obj): pass
+        mock_db.refresh = fake_refresh
+
+        await update_plan_from_stripe(mock_db, self._stripe_product())
+
+        # add() called inside create_plan_from_stripe
+        mock_db.add.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_deactivates_plan_when_stripe_inactive(self, mock_db):
+        from subscription.crud import update_plan_from_stripe
+        plan = make_plan(active=True)
+        _exec_returns(mock_db, plan)
+        async def fake_refresh(obj): pass
+        mock_db.refresh = fake_refresh
+
+        await update_plan_from_stripe(mock_db, self._stripe_product(active=False))
+
+        assert plan.is_active is False
+
+
+class TestCreatePlanPriceFromStripe:
+
+    def _stripe_price(self, price_id="price_123", product_id="prod_123", active=True):
+        return {
+            "id": price_id,
+            "product": product_id,
+            "currency": "inr",
+            "unit_amount": 49900,   # 499 rupees in paise
+            "active": active,
+            "recurring": {"interval": "month"},
+        }
+
+    def _setup_db_sequence(self, mock_db, existing_price, plan):
+        """Execute is called twice: check existing price, then find plan."""
+        calls = [existing_price, plan]
+        idx = 0
+        def side_effect(query, *args, **kwargs):
+            nonlocal idx
+            result = MagicMock()
+            result.scalar_one_or_none.return_value = calls[idx]
+            idx = min(idx + 1, len(calls) - 1)
+            return result
+        mock_db.execute.side_effect = side_effect
+
+    @pytest.mark.asyncio
+    async def test_creates_new_price_with_correct_fields(self, mock_db):
+        from subscription.crud import create_plan_price_from_stripe
+        plan = make_plan()
+        self._setup_db_sequence(mock_db, existing_price=None, plan=plan)
+        async def fake_refresh(obj): pass
+        mock_db.refresh = fake_refresh
+
+        result = await create_plan_price_from_stripe(mock_db, self._stripe_price())
+
+        mock_db.add.assert_called_once()
+        mock_db.commit.assert_called_once()
+        added = mock_db.add.call_args[0][0]
+        assert added.stripe_price_id == "price_123"
+        assert added.billing_period == "month"
+        assert added.amount == 499          # paise → rupees
+        assert added.currency == "INR"
+        assert added.plan_id == plan.id
+
+    @pytest.mark.asyncio
+    async def test_returns_existing_price_without_creating(self, mock_db):
+        from subscription.crud import create_plan_price_from_stripe
+        existing = make_price()
+        _exec_returns(mock_db, existing)
+
+        result = await create_plan_price_from_stripe(mock_db, self._stripe_price())
+
+        mock_db.add.assert_not_called()
+        assert result is existing
+
+    @pytest.mark.asyncio
+    async def test_returns_none_when_plan_not_found(self, mock_db):
+        from subscription.crud import create_plan_price_from_stripe
+        # price doesn't exist, plan also not found
+        self._setup_db_sequence(mock_db, existing_price=None, plan=None)
+
+        result = await create_plan_price_from_stripe(mock_db, self._stripe_price())
+
+        mock_db.add.assert_not_called()
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_one_time_price_sets_billing_period(self, mock_db):
+        from subscription.crud import create_plan_price_from_stripe
+        plan = make_plan()
+        self._setup_db_sequence(mock_db, existing_price=None, plan=plan)
+        async def fake_refresh(obj): pass
+        mock_db.refresh = fake_refresh
+
+        stripe_price = self._stripe_price()
+        stripe_price["recurring"] = None   # one-time price
+
+        await create_plan_price_from_stripe(mock_db, stripe_price)
+
+        added = mock_db.add.call_args[0][0]
+        assert added.billing_period == "one_time"
+
+
+class TestUpdatePlanPriceFromStripe:
+
+    def _stripe_price(self, price_id="price_123", active=True):
+        return {
+            "id": price_id,
+            "product": "prod_123",
+            "currency": "inr",
+            "unit_amount": 49900,
+            "active": active,
+            "recurring": {"interval": "month"},
+        }
+
+    @pytest.mark.asyncio
+    async def test_deactivates_existing_price(self, mock_db):
+        from subscription.crud import update_plan_price_from_stripe
+        price = make_price(active=True)
+        _exec_returns(mock_db, price)
+        async def fake_refresh(obj): pass
+        mock_db.refresh = fake_refresh
+
+        result = await update_plan_price_from_stripe(mock_db, self._stripe_price(active=False))
+
+        assert price.is_active is False
+        mock_db.commit.assert_called_once()
+        assert result is price
+
+    @pytest.mark.asyncio
+    async def test_reactivates_existing_price(self, mock_db):
+        from subscription.crud import update_plan_price_from_stripe
+        price = make_price(active=False)
+        _exec_returns(mock_db, price)
+        async def fake_refresh(obj): pass
+        mock_db.refresh = fake_refresh
+
+        result = await update_plan_price_from_stripe(mock_db, self._stripe_price(active=True))
+
+        assert price.is_active is True
+
+    @pytest.mark.asyncio
+    async def test_creates_price_when_not_found(self, mock_db):
+        from subscription.crud import update_plan_price_from_stripe
+        # First call → no existing price; delegates to create_plan_price_from_stripe
+        # which then calls execute twice more (check existing + find plan), both None
+        _exec_returns(mock_db, None)
+        async def fake_refresh(obj): pass
+        mock_db.refresh = fake_refresh
+
+        result = await update_plan_price_from_stripe(mock_db, self._stripe_price())
+
+        # Result is None because plan also not found inside create_plan_price_from_stripe
+        assert result is None
+        mock_db.add.assert_not_called()
 
 class TestDeletePlanFromStripe:
 
