@@ -9,3 +9,4 @@ omit =
     */__pycache__/*
     */deploy_*.py
     */test_gemini.py
+    */test_db.py
