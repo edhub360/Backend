@@ -5,7 +5,7 @@ All stripe.* SDK calls are patched — no real network calls.
 import pytest
 import stripe as stripe_lib
 from unittest.mock import MagicMock, patch
-from stripe_client import StripeClient
+from subscription.stripe_client import StripeClient
 
 
 class TestCreateCustomer:
