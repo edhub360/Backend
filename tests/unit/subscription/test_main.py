@@ -131,6 +131,12 @@ class TestCreateCheckoutSession:
 
 class TestGetPlans:
 
+    def setup_method(self):
+        # Reset cache state before each test
+        import subscription.main as main_module
+        main_module.PLANS_CACHE = None
+        main_module.CACHE_EXPIRY = None
+
     @pytest.mark.asyncio
     async def test_returns_list_of_plans(self, mock_db):
         import subscription.main as main_mod
@@ -170,15 +176,7 @@ class TestGetPlans:
         app.dependency_overrides.clear()
         main_mod.PLANS_CACHE  = None
         main_mod.CACHE_EXPIRY = None
-
-class TestGetCachedPlans:
-
-    def setup_method(self):
-        # Reset cache state before each test
-        import subscription.main as main_module
-        main_module.PLANS_CACHE = None
-        main_module.CACHE_EXPIRY = None
-
+    
     @pytest.mark.asyncio
     async def test_returns_cached_plans_when_cache_valid(self, mock_db):
         import subscription.main as main_module
