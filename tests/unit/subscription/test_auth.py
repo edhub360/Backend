@@ -128,3 +128,23 @@ class TestGetCurrentUser:
                    new=AsyncMock(return_value=user)) as mock_enforce:
             await get_current_user(token="valid.token", db=mock_db)
         mock_enforce.assert_called_once_with(mock_db, user)
+
+    # test_auth.py — add these two tests to TestGetCurrentUser
+
+    @pytest.mark.asyncio
+    async def test_raises_401_on_malformed_uuid(self, mock_db):
+        from subscription.auth import get_current_user
+        with patch("subscription.auth.decode_jwt_token", return_value={"sub": "not-a-uuid"}):
+            with pytest.raises(HTTPException) as exc:
+                await get_current_user(token="valid.token", db=mock_db)
+        assert exc.value.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_raises_401_on_unexpected_db_error(self, mock_db):
+        from subscription.auth import get_current_user
+        uid = str(uuid4())
+        mock_db.execute.side_effect = Exception("DB connection lost")
+        with patch("subscription.auth.decode_jwt_token", return_value={"sub": uid}):
+            with pytest.raises(HTTPException) as exc:
+                await get_current_user(token="valid.token", db=mock_db)
+        assert exc.value.status_code == 401
