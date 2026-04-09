@@ -22,6 +22,7 @@ jobs:
           - { name: Notes,         src: Notes,         tests: tests/unit/Notes }
           - { name: login,         src: login,         tests: tests/unit/login }   # ← added
           - { name: subscription,  src: subscription,  tests: tests/unit/subscription }   # ← added
+          - { name: cs_bot,        src: cs_bot,        tests: tests/unit/cs_bot }   # ← added
 
     steps:
     - uses: actions/checkout@v4

@@ -3,7 +3,7 @@
         test-study_planner test-Notes test-login test-all-modules
 
 
-SERVICES = ai_chat courses flashcard quiz study_planner Notes login subscription
+SERVICES = ai_chat courses flashcard quiz study_planner Notes login subscription cs_bot
 
 
 # Install test dependencies
@@ -91,6 +91,13 @@ test-subscription:
 		--asyncio-mode=auto \
 		-v
 
+test-cs_bot:
+	pytest tests/unit/cs_bot/ \
+		--cov=cs_bot \
+		--cov-report=term-missing \
+		--cov-report=html:htmlcov/cs_bot \
+		--asyncio-mode=auto \
+		-v
 
 # ── Run all modules sequentially with per-module coverage ────────
 test-all-modules:
