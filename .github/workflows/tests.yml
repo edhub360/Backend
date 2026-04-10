@@ -31,26 +31,22 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
-        # ── REMOVED: cache: pip ──────────────────────────────────────────────
-        # pip cache was persisting a corrupted/partial langchain_core install
-        # across runs, causing: "langchain_core is not a package".
-        # Remove the cache until all LangChain packages are pinned and stable.
 
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
 
-        # ── cs_bot needs LangChain packages installed FIRST in isolation ─────
-        # langchain-community depends on langchain-core; installing them
-        # together in one shot lets pip resolve a coherent set.
-        # The --no-cache-dir flag ensures no stale cached wheels are used.
         if [[ "${{ matrix.module.name }}" == "cs_bot" ]]; then
-          pip install --no-cache-dir             "langchain-core>=0.3.0,<0.4.0"             "langchain-community>=0.3.0,<0.4.0"             "langchain-google-genai>=2.0.0,<3.0.0"             "langchain-postgres>=0.0.12,<0.1.0"             "langchain-text-splitters>=0.3.0,<0.4.0"
+          pip install --no-cache-dir \
+            "langchain-core>=0.3.0,<0.4.0" \
+            "langchain-community>=0.3.0,<0.4.0" \
+            "langchain-google-genai>=2.0.0,<3.0.0" \
+            "langchain-postgres>=0.0.12,<0.1.0" \
+            "langchain-text-splitters>=0.3.0,<0.4.0"
         fi
 
         pip install --no-cache-dir -r requirements-test.txt
 
-        # ── Verify langchain_core installed correctly for cs_bot ─────────────
         if [[ "${{ matrix.module.name }}" == "cs_bot" ]]; then
           python -c "import langchain_core; print('langchain_core OK:', langchain_core.__file__)"
           pip check
@@ -80,13 +76,14 @@ jobs:
         echo "EMAILS_FROM_EMAIL=noreply@example.com" >> $GITHUB_ENV
         echo "SMTP_FROM_EMAIL=noreply@example.com" >> $GITHUB_ENV
         echo "SMTP_FROM_NAME=EdHub360" >> $GITHUB_ENV
-        # ── cs_bot extra env vars ─────────────────────────────────────────────
         echo "REDIS_URL=redis://localhost:6379" >> $GITHUB_ENV
         echo "ADMIN_KEY=test-admin-secret" >> $GITHUB_ENV
 
     - name: Lint — ${{ matrix.module.name }}
       run: |
-        flake8 ${{ matrix.module.src }}           --count --select=E9,F63,F7,F82           --show-source --statistics
+        flake8 ${{ matrix.module.src }} \
+          --count --select=E9,F63,F7,F82 \
+          --show-source --statistics
 
     - name: Format check — ${{ matrix.module.name }}
       run: |
@@ -98,7 +95,12 @@ jobs:
 
     - name: Run tests — ${{ matrix.module.name }}
       run: |
-        pytest ${{ matrix.module.tests }}           --cov=${{ matrix.module.src }}           --cov-report=xml:coverage_${{ matrix.module.name }}.xml           --cov-report=term-missing           --asyncio-mode=auto           -v --tb=short
+        pytest ${{ matrix.module.tests }} \
+          --cov=${{ matrix.module.src }} \
+          --cov-report=xml:coverage_${{ matrix.module.name }}.xml \
+          --cov-report=term-missing \
+          --asyncio-mode=auto \
+          -v --tb=short
 
     - name: Upload coverage — ${{ matrix.module.name }}
       uses: codecov/codecov-action@v5
