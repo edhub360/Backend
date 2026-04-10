@@ -1,24 +1,33 @@
 """tests/unit/cs_bot/test_database.py"""
-import pytest
+import sys
 from unittest.mock import MagicMock, patch
 
-import cs_bot.app.core.database as db_mod
+# Stub transitive imports BEFORE importing database.py
+_pg = MagicMock()
+_pg.PGVector = MagicMock
+_lc_gg = MagicMock()
+_lc_gg.GoogleGenerativeAIEmbeddings = MagicMock
+
+with patch.dict(
+    sys.modules,
+    {
+        "langchain_postgres": _pg,
+        "langchain_postgres.vectorstores": MagicMock(),
+        "langchain_postgres.chat_message_histories": MagicMock(),
+        "langchain_google_genai": _lc_gg,
+    },
+):
+    import cs_bot.app.core.database as db_mod
 
 
 def _reset():
     db_mod.vector_store = None
-    db_mod.embeddings   = None
+    db_mod.embeddings = None
 
 
 class TestInitVectorStore:
-    """
-    database.py symbols to patch (all inside cs_bot.app.core.database namespace):
-        GoogleGenerativeAIEmbeddings
-        PGVector
-    """
-
     def test_sets_global_vector_store(self):
-        mock_vs  = MagicMock()
+        mock_vs = MagicMock()
         mock_emb = MagicMock()
         _reset()
         with patch.multiple(
@@ -96,8 +105,6 @@ class TestInitVectorStore:
 
 
 class TestGetVectorStore:
-    """get_vector_store() is a pure getter — no langchain imports triggered."""
-
     def test_returns_initialized_store(self):
         mock_vs = MagicMock()
         db_mod.vector_store = mock_vs
