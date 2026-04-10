@@ -1,36 +1,24 @@
 """tests/unit/cs_bot/conftest.py"""
 import os
-import sys
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-# Top of conftest.py, before everything else
-_pg_mock = MagicMock()
-sys.modules.setdefault("langchain_postgres",                        _pg_mock)
-sys.modules.setdefault("langchain_postgres.vectorstores",           _pg_mock)
-sys.modules.setdefault("langchain_postgres.chat_message_histories", _pg_mock)
-_pg_mock.PGVector = MagicMock
-
-# Must be set BEFORE any app module is imported
+# Set env before app imports
 os.environ["GEMINI_API_KEY"] = "test-gemini-key"
-os.environ["DATABASE_URL"]   = "postgresql+asyncpg://user:pass@localhost/testdb"
-os.environ["REDIS_URL"]      = "redis://localhost:6379"
-os.environ["ADMIN_KEY"]      = "test-admin-secret"
+os.environ["DATABASE_URL"] = "postgresql+asyncpg://user:pass@localhost/testdb"
+os.environ["REDIS_URL"] = "redis://localhost:6379"
+os.environ["ADMIN_KEY"] = "test-admin-secret"
 
-# Pre-register sub-modules so patch("cs_bot.app.X.Y.symbol") resolves correctly.
-# Python only adds a sub-module to sys.modules after it has been imported at least
-# once; without this, patch() raises AttributeError: module has no attribute X.
-import cs_bot.app.core.database              # noqa: E402
-import cs_bot.app.core.redis                 # noqa: E402
-import cs_bot.app.services.ingestion_service # noqa: E402
-import cs_bot.app.services.session_service   # noqa: E402
-
+# IMPORTANT:
+# Do not import cs_bot app modules here.
+# pytest imports conftest before test collection, so any heavy import here can
+# crash the whole test run. Keep conftest limited to pure fixtures/env only.
 
 @pytest.fixture
 def mock_redis():
-    r        = AsyncMock()
-    r.get    = AsyncMock(return_value=None)
-    r.setex  = AsyncMock()
+    r = AsyncMock()
+    r.get = AsyncMock(return_value=None)
+    r.setex = AsyncMock()
     r.delete = AsyncMock()
     r.aclose = AsyncMock()
     return r
@@ -38,7 +26,7 @@ def mock_redis():
 
 @pytest.fixture
 def mock_vector_store():
-    vs                = MagicMock()
-    vs.as_retriever   = MagicMock(return_value=AsyncMock())
+    vs = MagicMock()
+    vs.as_retriever = MagicMock(return_value=AsyncMock())
     vs.aadd_documents = AsyncMock(return_value=None)
     return vs
