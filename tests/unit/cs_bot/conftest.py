@@ -1,7 +1,15 @@
 """tests/unit/cs_bot/conftest.py"""
 import os
+import sys
 import pytest
 from unittest.mock import AsyncMock, MagicMock
+
+# Top of conftest.py, before everything else
+_pg_mock = MagicMock()
+sys.modules.setdefault("langchain_postgres",                        _pg_mock)
+sys.modules.setdefault("langchain_postgres.vectorstores",           _pg_mock)
+sys.modules.setdefault("langchain_postgres.chat_message_histories", _pg_mock)
+_pg_mock.PGVector = MagicMock
 
 # Must be set BEFORE any app module is imported
 os.environ["GEMINI_API_KEY"] = "test-gemini-key"
