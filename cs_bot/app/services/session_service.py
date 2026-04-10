@@ -1,6 +1,6 @@
 import json
-from app.core.redis import get_redis
-from app.core.config import settings
+from cs_bot.app.core.redis import get_redis
+from cs_bot.app.core.config import settings
 from langchain_core.messages import HumanMessage, AIMessage, BaseMessage
 
 def _serialize(messages: list[BaseMessage]) -> str:

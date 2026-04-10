@@ -7,8 +7,8 @@ from httpx._transports.asgi import ASGITransport
 
 def _get_app():
     """Return the FastAPI app with mocked startup dependencies."""
-    import app.core.redis    as redis_mod
-    import app.core.database as db_mod
+    import cs_bot.app.core.redis    as redis_mod
+    import cs_bot.app.core.database as db_mod
 
     mock_redis      = MagicMock()
     mock_redis.aclose = AsyncMock()
@@ -16,7 +16,7 @@ def _get_app():
     db_mod.vector_store    = MagicMock()
     db_mod.embeddings      = MagicMock()
 
-    from app.main import app
+    from cs_bot.app.main import app
     return app
 
 
@@ -53,9 +53,9 @@ class TestChatRouter:
     @pytest.mark.asyncio
     async def test_returns_reply_and_sources(self):
         app = _get_app()
-        with patch("app.services.session_service.get_history",
-                   new=AsyncMock(return_value=[])),              patch("app.services.rag_service.generate_reply",
-                   new=AsyncMock(return_value=("Hello!", ["https://edhub.com"]))),              patch("app.services.session_service.save_history",
+        with patch("cs_bot.app.services.session_service.get_history",
+                   new=AsyncMock(return_value=[])),              patch("cs_bot.app.services.rag_service.generate_reply",
+                   new=AsyncMock(return_value=("Hello!", ["https://edhub.com"]))),              patch("cs_bot.app.services.session_service.save_history",
                    new=AsyncMock()):
             async with AsyncClient(transport=ASGITransport(app=app),
                                    base_url="http://test") as ac:
@@ -69,7 +69,7 @@ class TestChatRouter:
     @pytest.mark.asyncio
     async def test_generates_session_id_when_not_provided(self):
         app = _get_app()
-        with patch("app.services.session_service.get_history",  new=AsyncMock(return_value=[])),              patch("app.services.rag_service.generate_reply",   new=AsyncMock(return_value=("r", []))),              patch("app.services.session_service.save_history", new=AsyncMock()):
+        with patch("cs_bot.app.services.session_service.get_history",  new=AsyncMock(return_value=[])),              patch("app.services.rag_service.generate_reply",   new=AsyncMock(return_value=("r", []))),              patch("app.services.session_service.save_history", new=AsyncMock()):
             async with AsyncClient(transport=ASGITransport(app=app),
                                    base_url="http://test") as ac:
                 resp = await ac.post("/chat", json={"message": "hi"})
@@ -80,7 +80,7 @@ class TestChatRouter:
     @pytest.mark.asyncio
     async def test_uses_provided_session_id(self):
         app = _get_app()
-        with patch("app.services.session_service.get_history",  new=AsyncMock(return_value=[])),              patch("app.services.rag_service.generate_reply",   new=AsyncMock(return_value=("r", []))),              patch("app.services.session_service.save_history", new=AsyncMock()):
+        with patch("cs_bot.app.services.session_service.get_history",  new=AsyncMock(return_value=[])),              patch("app.services.rag_service.generate_reply",   new=AsyncMock(return_value=("r", []))),              patch("app.services.session_service.save_history", new=AsyncMock()):
             async with AsyncClient(transport=ASGITransport(app=app),
                                    base_url="http://test") as ac:
                 resp = await ac.post("/chat",
@@ -100,7 +100,7 @@ class TestChatRouter:
     async def test_saves_history_after_reply(self):
         app = _get_app()
         mock_save = AsyncMock()
-        with patch("app.services.session_service.get_history",  new=AsyncMock(return_value=[])),              patch("app.services.rag_service.generate_reply",   new=AsyncMock(return_value=("r", []))),              patch("app.services.session_service.save_history", new=mock_save):
+        with patch("cs_bot.app.services.session_service.get_history",  new=AsyncMock(return_value=[])),              patch("cs_bot.app.services.rag_service.generate_reply",   new=AsyncMock(return_value=("r", []))),              patch("app.services.session_service.save_history", new=mock_save):
             async with AsyncClient(transport=ASGITransport(app=app),
                                    base_url="http://test") as ac:
                 await ac.post("/chat", json={"message": "hi"})
@@ -115,7 +115,7 @@ class TestChatRouter:
         async def capture_save(session_id, messages):
             saved.extend(messages)
 
-        with patch("app.services.session_service.get_history",  new=AsyncMock(return_value=[])),              patch("app.services.rag_service.generate_reply",   new=AsyncMock(return_value=("answer", []))),              patch("app.services.session_service.save_history", new=capture_save):
+        with patch("cs_bot.app.services.session_service.get_history",  new=AsyncMock(return_value=[])),              patch("cs_bot.app.services.rag_service.generate_reply",   new=AsyncMock(return_value=("answer", []))),              patch("cs_bot.app.services.session_service.save_history", new=capture_save):
             async with AsyncClient(transport=ASGITransport(app=app),
                                    base_url="http://test") as ac:
                 await ac.post("/chat", json={"message": "hello"})
@@ -133,7 +133,7 @@ class TestClearSession:
     @pytest.mark.asyncio
     async def test_returns_200_with_session_id(self):
         app = _get_app()
-        with patch("app.services.session_service.delete_history",
+        with patch("cs_bot.app.services.session_service.delete_history",
                    new=AsyncMock()) as mock_del:
             async with AsyncClient(transport=ASGITransport(app=app),
                                    base_url="http://test") as ac:
@@ -145,7 +145,7 @@ class TestClearSession:
     @pytest.mark.asyncio
     async def test_calls_delete_history_with_correct_id(self):
         app = _get_app()
-        with patch("app.services.session_service.delete_history",
+        with patch("cs_bot.app.services.session_service.delete_history",
                    new=AsyncMock()) as mock_del:
             async with AsyncClient(transport=ASGITransport(app=app),
                                    base_url="http://test") as ac:
@@ -181,7 +181,7 @@ class TestIngestionRouter:
     @pytest.mark.asyncio
     async def test_ingest_urls_correct_key_returns_200(self):
         app = _get_app()
-        with patch("app.routers.ingestion.ingest_urls", new=AsyncMock(return_value=3)):
+        with patch("cs_bot.app.routers.ingestion.ingest_urls", new=AsyncMock(return_value=3)):
             async with AsyncClient(transport=ASGITransport(app=app),
                                    base_url="http://test") as ac:
                 resp = await ac.post("/ingest/urls",
@@ -195,7 +195,7 @@ class TestIngestionRouter:
     @pytest.mark.asyncio
     async def test_ingest_urls_returns_chunks_added_zero(self):
         app = _get_app()
-        with patch("app.routers.ingestion.ingest_urls", new=AsyncMock(return_value=5)):
+        with patch("cs_bot.app.routers.ingestion.ingest_urls", new=AsyncMock(return_value=5)):
             async with AsyncClient(transport=ASGITransport(app=app),
                                    base_url="http://test") as ac:
                 resp = await ac.post("/ingest/urls",
@@ -216,7 +216,7 @@ class TestIngestionRouter:
     @pytest.mark.asyncio
     async def test_ingest_json_correct_key_returns_chunk_count(self):
         app = _get_app()
-        with patch("app.routers.ingestion.ingest_json", new=AsyncMock(return_value=10)):
+        with patch("cs_bot.app.routers.ingestion.ingest_json", new=AsyncMock(return_value=10)):
             async with AsyncClient(transport=ASGITransport(app=app),
                                    base_url="http://test") as ac:
                 resp = await ac.post("/ingest/json",

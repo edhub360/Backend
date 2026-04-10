@@ -23,7 +23,7 @@ class TestIngestUrls:
                    return_value=mock_loader),              patch("app.services.ingestion_service.RecursiveCharacterTextSplitter",
                    return_value=mock_splitter),              patch("app.services.ingestion_service.get_vector_store",
                    return_value=mock_vector_store):
-            from app.services.ingestion_service import ingest_urls
+            from cs_bot.app.services.ingestion_service import ingest_urls
             count = await ingest_urls(["https://a.com"])
 
         assert count == 2
@@ -42,7 +42,7 @@ class TestIngestUrls:
                    return_value=mock_loader),              patch("app.services.ingestion_service.RecursiveCharacterTextSplitter",
                    return_value=mock_splitter),              patch("app.services.ingestion_service.get_vector_store",
                    return_value=mock_vector_store):
-            from app.services.ingestion_service import ingest_urls
+            from cs_bot.app.services.ingestion_service import ingest_urls
             await ingest_urls(["https://a.com"])
 
         assert chunk.metadata["source"] == "https://a.com"
@@ -60,7 +60,7 @@ class TestIngestUrls:
                    return_value=mock_loader),              patch("app.services.ingestion_service.RecursiveCharacterTextSplitter",
                    return_value=mock_splitter),              patch("app.services.ingestion_service.get_vector_store",
                    return_value=mock_vector_store):
-            from app.services.ingestion_service import ingest_urls
+            from cs_bot.app.services.ingestion_service import ingest_urls
             await ingest_urls(["https://a.com"])
 
         assert chunk.metadata["source"] == ""
@@ -76,7 +76,7 @@ class TestIngestUrls:
                    return_value=mock_loader),              patch("app.services.ingestion_service.RecursiveCharacterTextSplitter",
                    return_value=mock_splitter),              patch("app.services.ingestion_service.get_vector_store",
                    return_value=mock_vector_store):
-            from app.services.ingestion_service import ingest_urls
+            from cs_bot.app.services.ingestion_service import ingest_urls
             await ingest_urls([])
 
         mock_vector_store.aadd_documents.assert_called_once()
@@ -96,7 +96,7 @@ class TestIngestJson:
         with patch("app.services.ingestion_service.RecursiveCharacterTextSplitter",
                    return_value=mock_splitter),              patch("app.services.ingestion_service.get_vector_store",
                    return_value=mock_vector_store):
-            from app.services.ingestion_service import ingest_json
+            from cs_bot.app.services.ingestion_service import ingest_json
             count = await ingest_json(str(json_file))
 
         assert count == 2
@@ -117,7 +117,7 @@ class TestIngestJson:
         with patch("app.services.ingestion_service.RecursiveCharacterTextSplitter",
                    return_value=mock_splitter),              patch("app.services.ingestion_service.get_vector_store",
                    return_value=mock_vector_store):
-            from app.services.ingestion_service import ingest_json
+            from cs_bot.app.services.ingestion_service import ingest_json
             await ingest_json(str(json_file))
 
         assert captured[0].metadata["source"] == "https://example.com/about"
@@ -142,7 +142,7 @@ class TestIngestJson:
         with patch("app.services.ingestion_service.RecursiveCharacterTextSplitter",
                    return_value=mock_splitter),              patch("app.services.ingestion_service.get_vector_store",
                    return_value=mock_vector_store):
-            from app.services.ingestion_service import ingest_json
+            from cs_bot.app.services.ingestion_service import ingest_json
             await ingest_json(str(json_file))
 
         assert len(captured) == 2

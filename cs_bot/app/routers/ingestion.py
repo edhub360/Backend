@@ -1,7 +1,7 @@
 from fastapi import APIRouter, BackgroundTasks, Header, HTTPException
-from app.models.schemas import IngestRequest, IngestResponse
-from app.services.ingestion_service import ingest_urls, ingest_json
-from app.core.config import settings
+from cs_bot.app.models.schemas import IngestRequest, IngestResponse
+from cs_bot.app.services.ingestion_service import ingest_urls, ingest_json
+from cs_bot.app.core.config import settings
 
 router = APIRouter()
 

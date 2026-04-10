@@ -3,7 +3,7 @@ from pathlib import Path
 from langchain_community.document_loaders import WebBaseLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
-from app.core.database import get_vector_store
+from cs_bot.app.core.database import get_vector_store
 
 
 async def ingest_urls(urls: list[str]) -> int:

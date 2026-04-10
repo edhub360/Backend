@@ -1,10 +1,10 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.core.config import settings
-from app.core.database import init_vector_store
-from app.core.redis import init_redis, get_redis
-from app.routers import chat, ingestion
+from cs_bot.app.core.config import settings
+from cs_bot.app.core.database import init_vector_store
+from cs_bot.app.core.redis import init_redis, get_redis
+from cs_bot.app.routers import chat, ingestion
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

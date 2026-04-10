@@ -2,8 +2,8 @@ from langchain_google_genai import ChatGoogleGenerativeAI   # only this changes
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.messages import BaseMessage
-from app.core.database import get_vector_store
-from app.core.config import settings
+from cs_bot.app.core.database import get_vector_store
+from cs_bot.app.core.config import settings
 
 SYSTEM_PROMPT = """You are a helpful customer support assistant for this website.
 Answer ONLY based on the context provided below from the website content.

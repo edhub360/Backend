@@ -1,8 +1,8 @@
 import uuid
 from fastapi import APIRouter
-from app.models.schemas import ChatRequest, ChatResponse
-from app.services.session_service import get_history, save_history, delete_history
-from app.services.rag_service import generate_reply
+from cs_bot.app.models.schemas import ChatRequest, ChatResponse
+from cs_bot.app.services.session_service import get_history, save_history, delete_history
+from cs_bot.app.services.rag_service import generate_reply
 from langchain_core.messages import HumanMessage, AIMessage
 
 router = APIRouter()

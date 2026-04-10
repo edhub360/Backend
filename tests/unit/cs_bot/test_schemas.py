@@ -1,7 +1,7 @@
 """tests/unit/cs_bot/test_schemas.py — Pydantic schema validation"""
 import pytest
 from pydantic import ValidationError
-from app.models.schemas import ChatRequest, ChatResponse, IngestRequest, IngestResponse
+from cs_bot.app.models.schemas import ChatRequest, ChatResponse, IngestRequest, IngestResponse
 
 
 class TestChatRequest:

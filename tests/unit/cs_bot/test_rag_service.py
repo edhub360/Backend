@@ -7,18 +7,18 @@ from langchain_core.messages import HumanMessage, AIMessage
 class TestFormatDocs:
 
     def test_joins_page_content_with_double_newline(self):
-        from app.services.rag_service import _format_docs
+        from cs_bot.app.services.rag_service import _format_docs
         docs   = [MagicMock(page_content="chunk1"), MagicMock(page_content="chunk2")]
         result = _format_docs(docs)
         assert result == "chunk1\n\nchunk2"
 
     def test_single_doc_no_separator(self):
-        from app.services.rag_service import _format_docs
+        from cs_bot.app.services.rag_service import _format_docs
         docs   = [MagicMock(page_content="only one")]
         assert _format_docs(docs) == "only one"
 
     def test_empty_docs_returns_empty_string(self):
-        from app.services.rag_service import _format_docs
+        from cs_bot.app.services.rag_service import _format_docs
         assert _format_docs([]) == ""
 
 
@@ -26,19 +26,19 @@ class TestGetLlm:
 
     def test_returns_llm_instance(self):
         mock_llm = MagicMock()
-        with patch("app.services.rag_service.ChatGoogleGenerativeAI",
+        with patch("cs_bot.app.services.rag_service.ChatGoogleGenerativeAI",
                    return_value=mock_llm) as mock_cls,              patch("app.services.rag_service.settings") as s:
             s.CHAT_MODEL     = "gemini-2.5-flash"
             s.GEMINI_API_KEY = "fake-key"
-            from app.services.rag_service import get_llm
+            from cs_bot.app.services.rag_service import get_llm
             llm = get_llm()
         assert llm is mock_llm
 
     def test_uses_correct_model(self):
-        with patch("app.services.rag_service.ChatGoogleGenerativeAI") as mock_cls,              patch("app.services.rag_service.settings") as s:
+        with patch("cs_bot.app.services.rag_service.ChatGoogleGenerativeAI") as mock_cls,              patch("cs_bot.app.services.rag_service.settings") as s:
             s.CHAT_MODEL     = "gemini-2.5-flash"
             s.GEMINI_API_KEY = "fake-key"
-            from app.services.rag_service import get_llm
+            from cs_bot.app.services.rag_service import get_llm
             get_llm()
         kwargs = mock_cls.call_args[1]
         assert kwargs["model"]       == "gemini-2.5-flash"
@@ -75,10 +75,10 @@ class TestGenerateReply:
         mock_chain   = self._make_chain("Edhub is great.")
         mock_prompt, mock_llm, mock_parser = self._setup_pipeline(mock_chain)
 
-        with patch("app.services.rag_service.get_vector_store",
-                   return_value=mock_vector_store),              patch("app.services.rag_service.get_llm",          return_value=mock_llm),              patch("app.services.rag_service.ChatPromptTemplate.from_messages",
-                   return_value=mock_prompt),              patch("app.services.rag_service.StrOutputParser",  return_value=mock_parser):
-            from app.services.rag_service import generate_reply
+        with patch("cs_bot.app.services.rag_service.get_vector_store",
+                   return_value=mock_vector_store),              patch("cs_bot.app.services.rag_service.get_llm",          return_value=mock_llm),              patch("cs_bot.app.services.rag_service.ChatPromptTemplate.from_messages",
+                   return_value=mock_prompt),              patch("cs_bot.app.services.rag_service.StrOutputParser",  return_value=mock_parser):
+            from cs_bot.app.services.rag_service import generate_reply
             reply, sources = await generate_reply("What is Edhub?", [])
 
         assert reply == "Edhub is great."
@@ -94,10 +94,10 @@ class TestGenerateReply:
         mock_chain   = self._make_chain("reply")
         mock_prompt, mock_llm, mock_parser = self._setup_pipeline(mock_chain)
 
-        with patch("app.services.rag_service.get_vector_store",
-                   return_value=mock_vector_store),              patch("app.services.rag_service.get_llm",          return_value=mock_llm),              patch("app.services.rag_service.ChatPromptTemplate.from_messages",
-                   return_value=mock_prompt),              patch("app.services.rag_service.StrOutputParser",  return_value=mock_parser):
-            from app.services.rag_service import generate_reply
+        with patch("cs_bot.app.services.rag_service.get_vector_store",
+                   return_value=mock_vector_store),              patch("cs_bot.app.services.rag_service.get_llm",          return_value=mock_llm),              patch("cs_bot.app.services.rag_service.ChatPromptTemplate.from_messages",
+                   return_value=mock_prompt),              patch("cs_bot.app.services.rag_service.StrOutputParser",  return_value=mock_parser):
+            from cs_bot.app.services.rag_service import generate_reply
             _, sources = await generate_reply("question", [])
 
         assert "https://edhub.com" in sources
@@ -114,10 +114,10 @@ class TestGenerateReply:
         mock_chain   = self._make_chain("reply")
         mock_prompt, mock_llm, mock_parser = self._setup_pipeline(mock_chain)
 
-        with patch("app.services.rag_service.get_vector_store",
-                   return_value=mock_vector_store),              patch("app.services.rag_service.get_llm",          return_value=mock_llm),              patch("app.services.rag_service.ChatPromptTemplate.from_messages",
-                   return_value=mock_prompt),              patch("app.services.rag_service.StrOutputParser",  return_value=mock_parser):
-            from app.services.rag_service import generate_reply
+        with patch("cs_bot.app.services.rag_service.get_vector_store",
+                   return_value=mock_vector_store),              patch("cs_bot.app.services.rag_service.get_llm",          return_value=mock_llm),              patch("cs_bot.app.services.rag_service.ChatPromptTemplate.from_messages",
+                   return_value=mock_prompt),              patch("cs_bot.app.services.rag_service.StrOutputParser",  return_value=mock_parser):
+            from cs_bot.app.services.rag_service import generate_reply
             _, sources = await generate_reply("question", [])
 
         assert len(sources) == 1
@@ -133,10 +133,10 @@ class TestGenerateReply:
         mock_chain   = self._make_chain("reply")
         mock_prompt, mock_llm, mock_parser = self._setup_pipeline(mock_chain)
 
-        with patch("app.services.rag_service.get_vector_store",
-                   return_value=mock_vector_store),              patch("app.services.rag_service.get_llm",          return_value=mock_llm),              patch("app.services.rag_service.ChatPromptTemplate.from_messages",
-                   return_value=mock_prompt),              patch("app.services.rag_service.StrOutputParser",  return_value=mock_parser):
-            from app.services.rag_service import generate_reply
+        with patch("cs_bot.app.services.rag_service.get_vector_store",
+                   return_value=mock_vector_store),              patch("cs_bot.app.services.rag_service.get_llm",          return_value=mock_llm),              patch("cs_bot.app.services.rag_service.ChatPromptTemplate.from_messages",
+                   return_value=mock_prompt),              patch("cs_bot.app.services.rag_service.StrOutputParser",  return_value=mock_parser):
+            from cs_bot.app.services.rag_service import generate_reply
             _, sources = await generate_reply("question", [])
 
         assert sources == []
@@ -152,10 +152,10 @@ class TestGenerateReply:
 
         history = [HumanMessage(content="prev question"), AIMessage(content="prev answer")]
 
-        with patch("app.services.rag_service.get_vector_store",
-                   return_value=mock_vector_store),              patch("app.services.rag_service.get_llm",          return_value=mock_llm),              patch("app.services.rag_service.ChatPromptTemplate.from_messages",
-                   return_value=mock_prompt),              patch("app.services.rag_service.StrOutputParser",  return_value=mock_parser):
-            from app.services.rag_service import generate_reply
+        with patch("cs_bot.app.services.rag_service.get_vector_store",
+                   return_value=mock_vector_store),              patch("cs_bot.app.services.rag_service.get_llm",          return_value=mock_llm),              patch("cs_bot.app.services.rag_service.ChatPromptTemplate.from_messages",
+                   return_value=mock_prompt),              patch("cs_bot.app.services.rag_service.StrOutputParser",  return_value=mock_parser):
+            from cs_bot.app.services.rag_service import generate_reply
             await generate_reply("new question", history)
 
         call_kwargs = mock_chain.ainvoke.call_args[0][0]

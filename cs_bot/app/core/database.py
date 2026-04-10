@@ -1,6 +1,6 @@
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_postgres import PGVector
-from app.core.config import settings
+from cs_bot.app.core.config import settings
 
 embeddings: GoogleGenerativeAIEmbeddings = None
 vector_store: PGVector = None
