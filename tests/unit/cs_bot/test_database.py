@@ -15,7 +15,7 @@ class TestInitVectorStore:
 
     def test_sets_global_vector_store(self):
         mock_vs = MagicMock()
-        with patch("app.core.database.GoogleGenerativeAIEmbeddings"),              patch("app.core.database.PGVector", return_value=mock_vs),              patch("app.core.database.settings", self._mock_settings()):
+        with patch("cs_bot.app.core.database.GoogleGenerativeAIEmbeddings"),              patch("cs_bot.app.core.database.PGVector", return_value=mock_vs),              patch("cs_bot.app.core.database.settings", self._mock_settings()):
             import cs_bot.app.core.database as db_mod
             db_mod.vector_store = None
             db_mod.init_vector_store()
