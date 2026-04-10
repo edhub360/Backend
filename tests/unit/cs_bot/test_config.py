@@ -27,14 +27,29 @@ class TestSettings:
 
     def test_default_values(self):
         from cs_bot.app.core.config import settings
-        assert settings.APP_NAME             == "Chatbot Service"
-        assert settings.RETRIEVER_TOP_K      == 4
-        assert settings.SESSION_TTL_SECONDS  == 3600
-        assert settings.CHAT_MODEL           == "gemini-2.5-flash"
+        assert settings.APP_NAME            == "Chatbot Service"
+        assert settings.RETRIEVER_TOP_K     == 4
+        assert settings.SESSION_TTL_SECONDS == 3600
+        assert settings.CHAT_MODEL          == "gemini-2.5-flash"
 
-    def test_admin_key_default(self):
+    def test_admin_key_from_env(self):
+        # conftest.py sets ADMIN_KEY="test-admin-secret" before imports;
+        # the live settings singleton reflects that env value, not the class default
         from cs_bot.app.core.config import settings
-        assert settings.ADMIN_KEY == "edhub360-admin-secret"
+        assert settings.ADMIN_KEY == "test-admin-secret"
+
+    def test_admin_key_class_default(self):
+        # Test the hard-coded class default by constructing a fresh Settings instance
+        # with patch.dict so it overrides conftest's env value for this test only
+        with patch.dict("os.environ", {
+            "GEMINI_API_KEY": "x",
+            "DATABASE_URL":   "postgresql+asyncpg://u:p@localhost/db",
+            "REDIS_URL":      "redis://localhost:6379",
+            "ADMIN_KEY":      "edhub360-admin-secret",
+        }):
+            from cs_bot.app.core.config import Settings
+            s = Settings()
+            assert s.ADMIN_KEY == "edhub360-admin-secret"
 
     def test_embedding_model_default(self):
         from cs_bot.app.core.config import settings
