@@ -168,8 +168,8 @@ class TestIngestionRouter:
 
     @pytest.mark.asyncio
     async def test_ingest_urls_correct_key_returns_200(self, client):
-        # Patch settings.ADMIN_KEY so _check_admin passes
-        with patch(f"{ING_MOD}.settings") as mock_settings:
+        with patch(f"{ING_MOD}.ingest_urls", new=AsyncMock(return_value=5)), \
+            patch(f"{ING_MOD}.settings") as mock_settings:
             mock_settings.ADMIN_KEY = "test-secret"
             async with client as ac:
                 resp = await ac.post(
@@ -179,10 +179,11 @@ class TestIngestionRouter:
                 )
         assert resp.status_code == 200
 
+
     @pytest.mark.asyncio
     async def test_ingest_urls_returns_chunks_added_zero(self, client):
-        # /ingest/urls uses BackgroundTasks → chunks_added is always 0 in the response
-        with patch(f"{ING_MOD}.settings") as mock_settings:
+        with patch(f"{ING_MOD}.ingest_urls", new=AsyncMock(return_value=5)), \
+            patch(f"{ING_MOD}.settings") as mock_settings:
             mock_settings.ADMIN_KEY = "test-secret"
             async with client as ac:
                 resp = await ac.post(
