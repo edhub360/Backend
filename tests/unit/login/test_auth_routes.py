@@ -89,8 +89,8 @@ def _result_returning(obj):
 
 
 def _make_app_with_db(mock_db):
-    from app.routes.auth_routes import router
-    from app.db import get_db
+    from login.app.routes.auth_routes import router
+    from login.app.db import get_db
     from slowapi import Limiter
     from slowapi.util import get_remote_address
 
@@ -124,39 +124,39 @@ class TestRegister:
         result.scalar_one_or_none.return_value = None
         self.db.execute = AsyncMock(return_value=result)
 
-    @patch("app.routes.auth_routes.create_refresh_token", return_value=(REFRESH_TOKEN, REFRESH_TOKEN_HASH))
-    @patch("app.routes.auth_routes.create_access_token", return_value=ACCESS_TOKEN)
-    @patch("app.routes.auth_routes.hash_password", return_value=HASHED_PASSWORD)
+    @patch("login.app.routes.auth_routes.create_refresh_token", return_value=(REFRESH_TOKEN, REFRESH_TOKEN_HASH))
+    @patch("login.app.routes.auth_routes.create_access_token", return_value=ACCESS_TOKEN)
+    @patch("login.app.routes.auth_routes.hash_password", return_value=HASHED_PASSWORD)
     def test_returns_200_on_success(self, mock_hash, mock_access, mock_refresh):
         self._no_existing_user()
         user = _make_user()
-        with patch("app.routes.auth_routes.create_user", new=AsyncMock(return_value=user)), \
-             patch("app.routes.auth_routes.create_auth_credential", new=AsyncMock()), \
-             patch("app.routes.auth_routes.create_refresh_token_db", new=AsyncMock()):
+        with patch("login.app.routes.auth_routes.create_user", new=AsyncMock(return_value=user)), \
+             patch("login.app.routes.auth_routes.create_auth_credential", new=AsyncMock()), \
+             patch("login.app.routes.auth_routes.create_refresh_token_db", new=AsyncMock()):
             resp = self.client.post(self.url, json=self.PAYLOAD)
         assert resp.status_code == 200
 
-    @patch("app.routes.auth_routes.create_refresh_token", return_value=(REFRESH_TOKEN, REFRESH_TOKEN_HASH))
-    @patch("app.routes.auth_routes.create_access_token", return_value=ACCESS_TOKEN)
-    @patch("app.routes.auth_routes.hash_password", return_value=HASHED_PASSWORD)
+    @patch("login.app.routes.auth_routes.create_refresh_token", return_value=(REFRESH_TOKEN, REFRESH_TOKEN_HASH))
+    @patch("login.app.routes.auth_routes.create_access_token", return_value=ACCESS_TOKEN)
+    @patch("login.app.routes.auth_routes.hash_password", return_value=HASHED_PASSWORD)
     def test_response_contains_access_token(self, mock_hash, mock_access, mock_refresh):
         self._no_existing_user()
         user = _make_user()
-        with patch("app.routes.auth_routes.create_user", new=AsyncMock(return_value=user)), \
-             patch("app.routes.auth_routes.create_auth_credential", new=AsyncMock()), \
-             patch("app.routes.auth_routes.create_refresh_token_db", new=AsyncMock()):
+        with patch("login.app.routes.auth_routes.create_user", new=AsyncMock(return_value=user)), \
+             patch("login.app.routes.auth_routes.create_auth_credential", new=AsyncMock()), \
+             patch("login.app.routes.auth_routes.create_refresh_token_db", new=AsyncMock()):
             resp = self.client.post(self.url, json=self.PAYLOAD)
         assert resp.json()["access_token"] == ACCESS_TOKEN
 
-    @patch("app.routes.auth_routes.create_refresh_token", return_value=(REFRESH_TOKEN, REFRESH_TOKEN_HASH))
-    @patch("app.routes.auth_routes.create_access_token", return_value=ACCESS_TOKEN)
-    @patch("app.routes.auth_routes.hash_password", return_value=HASHED_PASSWORD)
+    @patch("login.app.routes.auth_routes.create_refresh_token", return_value=(REFRESH_TOKEN, REFRESH_TOKEN_HASH))
+    @patch("login.app.routes.auth_routes.create_access_token", return_value=ACCESS_TOKEN)
+    @patch("login.app.routes.auth_routes.hash_password", return_value=HASHED_PASSWORD)
     def test_is_first_login_true_for_new_user(self, mock_hash, mock_access, mock_refresh):
         self._no_existing_user()
         user = _make_user()
-        with patch("app.routes.auth_routes.create_user", new=AsyncMock(return_value=user)), \
-             patch("app.routes.auth_routes.create_auth_credential", new=AsyncMock()), \
-             patch("app.routes.auth_routes.create_refresh_token_db", new=AsyncMock()):
+        with patch("login.app.routes.auth_routes.create_user", new=AsyncMock(return_value=user)), \
+             patch("login.app.routes.auth_routes.create_auth_credential", new=AsyncMock()), \
+             patch("login.app.routes.auth_routes.create_refresh_token_db", new=AsyncMock()):
             resp = self.client.post(self.url, json=self.PAYLOAD)
         assert resp.json()["is_first_login"] is True
 
@@ -183,15 +183,15 @@ class TestRegister:
     def test_password_without_digit_returns_422(self):
         assert self.client.post(self.url, json={"email": USER_EMAIL, "password": "NoDigitHere"}).status_code == 422
 
-    @patch("app.routes.auth_routes.hash_password", return_value=HASHED_PASSWORD)
+    @patch("login.app.routes.auth_routes.hash_password", return_value=HASHED_PASSWORD)
     def test_hash_password_called_with_register_password(self, mock_hash):
         self._no_existing_user()
         user = _make_user()
-        with patch("app.routes.auth_routes.create_user", new=AsyncMock(return_value=user)), \
-             patch("app.routes.auth_routes.create_auth_credential", new=AsyncMock()), \
-             patch("app.routes.auth_routes.create_refresh_token", return_value=(REFRESH_TOKEN, REFRESH_TOKEN_HASH)), \
-             patch("app.routes.auth_routes.create_access_token", return_value=ACCESS_TOKEN), \
-             patch("app.routes.auth_routes.create_refresh_token_db", new=AsyncMock()):
+        with patch("login.app.routes.auth_routes.create_user", new=AsyncMock(return_value=user)), \
+             patch("login.app.routes.auth_routes.create_auth_credential", new=AsyncMock()), \
+             patch("login.app.routes.auth_routes.create_refresh_token", return_value=(REFRESH_TOKEN, REFRESH_TOKEN_HASH)), \
+             patch("login.app.routes.auth_routes.create_access_token", return_value=ACCESS_TOKEN), \
+             patch("login.app.routes.auth_routes.create_refresh_token_db", new=AsyncMock()):
             self.client.post(self.url, json=self.PAYLOAD)
         mock_hash.assert_called_once_with("Secure123")
 
@@ -223,29 +223,29 @@ class TestLogin:
         ])
         return user, cred
 
-    @patch("app.routes.auth_routes.verify_password", return_value=True)
-    @patch("app.routes.auth_routes.create_refresh_token", return_value=(REFRESH_TOKEN, REFRESH_TOKEN_HASH))
-    @patch("app.routes.auth_routes.create_access_token", return_value=ACCESS_TOKEN)
+    @patch("login.app.routes.auth_routes.verify_password", return_value=True)
+    @patch("login.app.routes.auth_routes.create_refresh_token", return_value=(REFRESH_TOKEN, REFRESH_TOKEN_HASH))
+    @patch("login.app.routes.auth_routes.create_access_token", return_value=ACCESS_TOKEN)
     def test_returns_200_on_valid_credentials(self, *_):
         self._mock_user_and_cred()
-        with patch("app.routes.auth_routes.create_refresh_token_db", new=AsyncMock()):
+        with patch("login.app.routes.auth_routes.create_refresh_token_db", new=AsyncMock()):
             assert self.client.post(self.url, json=self.PAYLOAD).status_code == 200
 
-    @patch("app.routes.auth_routes.verify_password", return_value=True)
-    @patch("app.routes.auth_routes.create_refresh_token", return_value=(REFRESH_TOKEN, REFRESH_TOKEN_HASH))
-    @patch("app.routes.auth_routes.create_access_token", return_value=ACCESS_TOKEN)
+    @patch("login.app.routes.auth_routes.verify_password", return_value=True)
+    @patch("login.app.routes.auth_routes.create_refresh_token", return_value=(REFRESH_TOKEN, REFRESH_TOKEN_HASH))
+    @patch("login.app.routes.auth_routes.create_access_token", return_value=ACCESS_TOKEN)
     def test_response_contains_access_token(self, *_):
         self._mock_user_and_cred()
-        with patch("app.routes.auth_routes.create_refresh_token_db", new=AsyncMock()):
+        with patch("login.app.routes.auth_routes.create_refresh_token_db", new=AsyncMock()):
             resp = self.client.post(self.url, json=self.PAYLOAD)
         assert resp.json()["access_token"] == ACCESS_TOKEN
 
-    @patch("app.routes.auth_routes.verify_password", return_value=True)
-    @patch("app.routes.auth_routes.create_refresh_token", return_value=(REFRESH_TOKEN, REFRESH_TOKEN_HASH))
-    @patch("app.routes.auth_routes.create_access_token", return_value=ACCESS_TOKEN)
+    @patch("login.app.routes.auth_routes.verify_password", return_value=True)
+    @patch("login.app.routes.auth_routes.create_refresh_token", return_value=(REFRESH_TOKEN, REFRESH_TOKEN_HASH))
+    @patch("login.app.routes.auth_routes.create_access_token", return_value=ACCESS_TOKEN)
     def test_response_contains_user_email(self, *_):
         self._mock_user_and_cred()
-        with patch("app.routes.auth_routes.create_refresh_token_db", new=AsyncMock()):
+        with patch("login.app.routes.auth_routes.create_refresh_token_db", new=AsyncMock()):
             resp = self.client.post(self.url, json=self.PAYLOAD)
         assert resp.json()["user"]["email"] == USER_EMAIL
 
@@ -257,7 +257,7 @@ class TestLogin:
 
     def test_returns_401_for_wrong_password(self):
         self._mock_user_and_cred()
-        with patch("app.routes.auth_routes.verify_password", return_value=False):
+        with patch("login.app.routes.auth_routes.verify_password", return_value=False):
             assert self.client.post(self.url, json=self.PAYLOAD).status_code == 401
 
     def test_returns_401_when_no_email_credential(self):
@@ -285,23 +285,23 @@ class TestLogin:
         resp = self.client.post(self.url, json=self.PAYLOAD)
         assert "Invalid email or password" in resp.json()["detail"]
 
-    @patch("app.routes.auth_routes.verify_password", return_value=True)
-    @patch("app.routes.auth_routes.create_refresh_token", return_value=(REFRESH_TOKEN, REFRESH_TOKEN_HASH))
-    @patch("app.routes.auth_routes.create_access_token", return_value=ACCESS_TOKEN)
+    @patch("login.app.routes.auth_routes.verify_password", return_value=True)
+    @patch("login.app.routes.auth_routes.create_refresh_token", return_value=(REFRESH_TOKEN, REFRESH_TOKEN_HASH))
+    @patch("login.app.routes.auth_routes.create_access_token", return_value=ACCESS_TOKEN)
     def test_is_first_login_false_when_subscription_tier_set(self, *_):
         user = _make_user(subscription_tier="free")
         self._mock_user_and_cred(user=user)
-        with patch("app.routes.auth_routes.create_refresh_token_db", new=AsyncMock()):
+        with patch("login.app.routes.auth_routes.create_refresh_token_db", new=AsyncMock()):
             resp = self.client.post(self.url, json=self.PAYLOAD)
         assert resp.json()["is_first_login"] is False
 
-    @patch("app.routes.auth_routes.verify_password", return_value=True)
-    @patch("app.routes.auth_routes.create_refresh_token", return_value=(REFRESH_TOKEN, REFRESH_TOKEN_HASH))
-    @patch("app.routes.auth_routes.create_access_token", return_value=ACCESS_TOKEN)
+    @patch("login.app.routes.auth_routes.verify_password", return_value=True)
+    @patch("login.app.routes.auth_routes.create_refresh_token", return_value=(REFRESH_TOKEN, REFRESH_TOKEN_HASH))
+    @patch("login.app.routes.auth_routes.create_access_token", return_value=ACCESS_TOKEN)
     def test_is_first_login_true_when_no_subscription_tier(self, *_):
         user = _make_user(subscription_tier=None)
         self._mock_user_and_cred(user=user)
-        with patch("app.routes.auth_routes.create_refresh_token_db", new=AsyncMock()):
+        with patch("login.app.routes.auth_routes.create_refresh_token_db", new=AsyncMock()):
             resp = self.client.post(self.url, json=self.PAYLOAD)
         assert resp.json()["is_first_login"] is True
 
@@ -336,47 +336,47 @@ class TestGoogleSignIn:
         self.client = TestClient(self.app, raise_server_exceptions=False)
         self.url = "/auth/google"
 
-    @patch("app.routes.auth_routes.create_refresh_token", return_value=(REFRESH_TOKEN, REFRESH_TOKEN_HASH))
-    @patch("app.routes.auth_routes.create_access_token", return_value=ACCESS_TOKEN)
-    @patch("app.routes.auth_routes.verify_google_token", new_callable=AsyncMock)
+    @patch("login.app.routes.auth_routes.create_refresh_token", return_value=(REFRESH_TOKEN, REFRESH_TOKEN_HASH))
+    @patch("login.app.routes.auth_routes.create_access_token", return_value=ACCESS_TOKEN)
+    @patch("login.app.routes.auth_routes.verify_google_token", new_callable=AsyncMock)
     def test_returns_200_for_existing_user(self, mock_verify, *_):
         mock_verify.return_value = self.GOOGLE_USER_INFO
         user = _make_user()
-        with patch("app.routes.auth_routes.get_user_by_email", new=AsyncMock(return_value=user)), \
-             patch("app.routes.auth_routes.create_refresh_token_db", new=AsyncMock()):
+        with patch("login.app.routes.auth_routes.get_user_by_email", new=AsyncMock(return_value=user)), \
+             patch("login.app.routes.auth_routes.create_refresh_token_db", new=AsyncMock()):
             assert self.client.post(self.url, json=self.PAYLOAD).status_code == 200
 
-    @patch("app.routes.auth_routes.create_refresh_token", return_value=(REFRESH_TOKEN, REFRESH_TOKEN_HASH))
-    @patch("app.routes.auth_routes.create_access_token", return_value=ACCESS_TOKEN)
-    @patch("app.routes.auth_routes.verify_google_token", new_callable=AsyncMock)
+    @patch("login.app.routes.auth_routes.create_refresh_token", return_value=(REFRESH_TOKEN, REFRESH_TOKEN_HASH))
+    @patch("login.app.routes.auth_routes.create_access_token", return_value=ACCESS_TOKEN)
+    @patch("login.app.routes.auth_routes.verify_google_token", new_callable=AsyncMock)
     def test_creates_new_user_when_not_found(self, mock_verify, *_):
         mock_verify.return_value = self.GOOGLE_USER_INFO
         new_user = _make_user()
-        with patch("app.routes.auth_routes.get_user_by_email", new=AsyncMock(return_value=None)), \
-             patch("app.routes.auth_routes.create_user", new=AsyncMock(return_value=new_user)) as mock_create, \
-             patch("app.routes.auth_routes.create_auth_credential", new=AsyncMock()), \
-             patch("app.routes.auth_routes.create_refresh_token_db", new=AsyncMock()):
+        with patch("login.app.routes.auth_routes.get_user_by_email", new=AsyncMock(return_value=None)), \
+             patch("login.app.routes.auth_routes.create_user", new=AsyncMock(return_value=new_user)) as mock_create, \
+             patch("login.app.routes.auth_routes.create_auth_credential", new=AsyncMock()), \
+             patch("login.app.routes.auth_routes.create_refresh_token_db", new=AsyncMock()):
             self.client.post(self.url, json=self.PAYLOAD)
         mock_create.assert_called_once_with(self.db, USER_EMAIL, USER_NAME)
 
-    @patch("app.routes.auth_routes.verify_google_token", new_callable=AsyncMock)
+    @patch("login.app.routes.auth_routes.verify_google_token", new_callable=AsyncMock)
     def test_returns_400_for_invalid_google_token(self, mock_verify):
         mock_verify.side_effect = HTTPException(status_code=400, detail="Invalid Google token")
         assert self.client.post(self.url, json=self.PAYLOAD).status_code == 400
 
-    @patch("app.routes.auth_routes.verify_google_token", new_callable=AsyncMock)
+    @patch("login.app.routes.auth_routes.verify_google_token", new_callable=AsyncMock)
     def test_returns_500_on_unexpected_error(self, mock_verify):
         mock_verify.side_effect = Exception("Unexpected")
         assert self.client.post(self.url, json=self.PAYLOAD).status_code == 500
 
-    @patch("app.routes.auth_routes.create_refresh_token", return_value=(REFRESH_TOKEN, REFRESH_TOKEN_HASH))
-    @patch("app.routes.auth_routes.create_access_token", return_value=ACCESS_TOKEN)
-    @patch("app.routes.auth_routes.verify_google_token", new_callable=AsyncMock)
+    @patch("login.app.routes.auth_routes.create_refresh_token", return_value=(REFRESH_TOKEN, REFRESH_TOKEN_HASH))
+    @patch("login.app.routes.auth_routes.create_access_token", return_value=ACCESS_TOKEN)
+    @patch("login.app.routes.auth_routes.verify_google_token", new_callable=AsyncMock)
     def test_updates_name_if_changed(self, mock_verify, *_):
         mock_verify.return_value = {**self.GOOGLE_USER_INFO, "name": "Updated Name"}
         user = _make_user(name="Old Name")
-        with patch("app.routes.auth_routes.get_user_by_email", new=AsyncMock(return_value=user)), \
-             patch("app.routes.auth_routes.create_refresh_token_db", new=AsyncMock()):
+        with patch("login.app.routes.auth_routes.get_user_by_email", new=AsyncMock(return_value=user)), \
+             patch("login.app.routes.auth_routes.create_refresh_token_db", new=AsyncMock()):
             self.client.post(self.url, json=self.PAYLOAD)
         assert user.name == "Updated Name"
 
@@ -398,9 +398,9 @@ class TestRefreshToken:
         self.client = TestClient(self.app, raise_server_exceptions=False)
         self.url = "/auth/refresh"
 
-    @patch("app.routes.auth_routes.create_refresh_token", return_value=(REFRESH_TOKEN, REFRESH_TOKEN_HASH))
-    @patch("app.routes.auth_routes.create_access_token", return_value=ACCESS_TOKEN)
-    @patch("app.routes.auth_routes.hash_token", return_value=REFRESH_TOKEN_HASH)
+    @patch("login.app.routes.auth_routes.create_refresh_token", return_value=(REFRESH_TOKEN, REFRESH_TOKEN_HASH))
+    @patch("login.app.routes.auth_routes.create_access_token", return_value=ACCESS_TOKEN)
+    @patch("login.app.routes.auth_routes.hash_token", return_value=REFRESH_TOKEN_HASH)
     def test_returns_200_with_valid_refresh_token(self, *_):
         rt_record = _make_refresh_token_record()
         user = _make_user()
@@ -408,12 +408,12 @@ class TestRefreshToken:
             _result_returning(rt_record),
             _result_returning(user),
         ])
-        with patch("app.routes.auth_routes.create_refresh_token_db", new=AsyncMock()):
+        with patch("login.app.routes.auth_routes.create_refresh_token_db", new=AsyncMock()):
             assert self.client.post(self.url, json=self.PAYLOAD).status_code == 200
 
-    @patch("app.routes.auth_routes.create_refresh_token", return_value=(REFRESH_TOKEN, REFRESH_TOKEN_HASH))
-    @patch("app.routes.auth_routes.create_access_token", return_value=ACCESS_TOKEN)
-    @patch("app.routes.auth_routes.hash_token", return_value=REFRESH_TOKEN_HASH)
+    @patch("login.app.routes.auth_routes.create_refresh_token", return_value=(REFRESH_TOKEN, REFRESH_TOKEN_HASH))
+    @patch("login.app.routes.auth_routes.create_access_token", return_value=ACCESS_TOKEN)
+    @patch("login.app.routes.auth_routes.hash_token", return_value=REFRESH_TOKEN_HASH)
     def test_old_token_revoked_after_refresh(self, *_):
         rt_record = _make_refresh_token_record()
         user = _make_user()
@@ -421,18 +421,18 @@ class TestRefreshToken:
             _result_returning(rt_record),
             _result_returning(user),
         ])
-        with patch("app.routes.auth_routes.create_refresh_token_db", new=AsyncMock()):
+        with patch("login.app.routes.auth_routes.create_refresh_token_db", new=AsyncMock()):
             self.client.post(self.url, json=self.PAYLOAD)
         assert rt_record.revoked is True
 
-    @patch("app.routes.auth_routes.hash_token", return_value=REFRESH_TOKEN_HASH)
+    @patch("login.app.routes.auth_routes.hash_token", return_value=REFRESH_TOKEN_HASH)
     def test_returns_401_for_unknown_refresh_token(self, _):
         result = MagicMock()
         result.scalar_one_or_none.return_value = None
         self.db.execute = AsyncMock(return_value=result)
         assert self.client.post(self.url, json=self.PAYLOAD).status_code == 401
 
-    @patch("app.routes.auth_routes.hash_token", return_value=REFRESH_TOKEN_HASH)
+    @patch("login.app.routes.auth_routes.hash_token", return_value=REFRESH_TOKEN_HASH)
     def test_returns_401_when_user_not_found(self, _):
         rt_record = _make_refresh_token_record()
         self.db.execute = AsyncMock(side_effect=[
@@ -463,7 +463,7 @@ class TestLogout:
         self.client = TestClient(self.app, raise_server_exceptions=False)
         self.url = "/auth/logout"
 
-    @patch("app.routes.auth_routes.hash_token", return_value=REFRESH_TOKEN_HASH)
+    @patch("login.app.routes.auth_routes.hash_token", return_value=REFRESH_TOKEN_HASH)
     def test_returns_200_on_success(self, _):
         rt_record = _make_refresh_token_record()
         result = MagicMock()
@@ -471,7 +471,7 @@ class TestLogout:
         self.db.execute = AsyncMock(return_value=result)
         assert self.client.post(self.url, json=self.PAYLOAD).status_code == 200
 
-    @patch("app.routes.auth_routes.hash_token", return_value=REFRESH_TOKEN_HASH)
+    @patch("login.app.routes.auth_routes.hash_token", return_value=REFRESH_TOKEN_HASH)
     def test_response_message_on_logout(self, _):
         rt_record = _make_refresh_token_record()
         result = MagicMock()
@@ -479,7 +479,7 @@ class TestLogout:
         self.db.execute = AsyncMock(return_value=result)
         assert "Logged out" in self.client.post(self.url, json=self.PAYLOAD).json()["message"]
 
-    @patch("app.routes.auth_routes.hash_token", return_value=REFRESH_TOKEN_HASH)
+    @patch("login.app.routes.auth_routes.hash_token", return_value=REFRESH_TOKEN_HASH)
     def test_token_revoked_on_logout(self, _):
         rt_record = _make_refresh_token_record()
         result = MagicMock()
@@ -488,7 +488,7 @@ class TestLogout:
         self.client.post(self.url, json=self.PAYLOAD)
         assert rt_record.revoked is True
 
-    @patch("app.routes.auth_routes.hash_token", return_value=REFRESH_TOKEN_HASH)
+    @patch("login.app.routes.auth_routes.hash_token", return_value=REFRESH_TOKEN_HASH)
     def test_returns_200_even_if_token_not_found(self, _):
         """Logout is idempotent."""
         result = MagicMock()
@@ -517,7 +517,7 @@ class TestGetMe:
         self.url = "/auth/me"
 
     def _override_current_user(self, user):
-        from app.routes.auth_routes import get_current_user
+        from login.app.routes.auth_routes import get_current_user
         self.app.dependency_overrides[get_current_user] = lambda: user
 
     def test_returns_200_with_valid_token(self):
@@ -551,7 +551,7 @@ class TestUpdateMe:
         self.url = "/auth/me"
 
     def _override_current_user(self, user):
-        from app.routes.auth_routes import get_current_user
+        from login.app.routes.auth_routes import get_current_user
         self.app.dependency_overrides[get_current_user] = lambda: user
 
     def test_returns_200_on_name_update(self):
@@ -581,28 +581,28 @@ class TestGetCurrentUser:
 
     @pytest.mark.asyncio
     async def test_returns_user_for_valid_token(self):
-        from app.routes.auth_routes import get_current_user
+        from login.app.routes.auth_routes import get_current_user
         db = _make_db_session()
         user = _make_user()
         db.execute = AsyncMock(return_value=_result_returning(user))
-        with patch("app.routes.auth_routes.decode_jwt_token", return_value={"sub": str(USER_ID)}), \
-             patch("app.routes.auth_routes.enforce_free_plan_expiry", new=AsyncMock(return_value=user)):
+        with patch("login.app.routes.auth_routes.decode_jwt_token", return_value={"sub": str(USER_ID)}), \
+             patch("login.app.routes.auth_routes.enforce_free_plan_expiry", new=AsyncMock(return_value=user)):
             result = await get_current_user(token="valid.token", db=db)
         assert result is user
 
     @pytest.mark.asyncio
     async def test_raises_401_when_user_not_found(self):
-        from app.routes.auth_routes import get_current_user
+        from login.app.routes.auth_routes import get_current_user
         db = _make_db_session()
         db.execute = AsyncMock(return_value=_result_returning(None))
-        with patch("app.routes.auth_routes.decode_jwt_token", return_value={"sub": str(USER_ID)}), \
+        with patch("login.app.routes.auth_routes.decode_jwt_token", return_value={"sub": str(USER_ID)}), \
              pytest.raises(HTTPException) as exc:
             await get_current_user(token="token", db=db)
         assert exc.value.status_code == 401
 
     @pytest.mark.asyncio
     async def test_raises_401_when_sub_missing_from_payload(self):
-        from app.routes.auth_routes import get_current_user
+        from login.app.routes.auth_routes import get_current_user
         db = _make_db_session()
         with patch("app.routes.auth_routes.decode_jwt_token", return_value={}), \
              pytest.raises(HTTPException) as exc:
@@ -611,9 +611,9 @@ class TestGetCurrentUser:
 
     @pytest.mark.asyncio
     async def test_raises_401_for_invalid_jwt(self):
-        from app.routes.auth_routes import get_current_user
+        from login.app.routes.auth_routes import get_current_user
         db = _make_db_session()
-        with patch("app.routes.auth_routes.decode_jwt_token",
+        with patch("login.app.routes.auth_routes.decode_jwt_token",
                    side_effect=HTTPException(status_code=401, detail="Invalid")), \
              pytest.raises(HTTPException) as exc:
             await get_current_user(token="bad.token", db=db)
@@ -627,7 +627,7 @@ class TestEnforceFreePlanExpiry:
 
     @pytest.mark.asyncio
     async def test_does_nothing_for_non_free_user(self):
-        from app.routes.auth_routes import enforce_free_plan_expiry
+        from login.app.routes.auth_routes import enforce_free_plan_expiry
         db = _make_db_session()
         user = _make_user(subscription_tier="pro")
         await enforce_free_plan_expiry(db, user)
@@ -636,7 +636,7 @@ class TestEnforceFreePlanExpiry:
 
     @pytest.mark.asyncio
     async def test_does_nothing_when_no_expiry_date(self):
-        from app.routes.auth_routes import enforce_free_plan_expiry
+        from login.app.routes.auth_routes import enforce_free_plan_expiry
         db = _make_db_session()
         user = _make_user(subscription_tier="free", free_plan_expires_at=None)
         await enforce_free_plan_expiry(db, user)
@@ -644,7 +644,7 @@ class TestEnforceFreePlanExpiry:
 
     @pytest.mark.asyncio
     async def test_revokes_tier_when_free_plan_expired(self):
-        from app.routes.auth_routes import enforce_free_plan_expiry
+        from login.app.routes.auth_routes import enforce_free_plan_expiry
         db = _make_db_session()
         expired = datetime.now(timezone.utc) - timedelta(days=1)
         user = _make_user(subscription_tier="free", free_plan_expires_at=expired)
@@ -654,7 +654,7 @@ class TestEnforceFreePlanExpiry:
 
     @pytest.mark.asyncio
     async def test_does_not_revoke_when_free_plan_still_active(self):
-        from app.routes.auth_routes import enforce_free_plan_expiry
+        from login.app.routes.auth_routes import enforce_free_plan_expiry
         db = _make_db_session()
         future = datetime.now(timezone.utc) + timedelta(days=10)
         user = _make_user(subscription_tier="free", free_plan_expires_at=future)
@@ -670,7 +670,7 @@ class TestHelperFunctions:
 
     @pytest.mark.asyncio
     async def test_get_user_by_email_returns_user(self):
-        from app.routes.auth_routes import get_user_by_email
+        from login.app.routes.auth_routes import get_user_by_email
         db = _make_db_session()
         user = _make_user()
         db.execute = AsyncMock(return_value=_result_returning(user))
@@ -678,16 +678,16 @@ class TestHelperFunctions:
 
     @pytest.mark.asyncio
     async def test_get_user_by_email_returns_none_when_not_found(self):
-        from app.routes.auth_routes import get_user_by_email
+        from login.app.routes.auth_routes import get_user_by_email
         db = _make_db_session()
         db.execute = AsyncMock(return_value=_result_returning(None))
         assert await get_user_by_email(db, "nobody@x.com") is None
 
     @pytest.mark.asyncio
     async def test_create_user_adds_to_session(self):
-        from app.routes.auth_routes import create_user
+        from login.app.routes.auth_routes import create_user
         db = _make_db_session()
-        with patch("app.routes.auth_routes.User") as MockUser:
+        with patch("login.app.routes.auth_routes.User") as MockUser:
             mock_user = MagicMock()
             MockUser.return_value = mock_user
             await create_user(db, USER_EMAIL, USER_NAME)
@@ -696,9 +696,9 @@ class TestHelperFunctions:
 
     @pytest.mark.asyncio
     async def test_create_auth_credential_adds_to_session(self):
-        from app.routes.auth_routes import create_auth_credential
+        from login.app.routes.auth_routes import create_auth_credential
         db = _make_db_session()
-        with patch("app.routes.auth_routes.AuthCredential") as MockCred:
+        with patch("login.app.routes.auth_routes.AuthCredential") as MockCred:
             mock_cred = MagicMock()
             MockCred.return_value = mock_cred
             await create_auth_credential(db, USER_ID, "email", HASHED_PASSWORD)
@@ -706,9 +706,9 @@ class TestHelperFunctions:
 
     @pytest.mark.asyncio
     async def test_create_refresh_token_db_adds_to_session(self):
-        from app.routes.auth_routes import create_refresh_token_db
+        from login.app.routes.auth_routes import create_refresh_token_db
         db = _make_db_session()
-        with patch("app.routes.auth_routes.RefreshToken") as MockRT:
+        with patch("login.app.routes.auth_routes.RefreshToken") as MockRT:
             mock_rt = MagicMock()
             MockRT.return_value = mock_rt
             await create_refresh_token_db(db, USER_ID, REFRESH_TOKEN_HASH)
@@ -716,12 +716,12 @@ class TestHelperFunctions:
 
     @pytest.mark.asyncio
     async def test_generate_tokens_returns_required_keys(self):
-        from app.routes.auth_routes import generate_tokens
+        from login.app.routes.auth_routes import generate_tokens
         db = _make_db_session()
         user = _make_user()
-        with patch("app.routes.auth_routes.create_access_token", return_value=ACCESS_TOKEN), \
-             patch("app.routes.auth_routes.create_refresh_token", return_value=(REFRESH_TOKEN, REFRESH_TOKEN_HASH)), \
-             patch("app.routes.auth_routes.create_refresh_token_db", new=AsyncMock()):
+        with patch("login.app.routes.auth_routes.create_access_token", return_value=ACCESS_TOKEN), \
+             patch("login.app.routes.auth_routes.create_refresh_token", return_value=(REFRESH_TOKEN, REFRESH_TOKEN_HASH)), \
+             patch("login.app.routes.auth_routes.create_refresh_token_db", new=AsyncMock()):
             tokens = await generate_tokens(db, user)
         for key in ("access_token", "refresh_token", "token_type", "expires_in", "user"):
             assert key in tokens
@@ -733,11 +733,11 @@ class TestHelperFunctions:
 class TestRouterConfig:
 
     def test_router_prefix_is_auth(self):
-        from app.routes.auth_routes import router
+        from login.app.routes.auth_routes import router
         assert router.prefix == "/auth"
 
     def test_all_expected_routes_exist(self):
-        from app.routes.auth_routes import router
+        from login.app.routes.auth_routes import router
         paths = [r.path for r in router.routes]
         for path in ("/register", "/login", "/google", "/refresh", "/logout", "/me"):
             assert path in paths
