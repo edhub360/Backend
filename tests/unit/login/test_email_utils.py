@@ -173,13 +173,13 @@ class TestSendResetPasswordEmailErrorHandling:
 
     def test_error_logged_when_smtp_fails(self):
         with patch("smtplib.SMTP", side_effect=Exception("Network error")), \
-             patch("app.email_utils.logger") as mock_logger:
+             patch("login.app.email_utils.logger") as mock_logger:
             send_reset_password_email(TO_EMAIL, RESET_URL)
         mock_logger.error.assert_called_once()
 
     def test_error_log_contains_recipient_email(self):
         with patch("smtplib.SMTP", side_effect=Exception("fail")), \
-             patch("app.email_utils.logger") as mock_logger:
+             patch("login.app.email_utils.logger") as mock_logger:
             send_reset_password_email(TO_EMAIL, RESET_URL)
         assert TO_EMAIL in mock_logger.error.call_args[0][0]
 
