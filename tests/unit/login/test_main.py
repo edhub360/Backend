@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 
 @pytest.fixture(scope="module")
 def client():
-    from app.main import app                           # ✅ not login.app.main
+    from login.app.main import app                           # ✅ not login.app.main
     return TestClient(app, raise_server_exceptions=False)
 
 
@@ -81,11 +81,11 @@ class TestCORSMiddleware:
 class TestRateLimiter:
 
     def test_limiter_attached_to_app_state(self):
-        from app.main import app                       # ✅
+        from login.app.main import app                       # ✅
         assert hasattr(app.state, "limiter")
 
     def test_limiter_is_not_none(self):
-        from app.main import app                       # ✅
+        from login.app.main import app                       # ✅
         assert app.state.limiter is not None
 
 
@@ -95,7 +95,7 @@ class TestRateLimiter:
 class TestGlobalExceptionHandler:
 
     def test_unhandled_exception_returns_500(self):
-        from app.main import app                       # ✅
+        from login.app.main import app                       # ✅
 
         @app.get("/test-crash")
         async def crash():
@@ -106,7 +106,7 @@ class TestGlobalExceptionHandler:
         assert resp.status_code == 500
 
     def test_unhandled_exception_returns_generic_message(self):
-        from app.main import app                       # ✅
+        from login.app.main import app                       # ✅
 
         @app.get("/test-crash-2")
         async def crash2():
@@ -126,7 +126,7 @@ class TestGlobalExceptionHandler:
 class TestRouterMounting:
 
     def test_auth_routes_are_mounted(self):
-        from app.main import app                       # ✅
+        from login.app.main import app                       # ✅
         paths = [r.path for r in app.routes]
         assert any("/auth" in p for p in paths)
 
@@ -156,23 +156,23 @@ class TestRouterMounting:
 class TestAppMetadata:
 
     def test_app_title_set(self):
-        from app.main import app                       # ✅
+        from login.app.main import app                       # ✅
         assert app.title is not None and len(app.title) > 0
 
     def test_app_version_is_1_0_0(self):
-        from app.main import app                       # ✅
+        from login.app.main import app                       # ✅
         assert app.version == "1.0.0"
 
     def test_docs_hidden_when_debug_false(self):
-        from app.config import settings                # ✅
+        from login.app.config import settings                # ✅
         if not settings.debug:
-            from app.main import app                   # ✅
+            from login.app.main import app                   # ✅
             c = TestClient(app, raise_server_exceptions=False)
             assert c.get("/docs").status_code == 404
 
     def test_redoc_hidden_when_debug_false(self):
-        from app.config import settings                # ✅
+        from login.app.config import settings                # ✅
         if not settings.debug:
-            from app.main import app                   # ✅
+            from login.app.main import app                   # ✅
             c = TestClient(app, raise_server_exceptions=False)
             assert c.get("/redoc").status_code == 404
