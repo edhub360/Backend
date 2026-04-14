@@ -143,21 +143,23 @@ class TestSendResetPasswordEmailSuccess:
         assert TO_EMAIL in mock_logger.info.call_args[0][0]
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Error handling — SMTP exceptions must be swallowed
-# ══════════════════════════════════════════════════════════════════════════════
 class TestSendResetPasswordEmailErrorHandling:
+
+    @pytest.fixture(autouse=True)
+    def patch_settings(self):
+        with _patch_settings():
+            yield
 
     def test_does_not_raise_when_smtp_connection_fails(self):
         with patch("login.app.email_utils.smtplib.SMTP",
                    side_effect=smtplib.SMTPConnectError(421, "Cannot connect")):
-            send_reset_password_email(TO_EMAIL, RESET_URL)  # must not raise
+            send_reset_password_email(TO_EMAIL, RESET_URL)
 
     def test_does_not_raise_when_login_fails(self):
         smtp_mock = _make_smtp_mock()
         smtp_mock.login.side_effect = smtplib.SMTPAuthenticationError(535, b"Bad credentials")
         with patch("login.app.email_utils.smtplib.SMTP", return_value=smtp_mock):
-            send_reset_password_email(TO_EMAIL, RESET_URL)  # must not raise
+            send_reset_password_email(TO_EMAIL, RESET_URL)
 
     def test_does_not_raise_when_sendmail_fails(self):
         smtp_mock = _make_smtp_mock()
@@ -165,12 +167,12 @@ class TestSendResetPasswordEmailErrorHandling:
             {TO_EMAIL: (550, b"User unknown")}
         )
         with patch("login.app.email_utils.smtplib.SMTP", return_value=smtp_mock):
-            send_reset_password_email(TO_EMAIL, RESET_URL)  # must not raise
+            send_reset_password_email(TO_EMAIL, RESET_URL)
 
     def test_does_not_raise_on_generic_exception(self):
         with patch("login.app.email_utils.smtplib.SMTP",
                    side_effect=Exception("Network error")):
-            send_reset_password_email(TO_EMAIL, RESET_URL)  # must not raise
+            send_reset_password_email(TO_EMAIL, RESET_URL)
 
     def test_error_logged_when_smtp_fails(self):
         with patch("login.app.email_utils.smtplib.SMTP",
@@ -199,10 +201,16 @@ class TestSendResetPasswordEmailErrorHandling:
         assert result is None
 
 
+
 # ══════════════════════════════════════════════════════════════════════════════
 # Edge cases
 # ══════════════════════════════════════════════════════════════════════════════
 class TestSendResetPasswordEmailEdgeCases:
+
+    @pytest.fixture(autouse=True)
+    def patch_settings(self):
+        with _patch_settings():
+            yield
 
     def test_different_recipients_use_correct_to_address(self):
         smtp_mock = _make_smtp_mock()
@@ -227,3 +235,4 @@ class TestSendResetPasswordEmailEdgeCases:
             send_reset_password_email(TO_EMAIL, long_url)
         _, _, message_str = smtp_mock.sendmail.call_args[0]
         assert long_url in message_str
+
