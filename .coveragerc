@@ -5,6 +5,7 @@ branch = False
 [report]
 omit =
     tests/*
+    */__init__.py
     */conftest.py
     */__pycache__/*
     */deploy_*.py
