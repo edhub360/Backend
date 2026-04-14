@@ -96,12 +96,12 @@ def _make_app_with_db(mock_db):
 
     app = FastAPI()
     app.state.limiter = Limiter(key_func=get_remote_address)
-    app.include_router(router)
 
     async def fake_db():
         yield mock_db
 
     app.dependency_overrides[get_db] = fake_db
+    app.include_router(router)
     return app
 
 
@@ -604,7 +604,7 @@ class TestGetCurrentUser:
     async def test_raises_401_when_sub_missing_from_payload(self):
         from login.app.routes.auth_routes import get_current_user
         db = _make_db_session()
-        with patch("app.routes.auth_routes.decode_jwt_token", return_value={}), \
+        with patch("login.app.routes.auth_routes.decode_jwt_token", return_value={}), \
              pytest.raises(HTTPException) as exc:
             await get_current_user(token="token", db=db)
         assert exc.value.status_code == 401

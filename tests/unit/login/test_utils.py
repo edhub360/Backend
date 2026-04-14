@@ -11,7 +11,7 @@ Coverage:
 
 import pytest
 import hashlib
-from app.utils import generate_secure_token, hash_token, verify_token_hash
+from login.app.utils import generate_secure_token, hash_token, verify_token_hash
 
 
 # ══════════════════════════════════════════════════════════════════════════════

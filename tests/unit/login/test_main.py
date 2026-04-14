@@ -93,9 +93,28 @@ class TestRateLimiter:
 # Global exception handler
 # ══════════════════════════════════════════════════════════════════════════════
 class TestGlobalExceptionHandler:
+    """
+    Uses an isolated app per test to avoid polluting the shared module-scoped app
+    with leaked /test-crash routes across test runs.
+    """
+
+    def _make_isolated_app(self):
+        """
+        Creates a fresh FastAPI instance that inherits only the
+        exception handlers registered in main.py, not the routes.
+        """
+        from login.app.main import app as main_app
+        from fastapi import FastAPI
+
+        isolated = FastAPI()
+
+        # Copy exception handlers from main app
+        isolated.exception_handlers = dict(main_app.exception_handlers)
+
+        return isolated
 
     def test_unhandled_exception_returns_500(self):
-        from login.app.main import app                       # ✅
+        app = self._make_isolated_app()
 
         @app.get("/test-crash")
         async def crash():
@@ -106,7 +125,7 @@ class TestGlobalExceptionHandler:
         assert resp.status_code == 500
 
     def test_unhandled_exception_returns_generic_message(self):
-        from login.app.main import app                       # ✅
+        app = self._make_isolated_app()
 
         @app.get("/test-crash-2")
         async def crash2():
