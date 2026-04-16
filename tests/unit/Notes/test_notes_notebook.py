@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from uuid import UUID
 
-USER_ID     = UUID("00000000-0000-0000-0000-000000000001")
+USER_ID     = "00000000-0000-0000-0000-000000000001"
 NOTEBOOK_ID = UUID("00000000-0000-0000-0000-000000000002")  # also fix this-001"
 
 MOCK_NOTEBOOK = MagicMock()
@@ -173,13 +173,14 @@ class TestListNotebooks:
         assert resp.status_code == 200
 
     def test_returns_list_of_notebooks(self):
+        from uuid import uuid4
         nb1 = MagicMock()
-        nb1.id = "nb-1"
+        nb1.id = uuid4()
         nb1.title = "First"
         nb1.user_id = USER_ID
 
         nb2 = MagicMock()
-        nb2.id = "nb-2"
+        nb2.id = uuid4()
         nb2.title = "Second"
         nb2.user_id = USER_ID
 
