@@ -146,7 +146,7 @@ async def store_embeddings_for_source(source: Source, session: AsyncSession) -> 
         await session.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to store embeddings: {str(e)}")
 
-async def semantic_search(data: SemanticSearchRequest, session: AsyncSession) -> Dict[str, Any]:
+async def semantic_search( data: SemanticSearchRequest, session: AsyncSession, user_id: str | None = None) -> Dict[str, Any]:
     """Perform semantic search across embeddings using schema-based request."""
     try:
         logger.info(f"Semantic search for: '{data.query}' (top {data.top_n})")
