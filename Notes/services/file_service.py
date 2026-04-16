@@ -2,12 +2,12 @@ import os
 from google.cloud import storage
 from fastapi import UploadFile
 
-GCS_BUCKET = os.getenv("GCS_BUCKET")
 
 async def save_file_to_gcs(file: UploadFile) -> str:
+    bucket_name = os.getenv("GCS_BUCKET")
     client = storage.Client()
-    bucket = client.get_bucket(GCS_BUCKET)
+    bucket = client.get_bucket(bucket_name)
     blob = bucket.blob(file.filename)
     content = await file.read()
     blob.upload_from_string(content, file.content_type)
-    return f"https://storage.googleapis.com/{GCS_BUCKET}/{file.filename}"
+    return f"https://storage.googleapis.com/{bucket_name}/{file.filename}"

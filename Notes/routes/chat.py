@@ -5,21 +5,25 @@ from uuid import UUID
 import logging
 from utils.auth import get_current_user, AuthUser
 
-from db import get_session
+from Notes.db import get_session
 from Notes.services.gemini_service import GeminiService
 from Notes.services.embedding_service import get_relevant_chunks_for_notebook
 from Notes.utils.session_memory import SessionMemory
 from Notes.schemas import ChatRequest, ChatResponse, ChatMessage, ContextChunk
 
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/chat", tags=["chat"])
+
+router = APIRouter(tags=["chat"])
+
 
 # Initialize session memory and Gemini service
 session_memory = SessionMemory()
 gemini_service = GeminiService()
+
 
 @router.post("/{notebook_id}", response_model=ChatResponse)
 async def chat_with_notebook(
@@ -30,7 +34,7 @@ async def chat_with_notebook(
 ):
     """
     Chat with notebook content using RAG (Retrieval-Augmented Generation).
-    
+
     This endpoint:
     1. Retrieves relevant content chunks from notebook sources using semantic search
     2. Uses those chunks as context for Gemini AI to generate a response
@@ -41,10 +45,10 @@ async def chat_with_notebook(
         # Get user ID for session management
         user_id = user.user_id
         session_id = f"{user_id}_{notebook_id}"
-        
+
         logger.info(f"Processing chat request for notebook {notebook_id}, user {user_id}")
         logger.info(f"User query: {chat_request.user_query[:100]}...")
-        
+
         # Step 1: Retrieve relevant chunks using semantic search
         logger.info("Step 1: Retrieving relevant content chunks...")
         try:
@@ -55,26 +59,29 @@ async def chat_with_notebook(
                 top_n=chat_request.max_context_chunks or 5,
                 user_id=user_id
             )
-            
+
             if not relevant_chunks:
                 logger.warning(f"No relevant chunks found for notebook {notebook_id}")
                 raise HTTPException(
-                    status_code=404, 
+                    status_code=404,
                     detail="No content found in this notebook. Please upload some sources first."
                 )
-                
+
             logger.info(f"Found {len(relevant_chunks)} relevant chunks")
-            
+
+        except HTTPException:
+            raise
         except Exception as e:
             logger.error(f"Error retrieving chunks: {str(e)}")
             raise HTTPException(status_code=500, detail=f"Failed to retrieve content: {str(e)}")
-        
+
         # Step 2: Get existing chat history
         chat_history = session_memory.get_history(session_id)
         logger.info(f"Retrieved chat history with {len(chat_history)} messages")
-        
+
         max_tokens = chat_request.max_tokens or 512
         max_tokens = min(max_tokens, 1024)  # hard cap
+
         # Step 3: Generate response using Gemini with context
         logger.info("Step 2: Generating response with Gemini AI...")
         try:
@@ -84,17 +91,17 @@ async def chat_with_notebook(
                 chat_history=chat_history,
                 max_tokens=max_tokens
             )
-            
+
             logger.info(f"Generated response: {ai_response[:100]}...")
-            
+
         except Exception as e:
             logger.error(f"Error generating AI response: {str(e)}")
             raise HTTPException(status_code=500, detail=f"Failed to generate response: {str(e)}")
-        
+
         # Step 4: Update chat history
         session_memory.add_message(session_id, "user", chat_request.user_query)
         session_memory.add_message(session_id, "assistant", ai_response)
-        
+
         # Step 5: Format context chunks for response
         context_used = [
             ContextChunk(
@@ -108,7 +115,7 @@ async def chat_with_notebook(
 
         # Step 6: Get updated chat history
         updated_history = session_memory.get_history(session_id)
-        
+
         # Step 7: Return structured response
         response = ChatResponse(
             answer=ai_response,
@@ -117,17 +124,18 @@ async def chat_with_notebook(
             notebook_id=str(notebook_id),
             total_chunks_found=len(relevant_chunks),
         )
-        
+
         logger.info(f"Successfully processed chat request for notebook {notebook_id}")
         return response
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Unexpected error in chat endpoint: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
-@router.get("/{notebook_id}/history", response_model=List[ChatMessage])
+
+@router.get("/{notebook_id}/history")
 async def get_chat_history(
     notebook_id: UUID,
     user: AuthUser = Depends(get_current_user),
@@ -136,15 +144,16 @@ async def get_chat_history(
     try:
         user_id = user.user_id
         session_id = f"{user_id}_{notebook_id}"
-        
+
         history = session_memory.get_history(session_id)
         logger.info(f"Retrieved {len(history)} messages for notebook {notebook_id}")
-        
+
         return history
-        
+
     except Exception as e:
         logger.error(f"Error retrieving chat history: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to retrieve history: {str(e)}")
+
 
 @router.delete("/{notebook_id}/history")
 async def clear_chat_history(
@@ -155,12 +164,12 @@ async def clear_chat_history(
     try:
         user_id = user.user_id
         session_id = f"{user_id}_{notebook_id}"
-        
+
         session_memory.clear_history(session_id)
         logger.info(f"Cleared chat history for notebook {notebook_id}")
-        
+
         return {"message": "Chat history cleared successfully"}
-        
+
     except Exception as e:
         logger.error(f"Error clearing chat history: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to clear history: {str(e)}")
