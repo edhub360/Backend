@@ -10,13 +10,13 @@ class NotebookCreate(BaseModel):
 class Notebook(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    id: UUID
+    id: UUID | str
     title: str
-    user_id: str
+    user_id: UUID | str
 
 
 class SourceCreate(BaseModel):
-    type: str  # 'file', 'website', 'youtube'
+    type: str
     filename: Optional[str] = None
     file_url: Optional[str] = None
     website_url: Optional[str] = None
@@ -69,9 +69,9 @@ class ChatRequest(BaseModel):
 
 
 class ChatMessage(BaseModel):
-    role: str  # "user" or "assistant"
+    role: str
     content: str
-    timestamp: str
+    timestamp: Optional[str] = None
 
 
 class ContextChunk(BaseModel):
