@@ -47,7 +47,6 @@ class EmbeddingChunk(BaseModel):
 
 class SemanticSearchRequest(BaseModel):
     query: str
-    notebook_id: str
     top_n: int = 5
     source_ids: Optional[List[UUID]] = None
 
