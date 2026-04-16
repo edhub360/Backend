@@ -239,21 +239,21 @@ class TestGenerateContextualResponse:
         )
 
     @pytest.mark.asyncio
-    @patch("services.gemini_service.asyncio.to_thread", new_callable=AsyncMock)
+    @patch("Notes.services.gemini_service.asyncio.to_thread", new_callable=AsyncMock)
     async def test_returns_response_text(self, mock_thread):
         mock_thread.return_value = _make_response("Here is the answer.")
         result = await self._call()
         assert result == "Here is the answer."
 
     @pytest.mark.asyncio
-    @patch("services.gemini_service.asyncio.to_thread", new_callable=AsyncMock)
+    @patch("Notes.services.gemini_service.asyncio.to_thread", new_callable=AsyncMock)
     async def test_returns_stripped_text(self, mock_thread):
         mock_thread.return_value = _make_response("  Answer with spaces.  ")
         result = await self._call()
         assert result == "Answer with spaces."
 
     @pytest.mark.asyncio
-    @patch("services.gemini_service.asyncio.to_thread", new_callable=AsyncMock)
+    @patch("Notes.services.gemini_service.asyncio.to_thread", new_callable=AsyncMock)
     async def test_raises_on_empty_response(self, mock_thread):
         resp = MagicMock()
         resp.candidates = None
@@ -263,7 +263,7 @@ class TestGenerateContextualResponse:
             await self._call()
 
     @pytest.mark.asyncio
-    @patch("services.gemini_service.asyncio.to_thread", new_callable=AsyncMock)
+    @patch("Notes.services.gemini_service.asyncio.to_thread", new_callable=AsyncMock)
     async def test_raises_on_empty_candidates_list(self, mock_thread):
         resp = MagicMock()
         resp.candidates = []
@@ -273,7 +273,7 @@ class TestGenerateContextualResponse:
             await self._call()
 
     @pytest.mark.asyncio
-    @patch("services.gemini_service.asyncio.to_thread", new_callable=AsyncMock)
+    @patch("Notes.services.gemini_service.asyncio.to_thread", new_callable=AsyncMock)
     async def test_raises_on_max_tokens_finish_reason(self, mock_thread):
         mock_thread.return_value = _make_response("", finish_reason_name="MAX_TOKENS")
 
@@ -281,7 +281,7 @@ class TestGenerateContextualResponse:
             await self._call()
 
     @pytest.mark.asyncio
-    @patch("services.gemini_service.asyncio.to_thread", new_callable=AsyncMock)
+    @patch("Notes.services.gemini_service.asyncio.to_thread", new_callable=AsyncMock)
     async def test_raises_on_safety_finish_reason(self, mock_thread):
         mock_thread.return_value = _make_response("", finish_reason_name="SAFETY")
 
@@ -289,7 +289,7 @@ class TestGenerateContextualResponse:
             await self._call()
 
     @pytest.mark.asyncio
-    @patch("services.gemini_service.asyncio.to_thread", new_callable=AsyncMock)
+    @patch("Notes.services.gemini_service.asyncio.to_thread", new_callable=AsyncMock)
     async def test_raises_on_empty_text_parts(self, mock_thread):
         mock_thread.return_value = _make_response("", finish_reason_name="STOP")
 
@@ -297,7 +297,7 @@ class TestGenerateContextualResponse:
             await self._call()
 
     @pytest.mark.asyncio
-    @patch("services.gemini_service.asyncio.to_thread", new_callable=AsyncMock)
+    @patch("Notes.services.gemini_service.asyncio.to_thread", new_callable=AsyncMock)
     async def test_context_truncated_at_10000_chars(self, mock_thread):
         mock_thread.return_value = _make_response("Answer.")
         big_chunks = [{"source_name": "doc.pdf", "chunk": "A" * 15000, "score": 0.9}]
@@ -309,7 +309,7 @@ class TestGenerateContextualResponse:
         assert len(prompt_sent) < 20000
 
     @pytest.mark.asyncio
-    @patch("services.gemini_service.asyncio.to_thread", new_callable=AsyncMock)
+    @patch("Notes.services.gemini_service.asyncio.to_thread", new_callable=AsyncMock)
     async def test_max_tokens_capped_at_2048(self, mock_thread):
         mock_thread.return_value = _make_response("Answer.")
         await self._call(max_tokens=9999)
@@ -323,7 +323,7 @@ class TestGenerateContextualResponse:
         mock_thread.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch("services.gemini_service.asyncio.to_thread", new_callable=AsyncMock)
+    @patch("Notes.services.gemini_service.asyncio.to_thread", new_callable=AsyncMock)
     async def test_none_history_treated_as_empty(self, mock_thread):
         mock_thread.return_value = _make_response("Answer.")
         # Should not raise when history=None
@@ -335,7 +335,7 @@ class TestGenerateContextualResponse:
         assert isinstance(result, str)
 
     @pytest.mark.asyncio
-    @patch("services.gemini_service.asyncio.to_thread", new_callable=AsyncMock)
+    @patch("Notes.services.gemini_service.asyncio.to_thread", new_callable=AsyncMock)
     async def test_to_thread_called_with_model_generate(self, mock_thread):
         mock_thread.return_value = _make_response("Answer.")
         await self._call()
@@ -345,7 +345,7 @@ class TestGenerateContextualResponse:
         assert fn_called == self.svc.model.generate_content
 
     @pytest.mark.asyncio
-    @patch("services.gemini_service.asyncio.to_thread", new_callable=AsyncMock)
+    @patch("Notes.services.gemini_service.asyncio.to_thread", new_callable=AsyncMock)
     async def test_thread_exception_wrapped_in_failed_message(self, mock_thread):
         mock_thread.side_effect = RuntimeError("network timeout")
 
@@ -363,7 +363,7 @@ class TestGenerateSimpleResponse:
         self.svc = _make_service()
 
     @pytest.mark.asyncio
-    @patch("services.gemini_service.asyncio.to_thread", new_callable=AsyncMock)
+    @patch("Notes.services.gemini_service.asyncio.to_thread", new_callable=AsyncMock)
     async def test_returns_response_text(self, mock_thread):
         resp = MagicMock()
         resp.text = "Simple answer."
@@ -373,7 +373,7 @@ class TestGenerateSimpleResponse:
         assert result == "Simple answer."
 
     @pytest.mark.asyncio
-    @patch("services.gemini_service.asyncio.to_thread", new_callable=AsyncMock)
+    @patch("Notes.services.gemini_service.asyncio.to_thread", new_callable=AsyncMock)
     async def test_returns_stripped_text(self, mock_thread):
         resp = MagicMock()
         resp.text = "  Answer  "
@@ -383,7 +383,7 @@ class TestGenerateSimpleResponse:
         assert result == "Answer"
 
     @pytest.mark.asyncio
-    @patch("services.gemini_service.asyncio.to_thread", new_callable=AsyncMock)
+    @patch("Notes.services.gemini_service.asyncio.to_thread", new_callable=AsyncMock)
     async def test_raises_on_empty_response(self, mock_thread):
         resp = MagicMock()
         resp.text = None
@@ -393,7 +393,7 @@ class TestGenerateSimpleResponse:
             await self.svc.generate_simple_response("query")
 
     @pytest.mark.asyncio
-    @patch("services.gemini_service.asyncio.to_thread", new_callable=AsyncMock)
+    @patch("Notes.services.gemini_service.asyncio.to_thread", new_callable=AsyncMock)
     async def test_raises_on_none_response(self, mock_thread):
         mock_thread.return_value = None
 
@@ -401,7 +401,7 @@ class TestGenerateSimpleResponse:
             await self.svc.generate_simple_response("query")
 
     @pytest.mark.asyncio
-    @patch("services.gemini_service.asyncio.to_thread", new_callable=AsyncMock)
+    @patch("Notes.services.gemini_service.asyncio.to_thread", new_callable=AsyncMock)
     async def test_default_max_tokens_is_512(self, mock_thread):
         resp = MagicMock()
         resp.text = "Answer."
@@ -411,7 +411,7 @@ class TestGenerateSimpleResponse:
         mock_thread.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch("services.gemini_service.asyncio.to_thread", new_callable=AsyncMock)
+    @patch("Notes.services.gemini_service.asyncio.to_thread", new_callable=AsyncMock)
     async def test_custom_max_tokens_accepted(self, mock_thread):
         resp = MagicMock()
         resp.text = "Answer."
@@ -421,7 +421,7 @@ class TestGenerateSimpleResponse:
         assert result == "Answer."
 
     @pytest.mark.asyncio
-    @patch("services.gemini_service.asyncio.to_thread", new_callable=AsyncMock)
+    @patch("Notes.services.gemini_service.asyncio.to_thread", new_callable=AsyncMock)
     async def test_exception_wrapped_in_failed_message(self, mock_thread):
         mock_thread.side_effect = RuntimeError("API error")
 
@@ -429,7 +429,7 @@ class TestGenerateSimpleResponse:
             await self.svc.generate_simple_response("query")
 
     @pytest.mark.asyncio
-    @patch("services.gemini_service.asyncio.to_thread", new_callable=AsyncMock)
+    @patch("Notes.services.gemini_service.asyncio.to_thread", new_callable=AsyncMock)
     async def test_to_thread_called_with_model_generate(self, mock_thread):
         resp = MagicMock()
         resp.text = "Answer."
