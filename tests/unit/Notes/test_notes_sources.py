@@ -1,11 +1,10 @@
-# tests/unit/notes/routes/test_notes_sources.py
-
 import pytest
 import io
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+
 
 USER_ID = "user_abc"
 NOTEBOOK_ID = uuid4()
@@ -82,11 +81,11 @@ class TestAddSource:
 
     # ── file type ──────────────────────────────────────────────────────────────
 
-    @patch("Notes.routes.sources.store_embeddings_for_source", new_callable=AsyncMock)
-    @patch("Notes.routes.sources.extract_text_from_file_content")
-    @patch("Notes.routes.sources.upload_file_to_gcs")
-    @patch("Notes.routes.sources.get_gcs_client")
-    @patch("Notes.routes.sources.Source")
+    @patch("routes.sources.store_embeddings_for_source", new_callable=AsyncMock)
+    @patch("routes.sources.extract_text_from_file_content")
+    @patch("routes.sources.upload_file_to_gcs")
+    @patch("routes.sources.get_gcs_client")
+    @patch("routes.sources.Source")
     def test_file_upload_returns_201(
         self, MockSource, mock_gcs_client, mock_upload, mock_extract, mock_embed
     ):
@@ -108,11 +107,11 @@ class TestAddSource:
         )
         assert resp.status_code == 201
 
-    @patch("Notes.routes.sources.store_embeddings_for_source", new_callable=AsyncMock)
-    @patch("Notes.routes.sources.extract_text_from_file_content")
-    @patch("Notes.routes.sources.upload_file_to_gcs")
-    @patch("Notes.routes.sources.get_gcs_client")
-    @patch("Notes.routes.sources.Source")
+    @patch("routes.sources.store_embeddings_for_source", new_callable=AsyncMock)
+    @patch("routes.sources.extract_text_from_file_content")
+    @patch("routes.sources.upload_file_to_gcs")
+    @patch("routes.sources.get_gcs_client")
+    @patch("routes.sources.Source")
     def test_file_upload_response_has_id(
         self, MockSource, mock_gcs_client, mock_upload, mock_extract, mock_embed
     ):
@@ -134,11 +133,11 @@ class TestAddSource:
         )
         assert "id" in resp.json()
 
-    @patch("Notes.routes.sources.store_embeddings_for_source", new_callable=AsyncMock)
-    @patch("Notes.routes.sources.extract_text_from_file_content")
-    @patch("Notes.routes.sources.upload_file_to_gcs")
-    @patch("Notes.routes.sources.get_gcs_client")
-    @patch("Notes.routes.sources.Source")
+    @patch("routes.sources.store_embeddings_for_source", new_callable=AsyncMock)
+    @patch("routes.sources.extract_text_from_file_content")
+    @patch("routes.sources.upload_file_to_gcs")
+    @patch("routes.sources.get_gcs_client")
+    @patch("routes.sources.Source")
     def test_embeddings_generated_flag_true_on_success(
         self, MockSource, mock_gcs_client, mock_upload, mock_extract, mock_embed
     ):
@@ -161,9 +160,9 @@ class TestAddSource:
         )
         assert resp.json()["embeddings_generated"] is True
 
-    @patch("Notes.routes.sources.extract_text_from_file_content")
-    @patch("Notes.routes.sources.upload_file_to_gcs")
-    @patch("Notes.routes.sources.get_gcs_client")
+    @patch("routes.sources.extract_text_from_file_content")
+    @patch("routes.sources.upload_file_to_gcs")
+    @patch("routes.sources.get_gcs_client")
     def test_file_type_without_file_returns_400(
         self, mock_gcs_client, mock_upload, mock_extract
     ):
@@ -175,9 +174,9 @@ class TestAddSource:
         assert resp.status_code == 400
         assert "File is required" in resp.json()["detail"]
 
-    @patch("Notes.routes.sources.extract_text_from_file_content")
-    @patch("Notes.routes.sources.upload_file_to_gcs")
-    @patch("Notes.routes.sources.get_gcs_client")
+    @patch("routes.sources.extract_text_from_file_content")
+    @patch("routes.sources.upload_file_to_gcs")
+    @patch("routes.sources.get_gcs_client")
     def test_empty_file_returns_400(
         self, mock_gcs_client, mock_upload, mock_extract
     ):
@@ -190,9 +189,9 @@ class TestAddSource:
         assert resp.status_code == 400
         assert "empty" in resp.json()["detail"].lower()
 
-    @patch("Notes.routes.sources.extract_text_from_file_content")
-    @patch("Notes.routes.sources.upload_file_to_gcs")
-    @patch("Notes.routes.sources.get_gcs_client")
+    @patch("routes.sources.extract_text_from_file_content")
+    @patch("routes.sources.upload_file_to_gcs")
+    @patch("routes.sources.get_gcs_client")
     def test_gcs_upload_failure_returns_500(
         self, mock_gcs_client, mock_upload, mock_extract
     ):
@@ -207,11 +206,96 @@ class TestAddSource:
         assert resp.status_code == 500
         assert "File upload failed" in resp.json()["detail"]
 
+    @patch("routes.sources.store_embeddings_for_source", new_callable=AsyncMock)
+    @patch("routes.sources.extract_text_from_file_content")
+    @patch("routes.sources.upload_file_to_gcs")
+    @patch("routes.sources.get_gcs_client")
+    @patch("routes.sources.Source")
+    def test_file_extraction_failure_still_creates_source(
+        self, MockSource, mock_gcs_client, mock_upload, mock_extract, mock_embed
+    ):
+        mock_notebook_found(self.session)
+        self.session.commit = AsyncMock()
+        self.session.refresh = AsyncMock()
+        self.session.add = MagicMock()
+
+        src = make_mock_source("file")
+        src.extracted_text = "Text extraction failed: pdf parse failed"
+        src.source_metadata = {"error": "pdf parse failed"}
+        MockSource.return_value = src
+        mock_upload.return_value = "https://gcs.example.com/test.pdf"
+        mock_extract.side_effect = RuntimeError("pdf parse failed")
+        mock_embed.return_value = []
+
+        resp = self.client.post(
+            self.url,
+            data={"notebook_id": str(NOTEBOOK_ID), "type": "file"},
+            files={"file": ("test.pdf", b"PDF content here", "application/pdf")},
+        )
+
+        assert resp.status_code == 201
+        assert "Text extraction failed" in resp.json()["extracted_text"]
+        assert resp.json()["metadata"]["error"] == "pdf parse failed"
+
+    @patch("routes.sources.store_embeddings_for_source", new_callable=AsyncMock)
+    @patch("routes.sources.extract_text_from_file_content")
+    @patch("routes.sources.upload_file_to_gcs")
+    @patch("routes.sources.get_gcs_client")
+    @patch("routes.sources.Source")
+    def test_file_embedding_generation_failure_does_not_fail_request(
+        self, MockSource, mock_gcs_client, mock_upload, mock_extract, mock_embed
+    ):
+        mock_notebook_found(self.session)
+        self.session.commit = AsyncMock()
+        self.session.refresh = AsyncMock()
+        self.session.add = MagicMock()
+
+        src = make_mock_source("file")
+        src.extracted_text = "Substantial text content " * 10
+        MockSource.return_value = src
+        mock_upload.return_value = "https://gcs.example.com/test.pdf"
+        mock_extract.return_value = (src.extracted_text, {})
+        mock_embed.side_effect = RuntimeError("embedding failed")
+
+        resp = self.client.post(
+            self.url,
+            data={"notebook_id": str(NOTEBOOK_ID), "type": "file"},
+            files={"file": ("test.pdf", b"PDF content here", "application/pdf")},
+        )
+
+        assert resp.status_code == 201
+        assert resp.json()["embeddings_generated"] is False
+
+    @patch("routes.sources.upload_file_to_gcs")
+    @patch("routes.sources.get_gcs_client")
+    def test_add_source_unexpected_error_returns_500_and_rolls_back(
+        self, mock_gcs_client, mock_upload
+    ):
+        mock_notebook_found(self.session)
+        self.session.rollback = AsyncMock()
+        self.session.commit = AsyncMock(side_effect=RuntimeError("commit failed"))
+        self.session.refresh = AsyncMock()
+        self.session.add = MagicMock()
+
+        with patch("routes.sources.Source", return_value=make_mock_source("website")):
+            with patch("routes.sources.extract_from_url", new=AsyncMock(return_value=("Website content " * 10, {}))):
+                resp = self.client.post(
+                    self.url,
+                    data={
+                        "notebook_id": str(NOTEBOOK_ID),
+                        "type": "website",
+                        "website_url": "https://example.com",
+                    },
+                )
+
+        assert resp.status_code == 500
+        self.session.rollback.assert_called_once()
+
     # ── website type ───────────────────────────────────────────────────────────
 
-    @patch("Notes.routes.sources.store_embeddings_for_source", new_callable=AsyncMock)
-    @patch("Notes.routes.sources.extract_from_url", new_callable=AsyncMock)
-    @patch("Notes.routes.sources.Source")
+    @patch("routes.sources.store_embeddings_for_source", new_callable=AsyncMock)
+    @patch("routes.sources.extract_from_url", new_callable=AsyncMock)
+    @patch("routes.sources.Source")
     def test_website_type_returns_201(self, MockSource, mock_extract, mock_embed):
         mock_notebook_found(self.session)
         self.session.commit = AsyncMock()
@@ -234,7 +318,7 @@ class TestAddSource:
         )
         assert resp.status_code == 201
 
-    @patch("Notes.routes.sources.extract_from_url", new_callable=AsyncMock)
+    @patch("routes.sources.extract_from_url", new_callable=AsyncMock)
     def test_website_type_without_url_returns_400(self, mock_extract):
         mock_notebook_found(self.session)
         resp = self.client.post(
@@ -244,9 +328,9 @@ class TestAddSource:
         assert resp.status_code == 400
         assert "Website URL is required" in resp.json()["detail"]
 
-    @patch("Notes.routes.sources.store_embeddings_for_source", new_callable=AsyncMock)
-    @patch("Notes.routes.sources.extract_from_url", new_callable=AsyncMock)
-    @patch("Notes.routes.sources.Source")
+    @patch("routes.sources.store_embeddings_for_source", new_callable=AsyncMock)
+    @patch("routes.sources.extract_from_url", new_callable=AsyncMock)
+    @patch("routes.sources.Source")
     def test_website_extraction_failure_still_creates_source(
         self, MockSource, mock_extract, mock_embed
     ):
@@ -268,14 +352,13 @@ class TestAddSource:
                 "website_url": "https://example.com",
             },
         )
-        # Source should still be created even if extraction fails
         assert resp.status_code == 201
 
     # ── youtube type ───────────────────────────────────────────────────────────
 
-    @patch("Notes.routes.sources.store_embeddings_for_source", new_callable=AsyncMock)
-    @patch("Notes.routes.sources.extract_from_youtube", new_callable=AsyncMock)
-    @patch("Notes.routes.sources.Source")
+    @patch("routes.sources.store_embeddings_for_source", new_callable=AsyncMock)
+    @patch("routes.sources.extract_from_youtube", new_callable=AsyncMock)
+    @patch("routes.sources.Source")
     def test_youtube_type_returns_201(self, MockSource, mock_extract, mock_embed):
         mock_notebook_found(self.session)
         self.session.commit = AsyncMock()
@@ -298,7 +381,7 @@ class TestAddSource:
         )
         assert resp.status_code == 201
 
-    @patch("Notes.routes.sources.extract_from_youtube", new_callable=AsyncMock)
+    @patch("routes.sources.extract_from_youtube", new_callable=AsyncMock)
     def test_youtube_type_without_url_returns_400(self, mock_extract):
         mock_notebook_found(self.session)
         resp = self.client.post(
@@ -307,6 +390,38 @@ class TestAddSource:
         )
         assert resp.status_code == 400
         assert "YouTube URL is required" in resp.json()["detail"]
+
+    @patch("routes.sources.store_embeddings_for_source", new_callable=AsyncMock)
+    @patch("routes.sources.extract_from_youtube", new_callable=AsyncMock)
+    @patch("routes.sources.Source")
+    def test_youtube_extraction_failure_still_creates_source(
+        self, MockSource, mock_extract, mock_embed
+    ):
+        mock_notebook_found(self.session)
+        self.session.commit = AsyncMock()
+        self.session.refresh = AsyncMock()
+        self.session.add = MagicMock()
+
+        src = make_mock_source("youtube")
+        src.youtube_url = "https://youtube.com/watch?v=abc"
+        src.extracted_text = "YouTube extraction failed: transcript failed"
+        src.source_metadata = {"error": "transcript failed", "url": src.youtube_url}
+        MockSource.return_value = src
+        mock_extract.side_effect = RuntimeError("transcript failed")
+        mock_embed.return_value = []
+
+        resp = self.client.post(
+            self.url,
+            data={
+                "notebook_id": str(NOTEBOOK_ID),
+                "type": "youtube",
+                "youtube_url": "https://youtube.com/watch?v=abc",
+            },
+        )
+
+        assert resp.status_code == 201
+        assert "YouTube extraction failed" in resp.json()["extracted_text"]
+        assert resp.json()["metadata"]["error"] == "transcript failed"
 
     # ── invalid type ───────────────────────────────────────────────────────────
 
@@ -325,17 +440,20 @@ class TestAddSource:
         mock_notebook_not_found(self.session)
         resp = self.client.post(
             self.url,
-            data={"notebook_id": str(NOTEBOOK_ID), "type": "website",
-                  "website_url": "https://example.com"},
+            data={
+                "notebook_id": str(NOTEBOOK_ID),
+                "type": "website",
+                "website_url": "https://example.com",
+            },
         )
         assert resp.status_code == 404
         assert "Notebook not found" in resp.json()["detail"]
 
     # ── extracted text truncation ──────────────────────────────────────────────
 
-    @patch("Notes.routes.sources.store_embeddings_for_source", new_callable=AsyncMock)
-    @patch("Notes.routes.sources.extract_from_url", new_callable=AsyncMock)
-    @patch("Notes.routes.sources.Source")
+    @patch("routes.sources.store_embeddings_for_source", new_callable=AsyncMock)
+    @patch("routes.sources.extract_from_url", new_callable=AsyncMock)
+    @patch("routes.sources.Source")
     def test_extracted_text_truncated_at_500_in_response(
         self, MockSource, mock_extract, mock_embed
     ):
@@ -352,12 +470,15 @@ class TestAddSource:
 
         resp = self.client.post(
             self.url,
-            data={"notebook_id": str(NOTEBOOK_ID), "type": "website",
-                  "website_url": "https://example.com"},
+            data={
+                "notebook_id": str(NOTEBOOK_ID),
+                "type": "website",
+                "website_url": "https://example.com",
+            },
         )
         text = resp.json()["extracted_text"]
         assert text.endswith("...")
-        assert len(text) == 503  # 500 + "..."
+        assert len(text) == 503
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -405,7 +526,7 @@ class TestGetSources:
         resp = self.client.get(self.url)
         text = resp.json()["sources"][0]["extracted_text"]
         assert text.endswith("...")
-        assert len(text) == 203  # 200 + "..."
+        assert len(text) == 203
 
     def test_short_extracted_text_not_truncated(self):
         src = make_mock_source()
@@ -424,6 +545,12 @@ class TestGetSources:
     def test_invalid_notebook_uuid_returns_422(self):
         resp = self.client.get("/not-a-uuid")
         assert resp.status_code == 422
+
+    def test_unexpected_error_returns_500(self):
+        self.session.execute = AsyncMock(side_effect=RuntimeError("db exploded"))
+        resp = self.client.get(self.url)
+        assert resp.status_code == 500
+        assert "Internal server error" in resp.json()["detail"]
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -475,7 +602,7 @@ class TestGetSourceDetail:
 
     def test_wrong_user_returns_404(self):
         src = make_mock_source()
-        src.notebook.user_id = "other_user"  # different user
+        src.notebook.user_id = "other_user"
         self._mock_source_then_embeddings(src)
         resp = self.client.get(self.url)
         assert resp.status_code == 404
@@ -483,6 +610,18 @@ class TestGetSourceDetail:
     def test_invalid_source_uuid_returns_422(self):
         resp = self.client.get("/detail/not-a-uuid")
         assert resp.status_code == 422
+
+    def test_embeddings_query_failure_returns_500(self):
+        src = make_mock_source()
+        src_result = MagicMock()
+        src_result.scalar_one_or_none.return_value = src
+        self.session.execute = AsyncMock(
+            side_effect=[src_result, RuntimeError("embedding query failed")]
+        )
+
+        resp = self.client.get(self.url)
+        assert resp.status_code == 500
+        assert "Internal server error" in resp.json()["detail"]
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -552,6 +691,15 @@ class TestDeleteSource:
         resp = self.client.delete("/not-a-uuid")
         assert resp.status_code == 422
 
+    def test_commit_failure_returns_500_and_rolls_back(self):
+        self._mock_found()
+        self.session.commit = AsyncMock(side_effect=RuntimeError("commit failed"))
+        self.session.rollback = AsyncMock()
+
+        resp = self.client.delete(self.url)
+        assert resp.status_code == 500
+        self.session.rollback.assert_called_once()
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PATCH /{source_id}  — update_source
@@ -610,7 +758,7 @@ class TestUpdateSource:
         assert src.youtube_url == "https://youtube.com/watch?v=xyz"
 
     def test_no_matching_fields_returns_no_update_message(self):
-        self._mock_found("file")  # file type — neither website nor youtube
+        self._mock_found("file")
         resp = self.client.patch(
             f"/{SOURCE_ID}",
             data={"website_url": "https://example.com"},
@@ -664,6 +812,18 @@ class TestUpdateSource:
     def test_invalid_uuid_returns_422(self):
         resp = self.client.patch("/not-a-uuid", data={"website_url": "https://example.com"})
         assert resp.status_code == 422
+
+    def test_commit_failure_returns_500_and_rolls_back(self):
+        self._mock_found("website")
+        self.session.commit = AsyncMock(side_effect=RuntimeError("commit failed"))
+        self.session.rollback = AsyncMock()
+
+        resp = self.client.patch(
+            f"/{SOURCE_ID}",
+            data={"website_url": "https://new-url.com"},
+        )
+        assert resp.status_code == 500
+        self.session.rollback.assert_called_once()
 
 
 # ══════════════════════════════════════════════════════════════════════════════
