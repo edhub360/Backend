@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, Request, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 import stripe
 from dotenv import load_dotenv
+from fastapi.middleware.cors import CORSMiddleware
 import os
 from sqlalchemy import text
 from datetime import datetime, timedelta, timezone
@@ -15,13 +16,14 @@ from db import get_db, engine
 from models import Base
 from auth import get_current_user
 from email_service import send_subscription_success_email, send_subscription_expiry_email
-
+from middleware.security_headers import SecurityHeadersMiddleware
 
 load_dotenv()
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 app = FastAPI(title="Subscription Service (Async)")
+app.add_middleware(SecurityHeadersMiddleware)
 
-from fastapi.middleware.cors import CORSMiddleware
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

@@ -5,6 +5,7 @@ from app.core.config import settings
 from app.core.database import init_vector_store
 from app.core.redis import init_redis, get_redis
 from app.routers import chat, ingestion
+from app.middleware.security_headers import SecurityHeadersMiddleware
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -16,6 +17,8 @@ async def lifespan(app: FastAPI):
     await get_redis().aclose()
 
 app = FastAPI(title=settings.APP_NAME, lifespan=lifespan)
+
+app.add_middleware(SecurityHeadersMiddleware)  
 
 app.add_middleware(
     CORSMiddleware,

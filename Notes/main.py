@@ -5,8 +5,11 @@ import uvicorn
 from utils.logging import setup_logging
 from routes import notebooks, sources, embeddings
 from routes import chat
+from middleware.security_headers import SecurityHeadersMiddleware
 
 app = FastAPI(title="NotebookLM Backend", version="1.0.0")
+
+app.add_middleware(SecurityHeadersMiddleware)
 
 # CORS config as needed
 app.add_middleware(

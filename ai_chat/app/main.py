@@ -5,12 +5,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes.upload import router as upload_router
 from app.routes.chat import router as chat_router
+from app.middleware.security_headers import SecurityHeadersMiddleware
 
 app = FastAPI(
     title="SmartStudy API",
     description="AI Chat Application with General and RAG modes",
     version="1.0.0"
 )
+app.add_middleware(SecurityHeadersMiddleware)  # Add security headers middleware
 
 # CORS middleware for frontend communication
 app.add_middleware(
