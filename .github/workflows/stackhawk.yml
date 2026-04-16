@@ -1,8 +1,0 @@
-app:
-  applicationId: "your-app-id"
-  env: "development"
-  host: "https://edhub360.github.io/StudentHub"
-
-hawk:
-  spider:
-    maxDurationMinutes: 2
