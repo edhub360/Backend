@@ -1,19 +1,34 @@
-from fastapi import APIRouter, Depends, HTTPException, Form, UploadFile, File, Header
+from fastapi import APIRouter, Depends, HTTPException, Form, UploadFile, File
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlalchemy import select
 from typing import Optional
 from uuid import UUID
+
 from Notes.utils.auth import get_current_user, AuthUser
 from Notes.db import get_session
-from Notes.models import Source, Notebook
-from Notes.schemas import Source as SourceSchema
-from Notes.services.extract_service import extract_text_from_file_content, extract_from_url, extract_from_youtube
+from Notes.models import Source, Notebook, Embedding
+from Notes.services.extract_service import (
+    extract_text_from_file_content,
+    extract_from_url,
+    extract_from_youtube,
+)
 from Notes.services.gcs_service import get_gcs_client, upload_file_to_gcs
 from Notes.services.embedding_service import store_embeddings_for_source
 
 router = APIRouter()
+
+def _current_user_id(user: AuthUser) -> Optional[str]:
+    return getattr(user, "user_id", getattr(user, "userid", None))
+
+
+def _notebook_user_field():
+    return getattr(Notebook, "user_id", None) or getattr(Notebook, "userid")
+
+
+def _owner_user_id(notebook_obj) -> Optional[str]:
+    return getattr(notebook_obj, "user_id", getattr(notebook_obj, "userid", None))
 
 @router.post("/")
 async def add_source(
@@ -28,12 +43,13 @@ async def add_source(
 ):
     """Add a new source to a notebook"""
     try:
-        print(f"DEBUG: Adding source - type: {type}, notebook_id: {notebook_id}, user_id: {user.user_id}")
+        user_id = _current_user_id(user)
+        print(f"DEBUG: Adding source - type: {type}, notebook_id: {notebook_id}, user_id")
         
         # Verify notebook exists and belongs to user
         notebook_query = select(Notebook).where(
             Notebook.id == notebook_id,
-            Notebook.user_id == user.user_id
+            _notebook_user_field() == user_id
         )
         result = await session.execute(notebook_query)
         notebook = result.scalar_one_or_none()
@@ -179,12 +195,13 @@ async def get_sources(
 ):
     """Get all sources for a notebook"""
     try:
-        print(f"DEBUG: Getting sources for notebook {notebook_id}, user {user.user_id}")
+        user_id = _current_user_id(user)
+        print(f"DEBUG: Getting sources for notebook {notebook_id}, user {user_id}")
         
         # Verify notebook exists and belongs to user
         notebook_query = select(Notebook).where(
             Notebook.id == notebook_id,
-            Notebook.user_id == user.user_id
+            _notebook_user_field() == user_id
         )
         result = await session.execute(notebook_query)
         notebook = result.scalar_one_or_none()
@@ -241,11 +258,10 @@ async def get_source_detail(
             raise HTTPException(status_code=404, detail="Source not found")
         
         # Verify user owns the notebook
-        if source.notebook.user_id != user.user_id:
+        if _owner_user_id(source.notebook) != _current_user_id(user):
             raise HTTPException(status_code=404, detail="Source not found")
         
         # Count embeddings for this source
-        from models import Embedding
         embeddings_query = select(Embedding).where(Embedding.source_id == source_id)
         embeddings_result = await session.execute(embeddings_query)
         embeddings_count = len(embeddings_result.scalars().all())
@@ -292,7 +308,7 @@ async def delete_source(
             raise HTTPException(status_code=404, detail="Source not found")
         
         # Verify user owns the notebook
-        if source.notebook.user_id != user.user_id:
+        if _owner_user_id(source.notebook) != _current_user_id(user):
             raise HTTPException(status_code=404, detail="Source not found")
         
         # Delete the source (embeddings will be deleted automatically due to CASCADE)
@@ -332,7 +348,7 @@ async def update_source(
             raise HTTPException(status_code=404, detail="Source not found")
         
         # Verify user owns the notebook
-        if source.notebook.user_id != user.user_id:
+        if _owner_user_id(source.notebook) != _current_user_id(user):
             raise HTTPException(status_code=404, detail="Source not found")
         
         # Update allowed fields
