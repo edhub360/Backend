@@ -4,10 +4,12 @@ import logging
 
 from app.core.config import get_settings
 from app.api.v1.study_plan import router as study_plan_router
+from app.middleware.security_headers import SecurityHeadersMiddleware
 
 settings = get_settings()
 
 app = FastAPI(title=settings.PROJECT_NAME)
+app.add_middleware(SecurityHeadersMiddleware)
 
 logging.info(
     "STUDY-PLAN SETTINGS: JWT_ALGORITHM=%s, JWT_SECRET_KEY_PREFIX=%s",

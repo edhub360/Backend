@@ -9,6 +9,7 @@ from models import FlashcardAnalytics
 from schemas import FlashcardAnalyticsCreate, FlashcardAnalyticsOut, FlashcardDeckListItem, FlashcardDeckDetail, FlashcardDecksResponse, PaginationMeta
 from database import get_session
 from models import Quiz, QuizQuestion
+from middleware.security_headers import SecurityHeadersMiddleware
 
 # ========== APP INITIALIZATION ==========
 app = FastAPI(
@@ -16,6 +17,8 @@ app = FastAPI(
     version="1.0",
     description="Flashcard microservice using quiz data"
 )
+
+app.add_middleware(SecurityHeadersMiddleware)
 
 # ========== CORS MIDDLEWARE ==========
 app.add_middleware(

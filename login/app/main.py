@@ -13,7 +13,7 @@ from app.config import settings
 from app.db import init_db
 from app.routes.auth_routes import router as auth_router
 from app.routes.password_reset_routes import password_reset_router
-
+from app.middleware.security_headers import SecurityHeadersMiddleware
 
 # Configure logging
 logging.basicConfig(
@@ -51,6 +51,8 @@ app = FastAPI(
 # Add rate limiting
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+app.add_middleware(SecurityHeadersMiddleware)
 
 # Add CORS middleware
 app.add_middleware(

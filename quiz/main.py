@@ -4,6 +4,7 @@ from fastapi import FastAPI, Depends, HTTPException, status, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select, update, delete, func, text
 from sqlalchemy.ext.asyncio import AsyncSession
+from middleware.security_headers import SecurityHeadersMiddleware
 
 from database import get_session, engine
 from models import Base, User, QuizQuestion, Quiz, QuizAttempt, UserStudyStats  # FIXED: Changed Question to QuizQuestion
@@ -24,6 +25,8 @@ import ast  # For parsing incorrect_answers lists
 import json
 
 app = FastAPI(title="Quiz API (PostgreSQL + SQLAlchemy async)", version="3.0")
+
+app.add_middleware(SecurityHeadersMiddleware)
 
 # CORS Configuration
 app.add_middleware(

@@ -4,10 +4,12 @@ from fastapi.responses import JSONResponse
 from app.utils.logging import setup_logging
 from app.routes.courses import router as courses_router
 from fastapi.middleware.cors import CORSMiddleware
+from app.middleware.security_headers import SecurityHeadersMiddleware
 
 logger = setup_logging()
 
 app = FastAPI(title="Course Service API")
+app.add_middleware(SecurityHeadersMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
