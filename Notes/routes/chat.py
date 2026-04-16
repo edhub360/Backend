@@ -17,7 +17,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-router = APIRouter(tags=["chat"])
+router = APIRouter(prefix="/chat", tags=["chat"])
 
 
 # Initialize session memory and Gemini service

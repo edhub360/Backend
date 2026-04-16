@@ -24,7 +24,7 @@ setup_logging(app)
 app.include_router(notebooks.router, prefix="/api/notebooks")
 app.include_router(sources.router, prefix="/api/sources")
 app.include_router(embeddings.router, prefix="/api/embeddings")
-app.include_router(chat.router, prefix="/api/chat")
+app.include_router(chat.router, prefix="/api")
 
 
 @app.get("/")
