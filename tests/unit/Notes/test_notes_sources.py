@@ -82,11 +82,11 @@ class TestAddSource:
 
     # ── file type ──────────────────────────────────────────────────────────────
 
-    @patch("routes.sources.store_embeddings_for_source", new_callable=AsyncMock)
-    @patch("routes.sources.extract_text_from_file_content")
-    @patch("routes.sources.upload_file_to_gcs")
-    @patch("routes.sources.get_gcs_client")
-    @patch("routes.sources.Source")
+    @patch("Notes.routes.sources.store_embeddings_for_source", new_callable=AsyncMock)
+    @patch("Notes.routes.sources.extract_text_from_file_content")
+    @patch("Notes.routes.sources.upload_file_to_gcs")
+    @patch("Notes.routes.sources.get_gcs_client")
+    @patch("Notes.routes.sources.Source")
     def test_file_upload_returns_201(
         self, MockSource, mock_gcs_client, mock_upload, mock_extract, mock_embed
     ):
@@ -108,11 +108,11 @@ class TestAddSource:
         )
         assert resp.status_code == 201
 
-    @patch("routes.sources.store_embeddings_for_source", new_callable=AsyncMock)
-    @patch("routes.sources.extract_text_from_file_content")
-    @patch("routes.sources.upload_file_to_gcs")
-    @patch("routes.sources.get_gcs_client")
-    @patch("routes.sources.Source")
+    @patch("Notes.routes.sources.store_embeddings_for_source", new_callable=AsyncMock)
+    @patch("Notes.routes.sources.extract_text_from_file_content")
+    @patch("Notes.routes.sources.upload_file_to_gcs")
+    @patch("Notes.routes.sources.get_gcs_client")
+    @patch("Notes.routes.sources.Source")
     def test_file_upload_response_has_id(
         self, MockSource, mock_gcs_client, mock_upload, mock_extract, mock_embed
     ):
@@ -134,11 +134,11 @@ class TestAddSource:
         )
         assert "id" in resp.json()
 
-    @patch("routes.sources.store_embeddings_for_source", new_callable=AsyncMock)
-    @patch("routes.sources.extract_text_from_file_content")
-    @patch("routes.sources.upload_file_to_gcs")
-    @patch("routes.sources.get_gcs_client")
-    @patch("routes.sources.Source")
+    @patch("Notes.routes.sources.store_embeddings_for_source", new_callable=AsyncMock)
+    @patch("Notes.routes.sources.extract_text_from_file_content")
+    @patch("Notes.routes.sources.upload_file_to_gcs")
+    @patch("Notes.routes.sources.get_gcs_client")
+    @patch("Notes.routes.sources.Source")
     def test_embeddings_generated_flag_true_on_success(
         self, MockSource, mock_gcs_client, mock_upload, mock_extract, mock_embed
     ):
@@ -161,9 +161,9 @@ class TestAddSource:
         )
         assert resp.json()["embeddings_generated"] is True
 
-    @patch("routes.sources.extract_text_from_file_content")
-    @patch("routes.sources.upload_file_to_gcs")
-    @patch("routes.sources.get_gcs_client")
+    @patch("Notes.routes.sources.extract_text_from_file_content")
+    @patch("Notes.routes.sources.upload_file_to_gcs")
+    @patch("Notes.routes.sources.get_gcs_client")
     def test_file_type_without_file_returns_400(
         self, mock_gcs_client, mock_upload, mock_extract
     ):
@@ -175,9 +175,9 @@ class TestAddSource:
         assert resp.status_code == 400
         assert "File is required" in resp.json()["detail"]
 
-    @patch("routes.sources.extract_text_from_file_content")
-    @patch("routes.sources.upload_file_to_gcs")
-    @patch("routes.sources.get_gcs_client")
+    @patch("Notes.routes.sources.extract_text_from_file_content")
+    @patch("Notes.routes.sources.upload_file_to_gcs")
+    @patch("Notes.routes.sources.get_gcs_client")
     def test_empty_file_returns_400(
         self, mock_gcs_client, mock_upload, mock_extract
     ):
@@ -190,9 +190,9 @@ class TestAddSource:
         assert resp.status_code == 400
         assert "empty" in resp.json()["detail"].lower()
 
-    @patch("routes.sources.extract_text_from_file_content")
-    @patch("routes.sources.upload_file_to_gcs")
-    @patch("routes.sources.get_gcs_client")
+    @patch("Notes.routes.sources.extract_text_from_file_content")
+    @patch("Notes.routes.sources.upload_file_to_gcs")
+    @patch("Notes.routes.sources.get_gcs_client")
     def test_gcs_upload_failure_returns_500(
         self, mock_gcs_client, mock_upload, mock_extract
     ):
@@ -209,9 +209,9 @@ class TestAddSource:
 
     # ── website type ───────────────────────────────────────────────────────────
 
-    @patch("routes.sources.store_embeddings_for_source", new_callable=AsyncMock)
-    @patch("routes.sources.extract_from_url", new_callable=AsyncMock)
-    @patch("routes.sources.Source")
+    @patch("Notes.routes.sources.store_embeddings_for_source", new_callable=AsyncMock)
+    @patch("Notes.routes.sources.extract_from_url", new_callable=AsyncMock)
+    @patch("Notes.routes.sources.Source")
     def test_website_type_returns_201(self, MockSource, mock_extract, mock_embed):
         mock_notebook_found(self.session)
         self.session.commit = AsyncMock()
@@ -234,7 +234,7 @@ class TestAddSource:
         )
         assert resp.status_code == 201
 
-    @patch("routes.sources.extract_from_url", new_callable=AsyncMock)
+    @patch("Notes.routes.sources.extract_from_url", new_callable=AsyncMock)
     def test_website_type_without_url_returns_400(self, mock_extract):
         mock_notebook_found(self.session)
         resp = self.client.post(
@@ -244,9 +244,9 @@ class TestAddSource:
         assert resp.status_code == 400
         assert "Website URL is required" in resp.json()["detail"]
 
-    @patch("routes.sources.store_embeddings_for_source", new_callable=AsyncMock)
-    @patch("routes.sources.extract_from_url", new_callable=AsyncMock)
-    @patch("routes.sources.Source")
+    @patch("Notes.routes.sources.store_embeddings_for_source", new_callable=AsyncMock)
+    @patch("Notes.routes.sources.extract_from_url", new_callable=AsyncMock)
+    @patch("Notes.routes.sources.Source")
     def test_website_extraction_failure_still_creates_source(
         self, MockSource, mock_extract, mock_embed
     ):
@@ -273,9 +273,9 @@ class TestAddSource:
 
     # ── youtube type ───────────────────────────────────────────────────────────
 
-    @patch("routes.sources.store_embeddings_for_source", new_callable=AsyncMock)
-    @patch("routes.sources.extract_from_youtube", new_callable=AsyncMock)
-    @patch("routes.sources.Source")
+    @patch("Notes.routes.sources.store_embeddings_for_source", new_callable=AsyncMock)
+    @patch("Notes.routes.sources.extract_from_youtube", new_callable=AsyncMock)
+    @patch("Notes.routes.sources.Source")
     def test_youtube_type_returns_201(self, MockSource, mock_extract, mock_embed):
         mock_notebook_found(self.session)
         self.session.commit = AsyncMock()
@@ -298,7 +298,7 @@ class TestAddSource:
         )
         assert resp.status_code == 201
 
-    @patch("routes.sources.extract_from_youtube", new_callable=AsyncMock)
+    @patch("Notes.routes.sources.extract_from_youtube", new_callable=AsyncMock)
     def test_youtube_type_without_url_returns_400(self, mock_extract):
         mock_notebook_found(self.session)
         resp = self.client.post(
@@ -333,9 +333,9 @@ class TestAddSource:
 
     # ── extracted text truncation ──────────────────────────────────────────────
 
-    @patch("routes.sources.store_embeddings_for_source", new_callable=AsyncMock)
-    @patch("routes.sources.extract_from_url", new_callable=AsyncMock)
-    @patch("routes.sources.Source")
+    @patch("Notes.routes.sources.store_embeddings_for_source", new_callable=AsyncMock)
+    @patch("Notes.routes.sources.extract_from_url", new_callable=AsyncMock)
+    @patch("Notes.routes.sources.Source")
     def test_extracted_text_truncated_at_500_in_response(
         self, MockSource, mock_extract, mock_embed
     ):
