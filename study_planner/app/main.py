@@ -20,7 +20,7 @@ logging.info(
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Adjust as needed for production
+    allow_origins=["https://app.edhub360.com"],  # Adjust as needed for production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

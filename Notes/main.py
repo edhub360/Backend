@@ -14,7 +14,7 @@ app.add_middleware(SecurityHeadersMiddleware)
 # CORS config as needed
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # limit in production!
+    allow_origins=["https://app.edhub360.com"],  # limit in production!
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
