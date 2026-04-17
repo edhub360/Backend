@@ -17,7 +17,7 @@ app.add_middleware(SecurityHeadersMiddleware)  # Add security headers middleware
 # CORS middleware for frontend communication
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["https://app.edhub360.com"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

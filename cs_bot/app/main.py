@@ -22,7 +22,7 @@ app.add_middleware(SecurityHeadersMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # restrict to your frontend domain in prod
+    allow_origins=["https://app.edhub360.com"],  # restrict to your frontend domain in prod
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
