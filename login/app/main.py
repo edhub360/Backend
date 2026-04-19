@@ -59,8 +59,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://app.edhub360.com"],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],  # explicit
+    allow_headers=["Authorization", "Content-Type", "Accept"],  # explicit
 )
 
 
