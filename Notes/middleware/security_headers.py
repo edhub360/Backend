@@ -11,6 +11,9 @@ CSP_POLICY = (
     "frame-ancestors 'none'; "
     "object-src 'none'; "
     "base-uri 'self';"
+    "form-action 'self'; "
+    "worker-src 'none'; "
+    "manifest-src 'self';"
 )
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
