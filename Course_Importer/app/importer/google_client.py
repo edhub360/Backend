@@ -1,5 +1,4 @@
-import os
-from google.oauth2 import service_account
+from google.auth import default
 from googleapiclient.discovery import build
 
 SCOPES = [
@@ -8,8 +7,8 @@ SCOPES = [
 ]
 
 def get_credentials():
-    key_path = os.getenv("GOOGLE_SERVICE_ACCOUNT_KEY", "./course-importer-key.json")
-    return service_account.Credentials.from_service_account_file(key_path, scopes=SCOPES)
+    credentials, _ = default(scopes=SCOPES)
+    return credentials
 
 def get_sheets_service():
     return build("sheets", "v4", credentials=get_credentials())
