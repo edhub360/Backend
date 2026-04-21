@@ -12,6 +12,7 @@ router = APIRouter()
 MAX_PAGE_LIMIT = int(os.getenv("MAX_PAGE_LIMIT", 100))
 PAGE_DEFAULT_LIMIT = int(os.getenv("PAGE_DEFAULT_LIMIT", 10))
 
+
 @router.get("/", response_model=PaginatedCourses)
 async def list_courses_endpoint(
     q: Optional[str] = Query(None, description="Keyword search"),
@@ -32,7 +33,7 @@ async def list_courses_endpoint(
         CoursePreview(
             course_id=x.course_id,
             course_title=x.course_title,
-            short_description=(x.course_desc[:200] if x.course_desc else ""),
+            course_desc=(x.course_desc[:200] if x.course_desc else None),  # ✅ fixed
             course_duration=x.course_duration,
             course_complexity=x.course_complexity,
             course_image_url=x.course_image_url,
@@ -41,10 +42,31 @@ async def list_courses_endpoint(
         )
         for x in courses
     ]
-    # Move last item to first, rest shifted down
-    if items:
-        items = [items[-1]] + items[:-1]
     return PaginatedCourses(total=total, page=page, limit=limit, items=items)
+
+
+# ✅ /featured must be above /{course_id}
+@router.get("/featured", response_model=PaginatedCourses)
+async def featured_courses_endpoint(
+    limit: int = Query(PAGE_DEFAULT_LIMIT, ge=1, le=MAX_PAGE_LIMIT),
+    db: AsyncSession = Depends(get_db)
+):
+    total, courses = await list_courses(db, None, 1, limit, None, None, None)
+    items = [
+        CoursePreview(
+            course_id=x.course_id,
+            course_title=x.course_title,
+            course_desc=(x.course_desc[:200] if x.course_desc else None),  # ✅ fixed
+            course_duration=x.course_duration,
+            course_complexity=x.course_complexity,
+            course_image_url=x.course_image_url,
+            course_redirect_url=x.course_redirect_url,
+            course_credit=x.course_credit
+        )
+        for x in courses
+    ]
+    return PaginatedCourses(total=total, page=1, limit=limit, items=items)
+
 
 @router.get("/{course_id}", response_model=CourseDetail)
 async def get_course_endpoint(
@@ -65,27 +87,5 @@ async def get_course_endpoint(
         course_redirect_url=course.course_redirect_url,
         course_image_url=course.course_image_url,
         course_credit=course.course_credit,
-        created_at=course.created_at.isoformat()
+        created_at=course.created_at      # ✅ pass datetime directly
     )
-
-@router.get("/featured", response_model=PaginatedCourses)
-async def featured_courses_endpoint(
-    limit: int = Query(PAGE_DEFAULT_LIMIT, ge=1, le=MAX_PAGE_LIMIT),
-    db: AsyncSession = Depends(get_db)
-):
-    # Return most recent courses as 'featured'
-    total, courses = await list_courses(db, None, 1, limit, None, None, None)
-    items = [
-        CoursePreview(
-            course_id=x.course_id,
-            course_title=x.course_title,
-            short_description=(x.course_desc[:200] if x.course_desc else ""),
-            course_duration=x.course_duration,
-            course_complexity=x.course_complexity,
-            course_image_url=x.course_image_url,
-            course_redirect_url=x.course_redirect_url,
-            course_credit=x.course_credit
-        )
-        for x in courses
-    ]
-    return PaginatedCourses(total=total, page=1, limit=limit, items=items)
