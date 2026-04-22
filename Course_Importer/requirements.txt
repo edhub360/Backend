@@ -8,3 +8,4 @@ gspread==6.1.2
 python-dotenv==1.0.1
 pydantic==2.7.1
 google-cloud-secret-manager>=2.0.0
+google-auth-httplib2==0.2.0
