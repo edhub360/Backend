@@ -20,9 +20,20 @@ from middleware.security_headers import SecurityHeadersMiddleware
 
 load_dotenv()
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-app = FastAPI(title="Subscription Service (Async)")
-app.add_middleware(SecurityHeadersMiddleware)
 
+
+from contextlib import asynccontextmanager
+from scheduler import start_scheduler, stop_scheduler
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    start_scheduler()
+    yield
+    stop_scheduler()
+
+app = FastAPI(title="Subscription Service (Async)", lifespan=lifespan)
+
+app.add_middleware(SecurityHeadersMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
@@ -545,17 +556,6 @@ async def create_customer_portal_session(
 
 #  DELETE /activate-subscription — free plan now goes through Stripe checkout
 #  DELETE /free-plan-status — no longer needed
-
-from contextlib import asynccontextmanager
-from scheduler import start_scheduler, stop_scheduler
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    start_scheduler()
-    yield
-    stop_scheduler()
-
-app = FastAPI(title="Subscription Service (Async)", lifespan=lifespan)
 
 if __name__ == "__main__":
     import uvicorn
