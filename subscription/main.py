@@ -546,6 +546,16 @@ async def create_customer_portal_session(
 #  DELETE /activate-subscription — free plan now goes through Stripe checkout
 #  DELETE /free-plan-status — no longer needed
 
+from contextlib import asynccontextmanager
+from scheduler import start_scheduler, stop_scheduler
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    start_scheduler()
+    yield
+    stop_scheduler()
+
+app = FastAPI(title="Subscription Service (Async)", lifespan=lifespan)
 
 if __name__ == "__main__":
     import uvicorn
