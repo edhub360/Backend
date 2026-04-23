@@ -84,7 +84,35 @@ async def get_user_subscription(db: AsyncSession, user_id: UUID):
     if not row:
         return None
     sub, plan_name = row
-    sub.plan_name = plan_name   # attach dynamically
+    sub.plan_name = plan_name
+
+    # ── Real-time expiry guard ─────────────────────────────────────────────
+    now = datetime.now(timezone.utc)
+    if sub.current_period_end < now:
+        # Subscription technically active in DB but period has lapsed —
+        # lock it immediately without waiting for the scheduler
+        await db.execute(
+            text("""
+                UPDATE stud_hub_schema.subscriptions
+                SET status = 'expired', ended_at = :now
+                WHERE id = :sub_id
+            """),
+            {"now": now, "sub_id": str(sub.id)}
+        )
+        await db.execute(
+            text("""
+                UPDATE stud_hub_schema.users
+                SET subscription_tier = NULL
+                WHERE user_id = (
+                    SELECT user_id FROM stud_hub_schema.customers
+                    WHERE id = :customer_id
+                )
+            """),
+            {"customer_id": str(sub.customer_id)}
+        )
+        await db.commit()
+        return None  # treat as no active subscription
+
     return sub
 
 
