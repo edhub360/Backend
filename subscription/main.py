@@ -23,7 +23,7 @@ stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
 
 from contextlib import asynccontextmanager
-from scheduler import start_scheduler, stop_scheduler
+from scheduler import start_scheduler, stop_scheduler, scheduler, check_expired_subscriptions
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -557,8 +557,35 @@ async def create_customer_portal_session(
 #  DELETE /activate-subscription — free plan now goes through Stripe checkout
 #  DELETE /free-plan-status — no longer needed
 
+# ========== DEBUG ONLY — REMOVE IN PRODUCTION ==========
+
+@app.get("/scheduler/status")
+async def scheduler_status():
+    jobs = scheduler.get_jobs()
+    return {
+        "scheduler_running": scheduler.running,
+        "jobs": [
+            {
+                "id": job.id,
+                "name": job.name,
+                "next_run": str(job.next_run_time),
+                "trigger": str(job.trigger),
+            }
+            for job in jobs
+        ],
+        "current_utc": datetime.now(timezone.utc).isoformat(),
+    }
+
+@app.post("/scheduler/run-now")
+async def run_expiry_check_now():
+    await check_expired_subscriptions()
+    return {"message": "Expiry check completed — check logs"}
+
+# ========== END DEBUG ==========
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
 
 
