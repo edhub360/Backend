@@ -4,7 +4,7 @@ from app.db import get_db
 from app.importer.sheet_template import create_course_template
 from app.importer.sheet_reader import read_course_rows
 from app.importer.transformer import transform_row
-from app.importer.drive_watcher import register_drive_watch, stop_drive_watch
+from app.importer.drive_watcher import register_drive_watch, stop_drive_watch, get_active_watch
 from app.course_importer import upsert_courses
 from typing import Optional
 
@@ -40,6 +40,12 @@ async def register_watch():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/watch/status")
+async def watch_status():
+    state = get_active_watch()
+    if not state:
+        return {"active": False}
+    return {"active": True, **state}
 
 @router.post("/watch/stop")
 async def stop_watch(channel_id: str, resource_id: str):
