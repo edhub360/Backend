@@ -1,32 +1,43 @@
+import json
 import os
-from app.importer.google_client import get_drive_service
+import time
 import uuid
+from pathlib import Path
+
+from app.importer.google_client import get_drive_service
 
 DRIVE_UPLOAD_FOLDER_ID = os.getenv("DRIVE_UPLOAD_FOLDER_ID")
-
-# Your Cloud Run importer service public URL
-# e.g. https://course-importer-service-xxxx-uc.a.run.app
 IMPORTER_SERVICE_URL = os.getenv("IMPORTER_SERVICE_URL")
 WEBHOOK_PATH = "/admin/course-import/webhook"
+
+WATCH_STATE_FILE = "/tmp/drive_watch_state.json"
 
 
 def register_drive_watch() -> dict:
     """
-    Registers a push notification with Google Drive.
-    Google will POST to IMPORTER_SERVICE_URL/webhook whenever
-    a file is created/changed in the watched folder.
-    Call this once after deployment, or re-call every 7 days (max expiry).
+    Register or renew a Google Drive watch channel.
+    If an old channel is recorded, stop it first to prevent duplicates.
     """
     drive = get_drive_service()
 
-    channel_id = str(uuid.uuid4())  # unique channel ID for this watch
+    old_state = _load_watch_state()
+    if old_state and old_state.get("channel_id") and old_state.get("resource_id"):
+        try:
+            stop_drive_watch(
+                channel_id=old_state["channel_id"],
+                resource_id=old_state["resource_id"]
+            )
+        except Exception:
+            pass
+
+    channel_id = str(uuid.uuid4())
     webhook_url = f"{IMPORTER_SERVICE_URL}{WEBHOOK_PATH}"
 
     body = {
         "id": channel_id,
         "type": "web_hook",
         "address": webhook_url,
-        "expiration": _expiry_ms(days=6)  # max is 7 days for Drive
+        "expiration": _expiry_ms(days=6)
     }
 
     response = drive.files().watch(
@@ -34,29 +45,58 @@ def register_drive_watch() -> dict:
         body=body
     ).execute()
 
-    return {
+    state = {
         "channel_id": response.get("id"),
         "resource_id": response.get("resourceId"),
         "expiration": response.get("expiration"),
         "webhook_url": webhook_url
     }
 
+    _save_watch_state(state)
+    return state
+
 
 def stop_drive_watch(channel_id: str, resource_id: str) -> bool:
     """
-    Stops an existing Drive watch channel.
-    Call this before re-registering to avoid duplicate notifications.
+    Stop an active Drive watch channel.
     """
     drive = get_drive_service()
     drive.channels().stop(body={
         "id": channel_id,
         "resourceId": resource_id
     }).execute()
+
+    state = _load_watch_state()
+    if state and state.get("channel_id") == channel_id:
+        _clear_watch_state()
+
     return True
 
 
+def get_active_watch() -> dict | None:
+    return _load_watch_state()
+
+
+def _load_watch_state() -> dict | None:
+    path = Path(WATCH_STATE_FILE)
+    if not path.exists():
+        return None
+    try:
+        return json.loads(path.read_text())
+    except Exception:
+        return None
+
+
+def _save_watch_state(data: dict) -> None:
+    Path(WATCH_STATE_FILE).write_text(json.dumps(data))
+
+
+def _clear_watch_state() -> None:
+    path = Path(WATCH_STATE_FILE)
+    if path.exists():
+        path.unlink()
+
+
 def _expiry_ms(days: int) -> str:
-    """Returns expiry timestamp in milliseconds as string (required by Drive API)."""
-    import time
     expiry = int((time.time() + days * 86400) * 1000)
     return str(expiry)
