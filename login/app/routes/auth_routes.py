@@ -422,17 +422,15 @@ async def refresh_token(
             detail="Token refresh failed"
         )
 
-# backend — auth/router.py
 @router.get("/session/check")
 async def check_session(
     request: Request,
     db: AsyncSession = Depends(get_db)
 ):
     """Lightweight session validity check — no token rotation."""
-    # Get refresh token from header
     refresh_token_value = request.headers.get("X-Refresh-Token")
     if not refresh_token_value:
-        raise HTTPException(status_code=401, detail="No refresh token provided")
+        return JSONResponse(status_code=401, content={"valid": False, "detail": "No refresh token provided"})  # ✅ return, not raise
 
     token_hash = hash_token(refresh_token_value)
 
@@ -442,22 +440,15 @@ async def check_session(
     token_record = result.scalar_one_or_none()
 
     if not token_record:
-        raise HTTPException(status_code=401, detail="Invalid refresh token")
+        return JSONResponse(status_code=401, content={"valid": False, "detail": "Invalid refresh token"})
 
     if token_record.revoked:
-        raise HTTPException(
-            status_code=401,
-            detail="Session expired due to login from another device"
-        )
+        return JSONResponse(status_code=401, content={"valid": False, "detail": "Session expired due to login from another device"})
 
     if token_record.expires_at < datetime.now(timezone.utc):
-        raise HTTPException(
-            status_code=401,
-            detail="Session expired, please log in again"
-        )
+        return JSONResponse(status_code=401, content={"valid": False, "detail": "Session expired, please log in again"})
 
-    return {"valid": True}  # no new token created
-
+    return {"valid": True}
 
 @router.post("/logout")
 @limiter.limit(f"{settings.rate_limit_requests}/minute")
