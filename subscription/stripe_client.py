@@ -23,31 +23,55 @@ class StripeClient:
 
 
     @staticmethod
-    def create_checkout_session(
-        customer_id: str,
-        price_id: str,
-        success_url: str,       # already includes ?session_id= from frontend
-        cancel_url: str,
-        metadata: dict = None,
-        mode: str = "subscription"
-    ) -> str:
-        """Create Stripe Checkout session"""
+def create_checkout_session(
+    customer_id: str,
+    price_id: str,
+    success_url: str,
+    cancel_url: str,
+    metadata: dict = None,
+    mode: str = "subscription",
+    is_free: bool = False       # add this
+) -> str:
+    """Create Stripe Checkout session"""
 
-        params = {
-            "customer": customer_id,
-            "mode": mode,
-            "payment_method_types": ["card"],
-            "line_items": [{"price": price_id, "quantity": 1}],
-            "success_url": success_url,   # no appending — frontend sends complete URL
-            "cancel_url": cancel_url,
-            "payment_method_collection": "if_required",  # skips card for ₹0 free plan
+    if is_free:
+        line_items = [{
+            "price_data": {
+                "currency": "inr",           # match your currency
+                "unit_amount": 0,
+                "recurring": {"interval": "month"},
+                "product_data": {"name": "EdHub Free Trial"},
+            },
+            "quantity": 1,
+        }]
+        subscription_data = {
+            "trial_period_days": 7,
+            "trial_settings": {
+                "end_behavior": {"missing_payment_method": "cancel"}
+            }
         }
+    else:
+        line_items = [{"price": price_id, "quantity": 1}]
+        subscription_data = None
 
-        if metadata:
-            params["metadata"] = metadata
+    params = {
+        "customer": customer_id,
+        "mode": mode,
+        "payment_method_types": ["card"],
+        "line_items": line_items,
+        "success_url": success_url,
+        "cancel_url": cancel_url,
+        "payment_method_collection": "if_required",
+    }
 
-        session = stripe.checkout.Session.create(**params)
-        return session.url
+    if subscription_data:
+        params["subscription_data"] = subscription_data
+
+    if metadata:
+        params["metadata"] = metadata
+
+    session = stripe.checkout.Session.create(**params)
+    return session.url
 
 
     @staticmethod
