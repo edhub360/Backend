@@ -46,7 +46,7 @@
   {
     "page": "FAQ",
     "content": "How do I reset my password? Click Forgot Password on the login page and follow the email instructions. How do I upgrade my plan? Go to Settings and click on Subscription. How do I cancel my subscription? Go to Settings, Subscription, and click Cancel. How do I contact support? Use the chat assistant on the platform."
-  }
+  },
   {
   "page": "Account & Authentication",
   "content": "### How do I create an EdHub360 account? Visit edhub360.com/register and sign up using your email and password or Google OAuth. Verify your email to activate your account.
@@ -74,9 +74,7 @@
 
     ### Is my data secure?
       EdHub360 uses industry-standard encryption and security protocols to protect your personal information. See our Privacy Policy for detail"
-  }
-
-
+  },
   {
   "page": "Subscription Plans & Billing",
   "content": "
@@ -115,8 +113,7 @@
     
     ### Can I pause my subscription?
     Yes, you can pause for up to 3 months. Go to Settings → Subscription → Pause Subscription."
-  }
-
+  },
   {
   "page": "AI Chat & Tutoring",
   "content": "### What is the AI Chat feature?
@@ -151,8 +148,7 @@
     
     ### Can I share my AI chat with others?
     Currently, chats are private to your account. Contact support if you'd like to request this feature"
-  }
-
+  },
   {
   "page": "Quizzes & Practice",
   "content": "### What is Quiz Mode?
@@ -182,8 +178,7 @@
     
     ### Can I see which answers I got wrong?
     Yes, after submission, you'll see detailed feedback for each question, including the correct answer and explanation."
-  }
-
+  },
   {
   "page": "Flashcards & Memorization",
   "content": "### What are flashcards used for?
@@ -211,8 +206,7 @@
     
     ### Can I study flashcards on mobile?
     Yes, the mobile app supports full flashcard functionality including spaced repetition."
-  }
-
+  },
   {
   "page": "Notes & Study Materials",
   "content": "### What is the Notes feature?
@@ -246,9 +240,7 @@
     
     ### Are my notes backed up?
     Yes, all notes are automatically backed up daily. You can restore deleted notes within 30 days."
-  }
-
-
+  },
   {
   "page": "Screenshot Solve - Image Problem Solver",
   "content": "### What is Screenshot Solve?
@@ -292,8 +284,7 @@
     
     ### Is the solution always correct?
     The AI usually provides accurate solutions, but complex problems may occasionally need teacher verification."
-  }
-
+  },
   {
   "page": "Study Planner & Goal Tracking",
   "content": "      ### What is the Study Planner?
@@ -332,8 +323,7 @@
       
       ### Does the app track inactive time?
       No, idle sessions (no activity for 10 minutes) are not counted toward study time."
-  }
-
+  },
   {
   "page": "Courses & Structured Learning",
   "content": "        ### What are Courses?
@@ -363,8 +353,7 @@
         
         ### Are new courses added regularly?
         Yes, we add new courses monthly. Check 'What's New' in the Courses section."
-  }
-
+  },
   {
   "page": "Dashboard Analytics & Progress Tracking",
   "content": "### What information is shown on the Dashboard?
@@ -408,9 +397,7 @@
       
       ### Can I view detailed analytics?
       Pro and Pro Max users can access advanced analytics showing learning patterns, weak areas, and improvement recommendations"
-  }
-
-
+  },
   {
   "page": "Technical Support & Troubleshooting",
   "content": "### The app is running slowly. What can I do?
@@ -453,9 +440,7 @@
         
         ### Is there a knowledge base or help center?
         Yes, visit help.edhub360.com for FAQs, guides, and video tutorials."
-  }
-
-
+  },
   {
   "page": "Teachers & Classroom Management",
   "content": "### Is EdHub360 suitable for teachers?
@@ -494,9 +479,7 @@
         
         ### How much does a Teacher Plan cost?
         Contact sales@edhub360.com for teacher/school pricing and discounts."
-  }
-
-
+  },
   {
   "page": "Privacy, Security & Data Protection",
   "content": "### Is my data secure on EdHub360?
@@ -536,8 +519,7 @@
       
       ### What's your data retention policy?
       We keep your data as long as your account is active. After deletion, we retain anonymized analytics for 90 days, then permanently delete"
-  }
-
+  },
   {
   "page": "Feature Requests & Feedback",
   "content": "### How do I suggest a feature?
@@ -570,8 +552,5 @@
       
       ### Where can I see what changed in each update?
       Go to Settings → About → Release Notes to view the complete changelog."
-  }
-
-  
-  
+  }  
 ]
