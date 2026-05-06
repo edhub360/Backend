@@ -47,4 +47,531 @@
     "page": "FAQ",
     "content": "How do I reset my password? Click Forgot Password on the login page and follow the email instructions. How do I upgrade my plan? Go to Settings and click on Subscription. How do I cancel my subscription? Go to Settings, Subscription, and click Cancel. How do I contact support? Use the chat assistant on the platform."
   }
+  {
+  "page": "Account & Authentication",
+  "content": "### How do I create an EdHub360 account? Visit edhub360.com/register and sign up using your email and password or Google OAuth. Verify your email to activate your account.
+    ### What login methods are available?
+      You can log in using:
+        - Email and password
+        - Google Sign-In (OAuth)
+        - Microsoft Sign-In
+        - Facebook Sign-In
+
+    ### How do I reset my password?
+      Click 'Forgot Password' on the login page. Enter your email and follow the password reset link sent to your inbox. You'll receive a temporary link valid for 24 hours.
+
+    ### I didn't receive the password reset email. What should I do?
+      Check your spam/junk folder. If not found, request a new reset link. Ensure you're using the correct email address associated with your account.
+
+    ### How do I change my password?
+      Go to Settings → Account → Change Password. Enter your current password and set a new one.
+
+    ### Can I change my email address?
+      Yes, go to Settings → Account → Email and update it. You may need to verify the new email address.
+
+    ### How do I delete my account?
+      Contact support at support@edhub360.com or go to Settings → Account → Delete Account. Note: Deleted accounts cannot be recovered.
+
+    ### Is my data secure?
+      EdHub360 uses industry-standard encryption and security protocols to protect your personal information. See our Privacy Policy for detail"
+  }
+
+
+  {
+  "page": "Subscription Plans & Billing",
+  "content": "
+
+    ### What subscription plans does EdHub360 offer?
+    We offer three plans:
+    - **Free Plan:** Basic access to core features
+    - **Pro Plan:** Unlimited AI Chat, advanced flashcards, study planner
+    - **Pro Max Plan:** All premium features including unlimited storage, priority support
+    
+    ### How much does EdHub360 cost?
+    - Free: $0/month
+    - Pro: $9.99/month (or $99.99/year with 17% savings)
+    - Pro Max: $19.99/month (or $199.99/year with 17% savings)
+    
+    ### How do I upgrade my plan?
+    Go to Settings → Subscription and select the plan you want. Complete payment via Stripe. Upgrades take effect immediately.
+    
+    ### How do I downgrade my subscription?
+    Go to Settings → Subscription and select a lower tier. The change takes effect at the next billing cycle.
+    
+    ### Can I cancel my subscription?
+    Yes, go to Settings → Subscription → Cancel Subscription. You'll retain access until the end of your billing period.
+    
+    ### What payment methods do you accept?
+    We accept all major credit cards (Visa, Mastercard, American Express) via Stripe.
+    
+    ### When will I be charged?
+    You'll be charged on the same day each month (or year if annual). You'll receive an invoice email before each charge.
+    
+    ### Can I get a refund?
+    We offer a 7-day money-back guarantee for new subscriptions. Contact support@edhub360.com for refund requests.
+    
+    ### Do you offer student discounts?
+    Yes! Students with a .edu email can get 30% off Pro and Pro Max plans. Verify your student status in Settings.
+    
+    ### Can I pause my subscription?
+    Yes, you can pause for up to 3 months. Go to Settings → Subscription → Pause Subscription."
+  }
+
+  {
+  "page": "AI Chat & Tutoring",
+  "content": "### What is the AI Chat feature?
+    AI Chat lets you have intelligent conversations with an AI tutor powered by Google Gemini. Ask subject-related questions and get instant, detailed answers.
+    
+    ### What subjects can I ask about?
+    You can ask about any subject including:
+    - Mathematics (algebra, calculus, geometry)
+    - Science (physics, chemistry, biology)
+    - History and social studies
+    - Languages
+    - Literature
+    - Computer science
+    - And more!
+    
+    ### How many AI Chat messages do I get?
+    - Free plan: 10 messages/day
+    - Pro plan: Unlimited AI Chat
+    - Pro Max plan: Unlimited AI Chat + priority response time
+    
+    ### Can the AI help with homework?
+    Yes! The AI can help explain concepts, solve problems step-by-step, and provide learning hints. However, we encourage learning over just getting answers.
+    
+    ### Is the AI information accurate?
+    The AI provides accurate information based on its training data. For critical topics, we recommend cross-referencing with your textbooks or teacher.
+    
+    ### Can I save chat conversations?
+    Yes, all chats are automatically saved to your account. You can access them in the AI Chat history section.
+    
+    ### How long are conversations kept?
+    Conversations are stored indefinitely in your account. You can delete individual chats if needed.
+    
+    ### Can I share my AI chat with others?
+    Currently, chats are private to your account. Contact support if you'd like to request this feature"
+  }
+
+  {
+  "page": "Quizzes & Practice",
+  "content": "### What is Quiz Mode?
+    Quiz Mode lets you practice topic-wise questions with instant feedback. You can create custom quizzes or use pre-made ones from EdHub360.
+
+    ### How do I create a custom quiz?
+    Go to Quizzes → Create Quiz. Select a subject and topic, add questions, set the difficulty level, and save.
+    
+    ### Can teachers create quizzes for their classes?
+    Yes, teachers can create quizzes and assign them to students. Students can complete the quiz and see instant results.
+    
+    ### How is my quiz performance tracked?
+    Your scores are displayed on the Dashboard. You can see:
+    - Individual quiz scores
+    - Average quiz score
+    - Performance trends over time
+    - Topic-wise performance breakdown
+    
+    ### Can I retake a quiz?
+    Yes, you can retake any quiz unlimited times. Each attempt is recorded separately.
+    
+    ### How much time do I have to complete a quiz?
+    This depends on the quiz settings. Most quizzes have a time limit displayed before you start.
+    
+    ### What happens if I run out of time?
+    Your quiz is automatically submitted. You'll see your score and can review answers.
+    
+    ### Can I see which answers I got wrong?
+    Yes, after submission, you'll see detailed feedback for each question, including the correct answer and explanation."
+  }
+
+  {
+  "page": "Flashcards & Memorization",
+  "content": "### What are flashcards used for?
+    Flashcards help you memorize key concepts using active recall. They work with spaced repetition to boost long-term retention.
+    
+    ### How do I create flashcards?
+    Go to Flashcards → Create. Enter the question on the front and answer on the back. Organize by subject.
+    
+    ### Can I import flashcards from other sources?
+    Yes, you can import flashcard sets from Quizlet and Anki in .csv format. (Feature availability may vary by plan)
+    
+    ### How does spaced repetition work?
+    Spaced repetition shows harder cards more frequently and easier cards less often, optimizing your study time.
+    
+    ### Can I study offline?
+    Not currently, but you can download your flashcards as a PDF for offline reference.
+    
+    ### How many flashcards can I create?
+    - Free plan: Up to 100 flashcards
+    - Pro plan: Unlimited flashcards
+    - Pro Max plan: Unlimited flashcards + advanced categories
+    
+    ### Can I share flashcards with classmates?
+    Pro and Pro Max users can generate a shareable link. Recipients can view but not edit.
+    
+    ### Can I study flashcards on mobile?
+    Yes, the mobile app supports full flashcard functionality including spaced repetition."
+  }
+
+  {
+  "page": "Notes & Study Materials",
+  "content": "### What is the Notes feature?
+    Notes (also called Notebook) lets you create and manage study notes organized by subject. Supports rich text formatting.
+    
+    ### What formatting options are available?
+    You can:
+    - Bold, italic, underline text
+    - Create numbered and bulleted lists
+    - Add headings and subheadings
+    - Insert images and links
+    - Use code blocks for technical subjects
+    
+    ### Can I sync notes across devices?
+    Yes, all notes are synced in real-time across web and mobile apps.
+    
+    ### How do I organize my notes?
+    Create folders by subject, then subfolders by topic. Notes can be tagged for easy searching.
+    
+    ### Can I share notes with classmates?
+    Pro and Pro Max users can share notes via link or invite specific classmates.
+    
+    ### What's the maximum note size?
+    There's no strict limit, but very large notes may take longer to load. We recommend keeping individual notes under 50 pages.
+    
+    ### Can I export my notes?
+    Yes, you can export individual notes or entire folders as:
+    - PDF
+    - Word document (.docx)
+    - Plain text
+    
+    ### Are my notes backed up?
+    Yes, all notes are automatically backed up daily. You can restore deleted notes within 30 days."
+  }
+
+
+  {
+  "page": "Screenshot Solve - Image Problem Solver",
+  "content": "### What is Screenshot Solve?
+    Screenshot Solve lets you upload an image of any problem or question and get an AI-powered solution instantly.
+    
+    ### What subjects does it support?
+    Screenshot Solve works with:
+    - Mathematics (all levels)
+    - Physics
+    - Chemistry
+    - Biology
+    - Geometry (with diagrams)
+    - Engineering problems
+    - And more!
+    
+    ### How do I use Screenshot Solve?
+    1. Go to Screenshot Solve
+    2. Upload or take a photo of your problem
+    3. Wait for the AI to analyze and provide the solution
+    4. View step-by-step explanations
+    
+    ### What image formats are supported?
+    Supported formats: JPG, PNG, PDF, and screenshots. File size limit: 10 MB.
+    
+    ### Is there a limit to how many problems I can solve?
+    - Free plan: 5 problems/day
+    - Pro plan: 50 problems/day
+    - Pro Max plan: Unlimited
+    
+    ### Why didn't Screenshot Solve recognize my image?
+    The image may be:
+    - Blurry or low quality
+    - At an angle
+    - Too small
+    - In a non-supported format
+    
+    Try re-uploading a clearer, straight-on photo.
+    
+    ### Can I download the solution?
+    Yes, solutions can be saved to your notes or exported as PDF.
+    
+    ### Is the solution always correct?
+    The AI usually provides accurate solutions, but complex problems may occasionally need teacher verification."
+  }
+
+  {
+  "page": "Study Planner & Goal Tracking",
+  "content": "      ### What is the Study Planner?
+      The Study Planner helps you organize your study schedule, set daily goals, and track your progress.
+      
+      ### How do I set a study goal?
+      Go to Study Planner → Set Goal. Choose:
+      - Daily study duration (e.g., 2 hours)
+      - Subjects to focus on
+      - Topics or chapters to cover
+      
+      ### How do I track my progress?
+      The Dashboard shows:
+      - Study streak (consecutive days studied)
+      - Today's goal progress (% completed)
+      - Total study time logged
+      - Weekly activity chart
+      - Subject-wise mastery percentage
+      
+      ### Can I set recurring study goals?
+      Yes, you can set goals for specific days of the week. Goals automatically repeat unless you disable them.
+      
+      ### What happens when I reach my daily goal?
+      You'll see a success notification and earn badges/rewards.
+      
+      ### Can I adjust my goals mid-week?
+      Yes, go to Study Planner → Edit Goals anytime. Changes take effect immediately.
+      
+      ### How is study time calculated?
+      Study time is tracked when you:
+      - Use AI Chat
+      - Take Quizzes
+      - Review Flashcards
+      - Work on Notes
+      - Use Screenshot Solve
+      
+      ### Does the app track inactive time?
+      No, idle sessions (no activity for 10 minutes) are not counted toward study time."
+  }
+
+  {
+  "page": "Courses & Structured Learning",
+  "content": "        ### What are Courses?
+        Courses provide structured learning paths with video content, materials, and quizzes organized chapter by chapter.
+        
+        ### How do I enroll in a course?
+        Go to Courses → Browse and select a course. Click 'Enroll' (may require Pro plan for certain courses).
+        
+        ### Can I access course videos offline?
+        Not currently, but you can download course materials as PDFs.
+        
+        ### How do I track course progress?
+        The Course Dashboard shows:
+        - Modules completed
+        - Current chapter progress
+        - Overall completion percentage
+        - Certificate eligibility
+        
+        ### Are there course certificates?
+        Pro and Pro Max users who complete 100% of a course can download a certificate of completion.
+        
+        ### Can I take courses at my own pace?
+        Yes, there are no deadlines. You can pause and resume courses anytime.
+        
+        ### What if I want to retake a course?
+        You can retake any course. Your progress restarts, but your previous completion is saved in your history.
+        
+        ### Are new courses added regularly?
+        Yes, we add new courses monthly. Check 'What's New' in the Courses section."
+  }
+
+  {
+  "page": "Dashboard Analytics & Progress Tracking",
+  "content": "### What information is shown on the Dashboard?
+      The Dashboard displays:
+      - Study streak
+      - Today's goal progress
+      - Total study time
+      - Badges earned
+      - Average quiz score
+      - Weekly activity chart
+      - Subject mastery overview
+      - Recent activity
+      
+      ### What is a study streak?
+      Your study streak counts consecutive days you've used EdHub360. The more days you study, the higher your streak!
+      
+      ### How do I earn badges?
+      Badges are earned by:
+      - Reaching daily goals
+      - Completing courses
+      - Achieving high quiz scores
+      - Consistent study habits
+      - Milestone achievements
+      
+      ### What are subject badges?
+      Subject badges show your mastery level in each subject:
+      - Bronze: 0-40% mastery
+      - Silver: 41-70% mastery
+      - Gold: 71-90% mastery
+      - Platinum: 91-100% mastery
+      
+      ### Can I reset my stats?
+      Go to Settings → Reset Progress. Note: This action cannot be undone.
+      
+      ### How is mastery calculated?
+      Subject mastery is based on:
+      - Quiz performance in that subject
+      - Course completion
+      - Time spent on that subject
+      - Consistency of study
+      
+      ### Can I view detailed analytics?
+      Pro and Pro Max users can access advanced analytics showing learning patterns, weak areas, and improvement recommendations"
+  }
+
+
+  {
+  "page": "Technical Support & Troubleshooting",
+  "content": "### The app is running slowly. What can I do?
+        Try:
+        - Clearing your browser cache
+        - Restarting the app
+        - Checking your internet connection
+        - Updating to the latest app version
+        - Restarting your device
+        
+        ### I'm getting an error message. What should I do?
+        Note the error code and message. Take a screenshot and email support@edhub360.com with details.
+        
+        ### My changes aren't saving. How do I fix this?
+        - Check your internet connection
+        - Try saving again
+        - Clear cache and reload
+        - Log out and back in
+        - Contact support if the issue persists
+        
+        ### The app keeps crashing. How do I resolve this?
+        1. Update to the latest app version
+        2. Restart your device
+        3. Uninstall and reinstall the app
+        4. Check available storage space
+        5. Contact support@edhub360.com
+        
+        ### How long does customer support typically respond?
+        - Free plan: 48-72 hours
+        - Pro plan: 24 hours
+        - Pro Max plan: 4-8 hours (priority support)
+        
+        ### Can I contact support via chat?
+        Chat support is available for Pro and Pro Max users. Free users can email support@edhub360.com.
+        
+        ### What's the best way to contact EdHub360 support?
+        - Email: support@edhub360.com
+        - In-app chat (Pro/Pro Max users)
+        - Contact form: edhub360.com/contact
+        
+        ### Is there a knowledge base or help center?
+        Yes, visit help.edhub360.com for FAQs, guides, and video tutorials."
+  }
+
+
+  {
+  "page": "Teachers & Classroom Management",
+  "content": "### Is EdHub360 suitable for teachers?
+        Yes! Teachers can use EdHub360 to:
+        - Create custom quizzes
+        - Assign study materials
+        - Track student progress
+        - Create classes and manage students
+        
+        ### How do I create a classroom?
+        Go to Teacher Dashboard → Create Class. Name your class, add a description, and invite students using class codes or email.
+        
+        ### How do I assign assignments to students?
+        Go to your class → Assignments → Create. Select content type (quiz, flashcard set, course), set a deadline, and assign to students.
+        
+        ### Can I see student progress in real-time?
+        Yes, the Teacher Dashboard shows real-time analytics on:
+        - Student completion rates
+        - Quiz performance
+        - Study time
+        - Engagement metrics
+        
+        ### How do I invite students to my class?
+        Generate a class code students can use to join, or send direct email invitations.
+        
+        ### Can I customize content for my class?
+        Yes, you can create custom quizzes, notes, and study materials specific to your curriculum.
+        
+        ### What's included in the Teacher Plan?
+        Teacher plans include:
+        - Unlimited student assignments
+        - Full classroom analytics
+        - Custom content creation
+        - Priority support
+        - Certificate generation for students
+        
+        ### How much does a Teacher Plan cost?
+        Contact sales@edhub360.com for teacher/school pricing and discounts."
+  }
+
+
+  {
+  "page": "Privacy, Security & Data Protection",
+  "content": "### Is my data secure on EdHub360?
+      Yes. We use:
+      - SSL/TLS encryption for data in transit
+      - AES-256 encryption for data at rest
+      - Regular security audits
+      - GDPR and COPPA compliance
+      - Secure password hashing
+      
+      ### What data does EdHub360 collect?
+      We collect:
+      - Account information (name, email, age)
+      - Learning data (quiz scores, study habits, progress)
+      - Device/browser information
+      - IP address for security
+      
+      We do NOT sell your data to third parties.
+      
+      ### How do I access my personal data?
+      Go to Settings → Privacy → Download My Data. You can export all your information in standard formats.
+      
+      ### Can I request data deletion?
+      Yes, go to Settings → Account → Delete Account. All personal data and learning records will be permanently deleted within 30 days.
+      
+      ### Is EdHub360 GDPR compliant?
+      Yes, EdHub360 complies with GDPR, CCPA, and other privacy regulations.
+      
+      ### Is EdHub360 safe for children (COPPA compliant)?
+      Yes, we comply with the Children's Online Privacy Protection Act (COPPA). Parents can request details on what data we collect for minors.
+      
+      ### Who can access my study data?
+      Only you can access your data. Teachers can only see assignment completion and quiz scores if they assigned the work.
+      
+      ### How often are backups taken?
+      We perform daily automatic backups. Data is replicated across multiple secure servers.
+      
+      ### What's your data retention policy?
+      We keep your data as long as your account is active. After deletion, we retain anonymized analytics for 90 days, then permanently delete"
+  }
+
+  {
+  "page": "Feature Requests & Feedback",
+  "content": "### How do I suggest a feature?
+      Go to Settings → Send Feedback or email ideas@edhub360.com. We review all suggestions!
+      
+      ### How do I report a bug?
+      Report bugs via:
+      - In-app Feedback button (Settings → Report Bug)
+      - Email: bugs@edhub360.com
+      - Include steps to reproduce and screenshots
+      
+      ### Can I see which features are coming soon?
+      Yes, visit roadmap.edhub360.com to see upcoming features and vote on priorities.
+      
+      ### How are feature priorities decided?
+      We prioritize based on:
+      - User votes on the roadmap
+      - Frequency of feature requests
+      - User feedback and surveys
+      - Strategic alignment
+      
+      ### How long does it take for features to be released?
+      Timeframes vary. Small features: 2-4 weeks. Medium features: 1-3 months. Major features: 3+ months.
+      
+      ### Can I beta test new features?
+      Yes! Join our Beta Program at edhub360.com/beta to get early access to new features.
+      
+      ### How often are updates released?
+      We release minor updates weekly and major updates monthly.
+      
+      ### Where can I see what changed in each update?
+      Go to Settings → About → Release Notes to view the complete changelog."
+  }
+
+  
+  
 ]
