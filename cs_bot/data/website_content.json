@@ -48,59 +48,46 @@
     "content": "How do I reset my password? Click Forgot Password on the login page and follow the email instructions. How do I upgrade my plan? Go to Settings and click on Subscription. How do I cancel my subscription? Go to Settings, Subscription, and click Cancel. How do I contact support? Use the chat assistant on the platform."
   },
   {
-  "page": "Account & Authentication",
-  "content": "### How do I create an EdHub360 account? Visit edhub360.com/register and sign up using your email and password or Google OAuth. Verify your email to activate your account.
-    ### What login methods are available?
-      You can log in using:
-        - Email and password
-        - Google Sign-In (OAuth)
-        - Microsoft Sign-In
-        - Facebook Sign-In
-
-    ### How do I reset my password?
-      Click 'Forgot Password' on the login page. Enter your email and follow the password reset link sent to your inbox. You'll receive a temporary link valid for 24 hours.
-
-    ### I didn't receive the password reset email. What should I do?
-      Check your spam/junk folder. If not found, request a new reset link. Ensure you're using the correct email address associated with your account.
-
-    ### How do I change my password?
-      Go to Settings → Account → Change Password. Enter your current password and set a new one.
-
-    ### Can I change my email address?
-      Yes, go to Settings → Account → Email and update it. You may need to verify the new email address.
-
-    ### How do I delete my account?
-      Contact support at support@edhub360.com or go to Settings → Account → Delete Account. Note: Deleted accounts cannot be recovered.
-
-    ### Is my data secure?
-      EdHub360 uses industry-standard encryption and security protocols to protect your personal information. See our Privacy Policy for detail"
+    "page": "Home",
+    "content": "Edhub360 is an AI-powered educational platform designed for personalized learning. Core features include AI Tutoring (Chat), interactive Quizzes, recursive Flashcards, dynamic Study Planners, structured Courses, and automated Screenshot Solving. The platform is accessible at app.edhub360.com."
+  },
+  {
+    "page": "AI Chat & Tutoring",
+    "content": "### What is AI Chat?\nAI Chat provides an intelligent conversation interface with an AI tutor powered by Google Gemini. Students can ask subject-related questions and receive instant, detailed explanations.\n\n### Usage Limits:\n- **Free Plan**: 10 messages per day.\n- **Pro Plan**: Unlimited AI Chat.\n- **Pro Max Plan**: Unlimited AI Chat with priority response times.\n\n### Scope:\nThe tutor assists with Mathematics, Science, History, Languages, Literature, and Computer Science."
+  },
+  {
+    "page": "Quizzes & Practice",
+    "content": "### Quiz Mode Features:\n- Topic-wise practice questions with instant feedback.\n- Teachers can create and assign custom quizzes to classes.\n- Performance tracking on the Dashboard (average scores and trends).\n\n### Retake Policy:\nQuizzes can be retaken an unlimited number of times. Each attempt is logged separately for progress tracking."
+  },
+  {
+    "page": "Flashcards & Memorization",
+    "content": "### How do Flashcards work?\nEdhub360 uses active recall and spaced repetition techniques to improve long-term retention. Students can organize cards by subject.\n\n### Import/Export:\n- Import sets from Quizlet and Anki in .csv format (Pro/Pro Max).\n- Export decks as PDFs for offline study."
+  },
+  {
+    "page": "Notes & Study Materials",
+    "content": "### Notebook Features:\n- Rich text editing (bold, lists, headings, code blocks).\n- Organized by subject and topic folders.\n- Real-time sync across web and mobile.\n- Sharing: Pro and Pro Max users can share notes via links or invitations."
+  },
+  {
+    "page": "Screenshot Solve",
+    "content": "### Using Screenshot Solve:\nUpload an image (JPG, PNG, or PDF) of a problem. The AI analyzes the text and diagrams to provide step-by-step solutions for math, physics, chemistry, and biology.\n\n### Plan Limits:\n- **Free**: 5 problems per day.\n- **Pro**: 50 problems per day.\n- **Pro Max**: Unlimited solutions."
+  },
+  {
+    "page": "Subscription & Billing",
+    "content": "### Subscription Tiers:\n- **Free**: $0/month. Basic access.\n- **Pro**: $9.99/month. Includes unlimited Chat and Study Planner.\n- **Pro Max**: $19.99/month. Full premium access with unlimited storage.\n\n### Payments & Management:\n- Managed via Stripe. Major credit cards accepted.\n- Cancellations: Go to Settings > Subscription > Cancel. Access remains until the current period ends.\n- Refunds: 7-day money-back guarantee for new users."
+  },
+  {
+    "page": "Account & Authentication",
+    "content": "### Login Methods:\n- Email and Password.\n- Google, Microsoft, and Facebook OAuth (Social Login).\n\n### Troubleshooting:\n- **Password Reset**: Click 'Forgot Password' to receive a link valid for 24 hours. Check spam folders if not received.\n- **Account Deletion**: Contact support@edhub360.com. Note that data cannot be recovered after deletion."
+  },
+  {
+    "page": "Technical Support",
+    "content": "### Performance Tips:\nIf the app is slow, try clearing browser cache, checking internet connection, or restarting the device.\n\n### Contacting Support:\n- **Free Plan**: Response within 48-72 hours via email (support@edhub360.com).\n- **Pro Plan**: 24-hour response time.\n- **Pro Max**: Priority chat support (4-8 hours).\n- Data Security: EdHub360 uses industry-standard encryption and security protocols to protect your personal information. See our Privacy Policy for detail"
   },
   {
   "page": "Subscription Plans & Billing",
-  "content": "
-
-    ### What subscription plans does EdHub360 offer?
-    We offer three plans:
-    - **Free Plan:** Basic access to core features
-    - **Pro Plan:** Unlimited AI Chat, advanced flashcards, study planner
-    - **Pro Max Plan:** All premium features including unlimited storage, priority support
-    
-    ### How much does EdHub360 cost?
-    - Free: $0/month
-    - Pro: $9.99/month (or $99.99/year with 17% savings)
-    - Pro Max: $19.99/month (or $199.99/year with 17% savings)
-    
-    ### How do I upgrade my plan?
-    Go to Settings → Subscription and select the plan you want. Complete payment via Stripe. Upgrades take effect immediately.
-    
+  "content": "### Subscription plans offered:\n-     
     ### How do I downgrade my subscription?
     Go to Settings → Subscription and select a lower tier. The change takes effect at the next billing cycle.
-    
-    ### Can I cancel my subscription?
-    Yes, go to Settings → Subscription → Cancel Subscription. You'll retain access until the end of your billing period.
-    
-    ### What payment methods do you accept?
-    We accept all major credit cards (Visa, Mastercard, American Express) via Stripe.
     
     ### When will I be charged?
     You'll be charged on the same day each month (or year if annual). You'll receive an invoice email before each charge.
