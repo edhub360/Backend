@@ -35,21 +35,19 @@ class StripeClient:
         """Create Stripe Checkout session"""
 
         if is_free:
+            # $0 subscription — no payment method needed, no trial_settings
+            # (trial_settings conflicts with payment_method_collection="if_required")
+            # Expiry after 7 days is handled by the scheduler, not Stripe billing.
             line_items = [{
                 "price_data": {
-                    "currency": "inr",           # match your currency
+                    "currency": "inr",
                     "unit_amount": 0,
                     "recurring": {"interval": "month"},
                     "product_data": {"name": "EdHub Free Trial"},
                 },
                 "quantity": 1,
             }]
-            subscription_data = {
-                "trial_period_days": 7,
-                "trial_settings": {
-                    "end_behavior": {"missing_payment_method": "cancel"}
-                }
-            }
+            subscription_data = None
         else:
             line_items = [{"price": price_id, "quantity": 1}]
             subscription_data = None

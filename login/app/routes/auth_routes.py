@@ -5,6 +5,7 @@ from uuid import UUID
 import logging
 from starlette.requests import Request
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
@@ -178,7 +179,8 @@ async def google_signin(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Google sign-in error: {str(e)}")
+        import traceback
+        logger.error(f"Google sign-in error: {str(e)}\n{traceback.format_exc()}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Authentication failed"

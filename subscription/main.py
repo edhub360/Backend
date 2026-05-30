@@ -35,9 +35,14 @@ app = FastAPI(title="Subscription Service (Async)", lifespan=lifespan)
 
 app.add_middleware(SecurityHeadersMiddleware)
 
+_environment = os.getenv("ENVIRONMENT", "development")
+_allowed_origins = ["https://app.edhub360.com"]
+if _environment != "production":
+    _allowed_origins += ["http://localhost:5173", "https://localhost:5173", "http://localhost:3000", "https://edhub360.github.io"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://app.edhub360.com"],
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -65,36 +70,47 @@ async def create_checkout_session(
     request: CheckoutSessionRequest,
     db: AsyncSession = Depends(get_db)
 ):
-    customer = await get_customer(db, request.user_id)
-    if not customer:
-        stripe_cust_id = StripeClient.create_customer(str(request.user_id))
-        customer = await create_customer(db, request.user_id, stripe_cust_id)
+    try:
+        customer = await get_customer(db, request.user_id)
+        if not customer:
+            stripe_cust_id = StripeClient.create_customer(str(request.user_id))
+            customer = await create_customer(db, request.user_id, stripe_cust_id)
 
-    price = await get_plan_price(db, request.plan_id, request.billing_period)
-    if not price:
-        raise HTTPException(404, "Plan price not found")
+        price = await get_plan_price(db, request.plan_id, request.billing_period)
+        if not price:
+            raise HTTPException(404, "Plan price not found")
 
-    plan = await get_plan(db, request.plan_id)
-    is_free = plan and plan.name.lower() in ("free", "free trial")
+        plan = await get_plan(db, request.plan_id)
+        is_free = plan and plan.name.lower() in ("free", "free trial")
 
-    # Block free plan reuse
-    if is_free:
-        has_used = await has_used_free_plan(db, customer.id)
-        if has_used:
-            raise HTTPException(
-                status_code=403,
-                detail="Free plan has already been used. Please upgrade to a paid plan."
-            )
+        # Block free plan reuse
+        if is_free:
+            has_used = await has_used_free_plan(db, customer.id)
+            if has_used:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Free plan has already been used. Please upgrade to a paid plan."
+                )
 
-    url = StripeClient.create_checkout_session(
-        customer.stripe_customer_id,
-        price.stripe_price_id,
-        request.success_url,
-        request.cancel_url,
-        {"user_id": str(request.user_id)},
-        is_free=is_free   # pass flag
-    )
-    return CheckoutSessionResponse(url=url)
+        url = StripeClient.create_checkout_session(
+            customer.stripe_customer_id,
+            price.stripe_price_id,
+            request.success_url,
+            request.cancel_url,
+            {"user_id": str(request.user_id)},
+            is_free=is_free
+        )
+        return CheckoutSessionResponse(url=url)
+
+    except HTTPException:
+        raise
+    except stripe.error.StripeError as e:
+        print(f"❌ Stripe error in checkout: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Stripe error: {str(e)}")
+    except Exception as e:
+        import traceback
+        print(f"❌ Checkout error: {str(e)}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Checkout failed: {str(e)}")
 
 
 # ========== CACHE CONFIGURATION ==========

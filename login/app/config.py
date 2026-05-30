@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     
     # OAuth settings
     google_client_id: str = Field(..., description="Google OAuth client ID")
+    facebook_app_id: str = Field(default="", description="Facebook OAuth app ID")
+    facebook_app_secret: str = Field(default="", description="Facebook OAuth app secret")
     
     # Security settings
     bcrypt_rounds: int = Field(default=12, description="Bcrypt hashing rounds")

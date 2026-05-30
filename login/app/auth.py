@@ -166,16 +166,21 @@ async def verify_microsoft_token(token: str) -> Dict[str, Any]:
         )
 
 async def verify_facebook_token(token: str) -> Dict[str, Any]:
-    """Verify Facebook access token via Graph API."""
+    """Verify Facebook access token via Graph API, validated with app secret proof."""
     try:
+        import hashlib, hmac
+        app_secret = settings.facebook_app_secret
+        # appsecret_proof prevents token theft — FB validates HMAC of token signed with app secret
+        appsecret_proof = hmac.new(
+            app_secret.encode(), token.encode(), hashlib.sha256
+        ).hexdigest() if app_secret else None
+
+        params: Dict[str, Any] = {"fields": "id,name,email,picture", "access_token": token}
+        if appsecret_proof:
+            params["appsecret_proof"] = appsecret_proof
+
         async with httpx.AsyncClient() as client:
-            response = await client.get(
-                "https://graph.facebook.com/me",
-                params={
-                    "fields": "id,name,email,picture",
-                    "access_token": token,
-                }
-            )
+            response = await client.get("https://graph.facebook.com/me", params=params)
 
         if response.status_code != 200:
             logger.warning(f"Facebook Graph request failed: {response.status_code}")

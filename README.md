@@ -1,228 +1,125 @@
-# EdHub360 Backend - AI Chat Services
+# EdHub360 Backend
 
-A robust backend services platform providing AI-powered chat capabilities and microservices for the EdHub360 educational platform.
+Python microservices powering the EdHub360 learning platform, deployed on Google Cloud Run.
 
-## Overview
+## Services
 
-The Backend repository contains modular microservices that power the AI chat and learning features of EdHub360. Built with Python and containerized with Docker, it provides scalable, production-ready APIs for the StudentHub frontend.
+| Service | Port (local) | Description |
+|---|---|---|
+| `login` | 8001 | Auth — Google, Microsoft, Facebook OAuth + JWT |
+| `subscription` | — | Stripe billing and plan management |
+| `ai_chat` | — | AI conversational assistant |
+| `flashcard` | — | Flashcard deck management |
+| `quiz` | — | Quiz generation |
+| `notebook` | — | Notes / notebook |
+| `study_planner` | — | Study schedule |
+| `cs_bot` | — | CS-specific Q&A bot |
+| `courses` | — | Course catalogue |
 
-## Technology Stack
+## Tech Stack
 
-- **Primary Language**: Python (98%)
-- **Containerization**: Docker (1.9%)
-- **Templating**: Mako (0.1%)
+- **Framework**: FastAPI (async)
+- **ORM**: SQLAlchemy 2.0 (async) + asyncpg
+- **Database**: PostgreSQL (Cloud SQL on GCP)
+- **Auth**: JWT (python-jose), bcrypt, OAuth via provider APIs
+- **Payments**: Stripe
+- **Deployment**: Docker → Google Artifact Registry → Cloud Run
+- **CI/CD**: Google Cloud Build
 
-## Features
-
-### Core Services
-- **AI Chat Services** - Intelligent chat functionality powered by AI
-- **Authentication & Authorization** - Secure user authentication
-- **Microservices Architecture** - Modular, scalable service design
-- **RESTful APIs** - Clean, standardized API endpoints
-
-### Key Capabilities
-- Production-grade error handling
-- Database integration and ORM support
-- Authentication with JWT tokens
-- Rate limiting and security features
-- Comprehensive logging and monitoring
-- Docker containerization for easy deployment
-
-## Project Structure
-
-```
-Backend/
-├── auth/              # Authentication microservice
-├── chat/              # AI chat services
-├── core/              # Shared utilities and core modules
-├── migrations/        # Database migrations
-├── tests/             # Test suites
-├── Dockerfile         # Docker containerization
-└── requirements.txt   # Python dependencies
-```
-
-## Getting Started
-
-### Prerequisites
-
-- Python 3.8+
-- Docker & Docker Compose
-- PostgreSQL (for persistence)
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/edhub360/Backend.git
-   cd Backend
-   ```
-
-2. **Set up environment variables**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your configuration
-   ```
-
-3. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Run database migrations**
-   ```bash
-   alembic upgrade head
-   ```
-
-5. **Start the development server**
-   ```bash
-   python -m uvicorn main:app --reload
-   ```
-
-### Docker Deployment
+## Local Development — Login Service
 
 ```bash
-# Build the Docker image
-docker build -t edhub360-backend .
+cd Backend/login
 
-# Run the container
-docker run -p 8000:8000 --env-file .env edhub360-backend
+# Create and activate virtualenv
+python -m venv venv
+source venv/bin/activate   # Windows: venv\Scripts\activate
+
+pip install -r app/requirements.txt   # or requirements.txt at service root
 ```
 
-## API Documentation
+Create `Backend/login/.env` (never commit):
 
-Once the server is running, visit:
-- **Swagger UI**: `http://localhost:8000/docs`
-- **ReDoc**: `http://localhost:8000/redoc`
-
-## Configuration
-
-Environment variables can be set in the `.env` file:
-
-```
-DATABASE_URL=postgresql://user:password@localhost/edhub360
+```env
+DATABASE_URL=postgresql+asyncpg://postgres:password@localhost:5432/studenthub
 JWT_SECRET_KEY=your-secret-key
-AI_API_KEY=your-ai-service-key
-CORS_ORIGINS=http://localhost:3000
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=15
+REFRESH_TOKEN_EXPIRE_DAYS=30
+
+GOOGLE_CLIENT_ID=your-google-client-id
+
+FACEBOOK_APP_ID=your-facebook-app-id
+FACEBOOK_APP_SECRET=your-facebook-app-secret
+
+BCRYPT_ROUNDS=12
+RATE_LIMIT_REQUESTS=5
+DEBUG=true
+
+CORS_ORIGINS=["http://localhost:5173","https://localhost:5173"]
+
+FRONTEND_BASE_URL=https://localhost:5173/StudentHub
+
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=your-email@gmail.com
+SMTP_PASSWORD=your-app-password
+SMTP_FROM_EMAIL=your-email@gmail.com
+SMTP_FROM_NAME=EdHub360
 ```
-
-## Testing
-
-Run the test suite:
 
 ```bash
-pytest tests/
-pytest tests/ -v --cov=src  # With coverage
+uvicorn app.main:app --reload --port 8001
 ```
 
-## Microservices
+API docs available at `http://localhost:8001/docs`.
 
-### Authentication Service
-- User registration and login
-- Google Sign-In integration
-- JWT token management
-- Password reset functionality
+## Auth Flow
 
-### Chat Service
-- AI-powered conversation handling
-- Message persistence
-- Conversation history management
-- Real-time updates support
+All OAuth providers follow the same pattern:
 
-### Additional Services
-- User management
-- Course integration
-- Progress tracking
-- Content serving
+1. Frontend obtains an access token from the provider (Google/Microsoft/Facebook)
+2. Token is POSTed to `/auth/{provider}`
+3. Backend verifies the token against the provider's API (userinfo / Graph API)
+4. User is created or updated in the database
+5. JWT access token + refresh token are returned
 
-## Database
+### Endpoints
 
-The backend uses PostgreSQL with Alembic for migration management.
+| Method | Path | Description |
+|---|---|---|
+| POST | `/auth/google` | Google Sign-In |
+| POST | `/auth/microsoft` | Microsoft Sign-In |
+| POST | `/auth/facebook` | Facebook Sign-In |
+| POST | `/auth/login` | Email/password login |
+| POST | `/auth/register` | Email/password registration |
+| POST | `/auth/refresh` | Rotate refresh token |
+| POST | `/auth/logout` | Revoke refresh token |
+| GET | `/auth/session/check` | Validate session (lightweight) |
+| GET | `/auth/me` | Current user profile |
+| POST | `/auth/forgot-password` | Send password reset email |
+| POST | `/auth/reset-password` | Apply password reset |
 
-**Key Tables**:
-- `users` - User accounts
-- `auth_credentials` - Authentication data
-- `refresh_tokens` - Token management
-- `conversations` - Chat history
-- `messages` - Individual messages
+## Subscription Service
 
-## Performance & Scalability
+Manages Stripe billing. Deployed separately on Cloud Run.
 
-- Asynchronous request handling with FastAPI
-- Connection pooling for database
-- Caching strategies for frequently accessed data
-- Horizontal scaling support via containerization
+Key endpoints: `/plans`, `/checkout`, `/subscriptions/{user_id}`, `/webhooks/stripe`
 
-## Security
-
-- Password hashing with bcrypt
-- JWT-based authentication
-- Rate limiting on sensitive endpoints
-- CORS configuration
-- Input validation and sanitization
-- Secure error handling (no sensitive data leakage)
-
-## Logging & Monitoring
-
-- Structured logging throughout the application
-- Request/response logging
-- Error tracking and reporting
-- Performance metrics collection
-
-## Contributing
-
-1. Create a feature branch from `main`
-2. Make your changes and write tests
-3. Ensure all tests pass: `pytest tests/`
-4. Submit a pull request
-
-## CI/CD
-
-The repository includes GitHub Actions workflows for:
-- Automated testing on push and PRs
-- Code quality checks
-- Docker image building
-- Deployment automation
+Free plan uses a $0 Stripe subscription. Expiry after 7 days is handled by the built-in APScheduler job, not Stripe trial settings.
 
 ## Deployment
 
-Deployments are automated through GitHub Actions and can be deployed to:
-- Cloud platforms (AWS, GCP, Azure)
-- Kubernetes clusters
-- Docker Compose environments
-- Traditional VPS/server setups
+Each service has its own `Dockerfile` and `cloudbuild.yaml`. Cloud Build builds the Docker image, pushes to Artifact Registry, and deploys to Cloud Run with secrets sourced from Secret Manager.
 
-## Troubleshooting
+```bash
+# Trigger manually (requires gcloud auth)
+gcloud builds submit --config Backend/subscription/cloudbuild.yaml Backend/
+```
 
-### Database Connection Issues
-- Verify PostgreSQL is running
-- Check DATABASE_URL in .env
-- Review connection logs
+## Security Notes
 
-### Authentication Failures
-- Ensure JWT_SECRET_KEY is set correctly
-- Check token expiration settings
-- Verify Google OAuth credentials if using Sign-In
-
-### AI Service Issues
-- Validate AI_API_KEY configuration
-- Check API rate limits
-- Review service logs for details
-
-## Related Repositories
-
-- [StudentHub](https://github.com/edhub360/StudentHub) - Frontend UI repository
-
-## License
-
-[Your License Here]
-
-## Support
-
-For issues and questions:
-1. Check existing GitHub issues
-2. Create a new issue with detailed information
-3. Contact the development team
-
-## Changelog
-
-See [CHANGELOG.md](CHANGELOG.md) for version history and updates.
+- `.env` files are git-ignored — never commit secrets
+- The Facebook `appsecret_proof` (HMAC-SHA256) is sent with every Graph API call to prevent token replay attacks
+- Refresh tokens are stored as SHA-256 hashes; the raw token only exists in transit
+- New login revokes all previous sessions for the same user
