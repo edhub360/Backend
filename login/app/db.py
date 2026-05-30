@@ -10,18 +10,18 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 # Create async engine with SSL in connect_args
+_connect_args: dict = {
+    "server_settings": {"search_path": "stud_hub_schema"}
+}
+if not settings.debug:
+    _connect_args["ssl"] = "require"
+
 engine = create_async_engine(
     settings.database_url,
     echo=settings.db_echo,
     pool_pre_ping=True,
     pool_recycle=300,
-    # ✅ SSL configuration for asyncpg
-    connect_args={
-        "ssl": "require",  # This is how asyncpg handles SSL
-        "server_settings": {
-            "search_path": "stud_hub_schema"
-        }
-    }
+    connect_args=_connect_args,
 )
 
 # Rest of your code remains the same...
