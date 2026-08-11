@@ -90,6 +90,7 @@ services:
 
   Notes:
     build: ./Notes
+    image: edhub360-notes
     restart: unless-stopped
     env_file: ./Notes/env.prod
     depends_on:
