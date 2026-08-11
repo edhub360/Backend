@@ -15,9 +15,12 @@ engine = create_async_engine(
     echo=settings.db_echo,
     pool_pre_ping=True,
     pool_recycle=300,
-    # ✅ SSL configuration for asyncpg
     connect_args={
-        "ssl": "require",  # This is how asyncpg handles SSL
+        # SSL disabled: the Cloud SQL Auth Proxy already encrypts the tunnel
+        # to Cloud SQL itself and rejects a second TLS handshake on its local
+        # side ("rejected SSL upgrade"). Not applicable to Cloud Run's
+        # Unix-socket connection either way.
+        "ssl": False,
         "server_settings": {
             "search_path": "stud_hub_schema"
         }
