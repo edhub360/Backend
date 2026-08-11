@@ -1,0 +1,23 @@
+# Environments
+.venv/
+venv/
+env/
+.env
+.env.*
+!.env.example
+*/env.prod
+gcp-key.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Logs
+*.log
+*-uvicorn.err.log
+*-uvicorn.out.log
+
+# Node (docker-compose planning artifacts, etc.)
+node_modules/
+package-lock.json
