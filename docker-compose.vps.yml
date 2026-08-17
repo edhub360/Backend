@@ -1,11 +1,14 @@
 services:
-  cloud-sql-proxy:
-    image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.14.0
+  # Self-hosted Postgres for dev/test — replaces the Cloud SQL Auth Proxy
+  # while there are no real users yet. See VPS_DEPLOYMENT_PLAN.md for the
+  # plan to migrate back to Cloud SQL at launch (cloud-sql-proxy config
+  # preserved in git history for that cutover).
+  postgres:
+    image: pgvector/pgvector:pg17
     restart: unless-stopped
-    command:
-      - "--address=0.0.0.0"
-      - "--port=5432"
-      - "arctic-sentry-467317-s7:us-central1:studenthub"
+    env_file: ./db.env
+    volumes:
+      - pgdata:/var/lib/postgresql/data
     networks:
       - edhub360
 
@@ -14,7 +17,7 @@ services:
     restart: unless-stopped
     env_file: ./login/env.prod
     depends_on:
-      - cloud-sql-proxy
+      - postgres
     ports:
       - "127.0.0.1:8001:8080"
     networks:
@@ -25,7 +28,7 @@ services:
     restart: unless-stopped
     env_file: ./subscription/env.prod
     depends_on:
-      - cloud-sql-proxy
+      - postgres
     ports:
       - "127.0.0.1:8002:8080"
     networks:
@@ -36,7 +39,7 @@ services:
     restart: unless-stopped
     env_file: ./ai_chat/env.prod
     depends_on:
-      - cloud-sql-proxy
+      - postgres
     ports:
       - "127.0.0.1:8003:8080"
     volumes:
@@ -49,7 +52,7 @@ services:
     restart: unless-stopped
     env_file: ./flashcard/env.prod
     depends_on:
-      - cloud-sql-proxy
+      - postgres
     ports:
       - "127.0.0.1:8004:8080"
     networks:
@@ -60,7 +63,7 @@ services:
     restart: unless-stopped
     env_file: ./quiz/env.prod
     depends_on:
-      - cloud-sql-proxy
+      - postgres
     ports:
       - "127.0.0.1:8005:8080"
     networks:
@@ -71,7 +74,7 @@ services:
     restart: unless-stopped
     env_file: ./study_planner/env.prod
     depends_on:
-      - cloud-sql-proxy
+      - postgres
     ports:
       - "127.0.0.1:8006:8080"
     networks:
@@ -82,7 +85,7 @@ services:
     restart: unless-stopped
     env_file: ./cs_bot/env.prod
     depends_on:
-      - cloud-sql-proxy
+      - postgres
     ports:
       - "127.0.0.1:8007:8080"
     networks:
@@ -94,7 +97,7 @@ services:
     restart: unless-stopped
     env_file: ./Notes/env.prod
     depends_on:
-      - cloud-sql-proxy
+      - postgres
     ports:
       - "127.0.0.1:8008:8080"
     networks:
@@ -105,7 +108,7 @@ services:
     restart: unless-stopped
     env_file: ./courses/env.prod
     depends_on:
-      - cloud-sql-proxy
+      - postgres
     ports:
       - "127.0.0.1:8009:8080"
     networks:
@@ -116,4 +119,5 @@ networks:
     driver: bridge
 
 volumes:
+  pgdata:
   ai_chat_data:
