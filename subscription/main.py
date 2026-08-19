@@ -74,8 +74,7 @@ async def create_checkout_session(
     if not price:
         raise HTTPException(404, "Plan price not found")
 
-    plan = await get_plan(db, request.plan_id)
-    is_free = plan and plan.name.lower() in ("free", "free trial")
+    is_free = price.amount == 0
 
     # Block free plan reuse
     if is_free:
