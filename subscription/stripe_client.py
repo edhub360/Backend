@@ -34,16 +34,9 @@ class StripeClient:
     ) -> str:
         """Create Stripe Checkout session"""
 
+        line_items = [{"price": price_id, "quantity": 1}]
+
         if is_free:
-            line_items = [{
-                "price_data": {
-                    "currency": "inr",           # match your currency
-                    "unit_amount": 0,
-                    "recurring": {"interval": "month"},
-                    "product_data": {"name": "EdHub Free Trial"},
-                },
-                "quantity": 1,
-            }]
             subscription_data = {
                 "trial_period_days": 7,
                 "trial_settings": {
@@ -51,7 +44,6 @@ class StripeClient:
                 }
             }
         else:
-            line_items = [{"price": price_id, "quantity": 1}]
             subscription_data = None
 
         params = {
