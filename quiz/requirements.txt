@@ -8,3 +8,4 @@ pydantic[email]
 email-validator
 google-cloud-storage==2.16.0
 pandas==2.2.2
+python-jose[cryptography]==3.3.0

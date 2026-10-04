@@ -18,6 +18,7 @@ from schemas import (
 )
 
 from study_stats import update_user_study_stats
+from auth import get_current_user
 from google.cloud import storage
 import pandas as pd
 import io
@@ -55,8 +56,14 @@ async def healthz(session: AsyncSession = Depends(get_session)):
 # ============================================
 
 @app.post("/users", response_model=UserOut, status_code=status.HTTP_201_CREATED)
-async def create_user(payload: UserCreate, session: AsyncSession = Depends(get_session)):
-    """Create a new user"""
+async def create_user(
+    payload: UserCreate,
+    session: AsyncSession = Depends(get_session),
+    current_user: str = Depends(get_current_user),
+):
+    """Create a new user. Not currently called by the frontend (login owns
+    registration into this same shared users table) - auth required here
+    purely so this can't be hit anonymously."""
     user = User(**payload.model_dump())
     session.add(user)
     await session.commit()
@@ -64,23 +71,38 @@ async def create_user(payload: UserCreate, session: AsyncSession = Depends(get_s
     return user
 
 @app.get("/users", response_model=List[UserOut])
-async def list_users(limit: int = 100, session: AsyncSession = Depends(get_session)):
-    """List all users"""
+async def list_users(
+    limit: int = 100,
+    session: AsyncSession = Depends(get_session),
+    current_user: str = Depends(get_current_user),
+):
+    """List all users. Not currently called by the frontend - auth required
+    so the full user list can't be scraped anonymously."""
     result = await session.execute(select(User).limit(limit))
     return result.scalars().all()
 
 @app.get("/users/{user_id}", response_model=UserOut)
-async def get_user(user_id: str, session: AsyncSession = Depends(get_session)):
-    """Get user by ID"""
-    obj = await session.get(User, user_id)
+async def get_user(
+    user_id: str,
+    session: AsyncSession = Depends(get_session),
+    current_user: str = Depends(get_current_user),
+):
+    """Get user by ID. `user_id` path param is kept for URL compatibility but
+    ignored - always resolves to the authenticated caller, never someone else's."""
+    obj = await session.get(User, current_user)
     if not obj:
         raise HTTPException(status_code=404, detail="User not found")
     return obj
 
 @app.patch("/users/{user_id}", response_model=UserOut)
-async def update_user(user_id: str, payload: UserUpdate, session: AsyncSession = Depends(get_session)):
-    """Update user details"""
-    obj = await session.get(User, user_id)
+async def update_user(
+    user_id: str,
+    payload: UserUpdate,
+    session: AsyncSession = Depends(get_session),
+    current_user: str = Depends(get_current_user),
+):
+    """Update user details. Always operates on the authenticated caller - see get_user."""
+    obj = await session.get(User, current_user)
     if not obj:
         raise HTTPException(status_code=404, detail="User not found")
     for k, v in payload.model_dump(exclude_unset=True).items():
@@ -90,9 +112,15 @@ async def update_user(user_id: str, payload: UserUpdate, session: AsyncSession =
     return obj
 
 @app.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_user(user_id: str, session: AsyncSession = Depends(get_session)):
-    """Delete a user"""
-    obj = await session.get(User, user_id)
+async def delete_user(
+    user_id: str,
+    session: AsyncSession = Depends(get_session),
+    current_user: str = Depends(get_current_user),
+):
+    """Delete a user. Always operates on the authenticated caller - see get_user.
+    This is the same stud_hub_schema.users table login authenticates against,
+    so this used to let anyone delete anyone's account with no token at all."""
+    obj = await session.get(User, current_user)
     if not obj:
         raise HTTPException(status_code=404, detail="User not found")
     await session.delete(obj)
@@ -334,21 +362,27 @@ async def get_quiz_detail(
 
 
 @app.post("/quiz-attempts", response_model=QuizAttemptResponse, status_code=status.HTTP_201_CREATED)
-async def submit_quiz_attempt(payload: QuizAttemptCreate, session: AsyncSession = Depends(get_session)):
-    """Submit a quiz attempt and save results"""
+async def submit_quiz_attempt(
+    payload: QuizAttemptCreate,
+    session: AsyncSession = Depends(get_session),
+    current_user: str = Depends(get_current_user),
+):
+    """Submit a quiz attempt and save results. Always recorded under the
+    authenticated caller - payload.user_id is ignored so one user can't log
+    attempts (or inflate stats) under someone else's account."""
     # Verify user exists
-    user = await session.get(User, payload.user_id)
+    user = await session.get(User, current_user)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    
+
     # Verify quiz exists
     quiz = await session.get(Quiz, payload.quiz_id)
     if not quiz:
         raise HTTPException(status_code=404, detail="Quiz not found")
-    
+
     # Create attempt
     attempt = QuizAttempt(
-        user_id=payload.user_id,
+        user_id=current_user,
         quiz_id=payload.quiz_id,
         score=payload.score,
         total_questions=payload.total_questions,
@@ -384,16 +418,22 @@ async def submit_quiz_attempt(payload: QuizAttemptCreate, session: AsyncSession 
     )
 
 @app.get("/users/{user_id}/quiz-attempts", response_model=List[UserQuizHistory])
-async def get_user_quiz_history(user_id: str, limit: int = 50, session: AsyncSession = Depends(get_session)):
-    """Get user's quiz attempt history"""
+async def get_user_quiz_history(
+    user_id: str,
+    limit: int = 50,
+    session: AsyncSession = Depends(get_session),
+    current_user: str = Depends(get_current_user),
+):
+    """Get user's quiz attempt history. `user_id` path param is ignored -
+    always returns the authenticated caller's own history."""
     query = text("""
         SELECT * FROM stud_hub_schema.user_quiz_history
         WHERE user_id = :user_id
         ORDER BY completed_at DESC
         LIMIT :limit
     """)
-    
-    result = await session.execute(query, {"user_id": user_id, "limit": limit})
+
+    result = await session.execute(query, {"user_id": current_user, "limit": limit})
     rows = result.fetchall()
     
     return [
@@ -435,10 +475,14 @@ async def get_quiz_statistics(session: AsyncSession = Depends(get_session)):
 
 # ---------------- Legacy Quiz Endpoints (Deprecated) ----------------
 @app.post("/quizzes/legacy", response_model=QuizOut, status_code=status.HTTP_201_CREATED)
-async def create_quiz_legacy(payload: QuizCreate, session: AsyncSession = Depends(get_session)):
+async def create_quiz_legacy(
+    payload: QuizCreate,
+    session: AsyncSession = Depends(get_session),
+    current_user: str = Depends(get_current_user),
+):
     """Legacy endpoint - use POST /quiz-attempts instead"""
     quiz = Quiz(
-        user_id=payload.user_id,
+        user_id=current_user,
         questions=[q.model_dump() for q in payload.questions] if payload.questions else None,
         score=payload.score,
         time_taken=payload.time_taken,
@@ -457,7 +501,11 @@ from sqlalchemy import select, func
 async def get_quiz_dashboard_summary(
     user_id: str,
     session: AsyncSession = Depends(get_session),
+    current_user: str = Depends(get_current_user),
 ):
+    """`user_id` query param is kept for URL compatibility but ignored -
+    always returns the authenticated caller's own dashboard."""
+    user_id = current_user
     user = await session.get(User, user_id)
     if not user:
         raise HTTPException(
@@ -515,7 +563,14 @@ async def get_quiz_dashboard_summary(
     )
 
 @app.get("/dashboard/weekly-activity", response_model=WeeklyActivityResponse)
-async def get_weekly_activity(user_id: str, session: AsyncSession = Depends(get_session)):
+async def get_weekly_activity(
+    user_id: str,
+    session: AsyncSession = Depends(get_session),
+    current_user: str = Depends(get_current_user),
+):
+    """`user_id` query param is kept for URL compatibility but ignored -
+    always returns the authenticated caller's own activity."""
+    user_id = current_user
     user = await session.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")

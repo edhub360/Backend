@@ -13,7 +13,7 @@ from stripe_client import StripeClient
 from crud import *
 from schema import *
 from db import get_db, engine
-from models import Base
+from models import Base, User
 from auth import get_current_user
 from email_service import send_subscription_success_email, send_subscription_expiry_email
 from middleware.security_headers import SecurityHeadersMiddleware
@@ -63,12 +63,16 @@ async def get_db_session() -> AsyncSession:
 @app.post("/checkout", response_model=CheckoutSessionResponse)
 async def create_checkout_session(
     request: CheckoutSessionRequest,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    customer = await get_customer(db, request.user_id)
+    """request.user_id is ignored - checkout is always created for the
+    authenticated caller, never on someone else's behalf."""
+    user_id = current_user.user_id
+    customer = await get_customer(db, user_id)
     if not customer:
-        stripe_cust_id = StripeClient.create_customer(str(request.user_id))
-        customer = await create_customer(db, request.user_id, stripe_cust_id)
+        stripe_cust_id = StripeClient.create_customer(str(user_id))
+        customer = await create_customer(db, user_id, stripe_cust_id)
 
     price = await get_plan_price(db, request.plan_id, request.billing_period)
     if not price:
@@ -90,7 +94,7 @@ async def create_checkout_session(
         price.stripe_price_id,
         request.success_url,
         request.cancel_url,
-        {"user_id": str(request.user_id)},
+        {"user_id": str(user_id)},
         is_free=is_free   # pass flag
     )
     return CheckoutSessionResponse(url=url)
@@ -162,10 +166,13 @@ async def get_plans(db: AsyncSession = Depends(get_db)):
 @app.get("/subscriptions/{user_id}")
 async def get_subscription_by_user_id(
     user_id: UUID,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    """Get subscription by user ID — Stripe-only plans."""
-
+    """Get subscription by user ID — Stripe-only plans. `user_id` path param
+    is kept for URL compatibility but ignored - always resolves to the
+    authenticated caller, never someone else's subscription."""
+    user_id = current_user.user_id
     sub = await get_user_subscription(db, user_id)
     if sub:
         return {
@@ -185,20 +192,24 @@ async def get_subscription_by_user_id(
 
 @app.get("/subscriptions/me", response_model=SubscriptionOut)
 async def get_my_subscription(
-    user_id: UUID, 
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    sub = await get_user_subscription(db, user_id)
+    sub = await get_user_subscription(db, current_user.user_id)
     if not sub:
         raise HTTPException(404, "No active subscription")
     return sub  # TODO: join plan
 
 @app.post("/subscriptions/{user_id}/cancel")
 async def cancel_subscription(
-    user_id: UUID, 
-    request: CancelSubscriptionRequest, 
-    db: AsyncSession = Depends(get_db)
+    user_id: UUID,
+    request: CancelSubscriptionRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
+    """`user_id` path param is kept for URL compatibility but ignored - always
+    cancels the authenticated caller's own subscription."""
+    user_id = current_user.user_id
     sub = await get_user_subscription(db, user_id)
     if not sub:
         raise HTTPException(404, "No active subscription")
@@ -485,9 +496,12 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
 @app.get("/payment-methods/{user_id}")
 async def get_payment_methods(
     user_id: UUID,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    """Get user's payment methods from Stripe"""
+    """Get user's payment methods from Stripe. `user_id` path param is kept
+    for URL compatibility but ignored - always the authenticated caller's own."""
+    user_id = current_user.user_id
     try:
         customer = await get_customer(db, user_id)
         if not customer:
@@ -516,11 +530,13 @@ class CustomerPortalRequest(BaseModel):
 @app.post("/create-customer-portal-session")
 async def create_customer_portal_session(
     request: CustomerPortalRequest,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    """Create Stripe Customer Portal session"""
+    """Create Stripe Customer Portal session. request.user_id is ignored -
+    the portal session is always created for the authenticated caller."""
     try:
-        user_id = UUID(request.user_id)
+        user_id = current_user.user_id
         print(f"🔍 Creating portal for user: {user_id}")
 
         customer = await get_customer(db, user_id)

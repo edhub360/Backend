@@ -9,6 +9,7 @@ from models import FlashcardAnalytics
 from schemas import FlashcardAnalyticsCreate, FlashcardAnalyticsOut, FlashcardDeckListItem, FlashcardDeckDetail, FlashcardDecksResponse, PaginationMeta
 from database import get_session
 from models import Quiz, QuizQuestion
+from auth import get_current_user
 from middleware.security_headers import SecurityHeadersMiddleware
 
 # ========== APP INITIALIZATION ==========
@@ -194,21 +195,23 @@ async def get_flashcard_deck_detail(
 async def log_flashcard_analytics(
     payload: FlashcardAnalyticsCreate,
     session: AsyncSession = Depends(get_session),
+    current_user: str = Depends(get_current_user),
 ):
     """
-    Store flashcard review analytics (deck_id, user_id, card_reviewed, time_taken)
+    Store flashcard review analytics (deck_id, user_id, card_reviewed, time_taken).
+    Always recorded under the authenticated caller - payload.user_id is ignored.
     """
     analytics = FlashcardAnalytics(
         deck_id=payload.deck_id,
-        user_id=payload.user_id,
+        user_id=current_user,
         card_reviewed=payload.card_reviewed,
         time_taken=payload.time_taken,
     )
-    
+
     session.add(analytics)
     await session.commit()
     await session.refresh(analytics)
-    
+
     # Adapt to response model
     return FlashcardAnalyticsOut(
         analytics_id=analytics.analytics_id,
