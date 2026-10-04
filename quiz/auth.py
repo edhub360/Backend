@@ -3,14 +3,22 @@
 # No DB round trip here on purpose - this runs on every request.
 
 import os
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
 
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-secret-key-here")
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
+ADMIN_KEY = os.getenv("ADMIN_KEY", "")
 
 bearer_scheme = HTTPBearer()
+
+
+def require_admin(x_admin_key: str = Header(...)) -> None:
+    """Gate for internal/ops-only routes (bulk import, etc) - not tied to a
+    user account, just a shared secret only the team knows."""
+    if not ADMIN_KEY or x_admin_key != ADMIN_KEY:
+        raise HTTPException(status_code=403, detail="Forbidden")
 
 
 async def get_current_user(

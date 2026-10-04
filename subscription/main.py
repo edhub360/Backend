@@ -14,7 +14,7 @@ from crud import *
 from schema import *
 from db import get_db, engine
 from models import Base, User
-from auth import get_current_user
+from auth import get_current_user, require_admin
 from email_service import send_subscription_success_email, send_subscription_expiry_email
 from middleware.security_headers import SecurityHeadersMiddleware
 
@@ -577,7 +577,7 @@ async def create_customer_portal_session(
 
 # ========== DEBUG ONLY — REMOVE IN PRODUCTION ==========
 
-@app.get("/scheduler/status")
+@app.get("/scheduler/status", dependencies=[Depends(require_admin)])
 async def scheduler_status():
     jobs = scheduler.get_jobs()
     return {
@@ -594,7 +594,7 @@ async def scheduler_status():
         "current_utc": datetime.now(timezone.utc).isoformat(),
     }
 
-@app.post("/scheduler/run-now")
+@app.post("/scheduler/run-now", dependencies=[Depends(require_admin)])
 async def run_expiry_check_now():
     await check_expired_subscriptions()
     return {"message": "Expiry check completed — check logs"}

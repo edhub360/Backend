@@ -25,6 +25,7 @@ steps:
         export STRIPE_WEBHOOK_SECRET=$$(gcloud secrets versions access latest --secret="STRIPE_WEBHOOK_SECRET")
         export JWT_SECRET_KEY=$$(gcloud secrets versions access latest --secret="JWT_SECRET_KEY")
         export JWT_ALGORITHM=$$(gcloud secrets versions access latest --secret="JWT_ALGORITHM")
+        export ADMIN_KEY=$$(gcloud secrets versions access latest --secret="ADMIN_KEY")
         export MAIL_USERNAME=$$(gcloud secrets versions access latest --secret="MAIL_USERNAME")
         export MAIL_PASSWORD=$$(gcloud secrets versions access latest --secret="MAIL_PASSWORD")
         export MAIL_FROM=$$(gcloud secrets versions access latest --secret="MAIL_FROM")
@@ -36,7 +37,7 @@ steps:
           --allow-unauthenticated \
           --memory=1Gi --cpu=1 --timeout=300 --max-instances=10 --port=8000 \
           --add-cloudsql-instances=arctic-sentry-467317-s7:us-central1:studenthub \
-          --set-env-vars="ENVIRONMENT=production,DATABASE_URL=$$DATABASE_URL,JWT_SECRET_KEY=$$JWT_SECRET_KEY,JWT_ALGORITHM=$$JWT_ALGORITHM,MAIL_USERNAME=$$MAIL_USERNAME,MAIL_PASSWORD=$$MAIL_PASSWORD,MAIL_FROM=$$MAIL_FROM"\
+          --set-env-vars="ENVIRONMENT=production,DATABASE_URL=$$DATABASE_URL,JWT_SECRET_KEY=$$JWT_SECRET_KEY,JWT_ALGORITHM=$$JWT_ALGORITHM,ADMIN_KEY=$$ADMIN_KEY,MAIL_USERNAME=$$MAIL_USERNAME,MAIL_PASSWORD=$$MAIL_PASSWORD,MAIL_FROM=$$MAIL_FROM"\
           --set-env-vars="STRIPE_SECRET_KEY=$$STRIPE_SECRET_KEY,STRIPE_WEBHOOK_SECRET=$$STRIPE_WEBHOOK_SECRET"
 
 options:

@@ -18,7 +18,7 @@ from schemas import (
 )
 
 from study_stats import update_user_study_stats
-from auth import get_current_user
+from auth import get_current_user, require_admin
 from google.cloud import storage
 import pandas as pd
 import io
@@ -188,13 +188,13 @@ async def create_quiz(payload: QuizCreate, session: AsyncSession = Depends(get_s
         ]
     )
 
-@app.post("/quizzes/bulk-import-from-bucket")
+@app.post("/quizzes/bulk-import-from-bucket", dependencies=[Depends(require_admin)])
 async def bulk_import_from_bucket(
     quiz_csv_path: str = "quiz_bulk.csv",
     questions_csv_path: str = "questions_bulk.csv",
     session: AsyncSession = Depends(get_session)
 ):
-    
+
 
     client = storage.Client()
     bucket = client.bucket("arctic-sentry-467317-s7-studenthub-data")

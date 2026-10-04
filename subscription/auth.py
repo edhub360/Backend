@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -13,8 +13,16 @@ from models import User
 # Configuration
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-secret-key-here")
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
+ADMIN_KEY = os.getenv("ADMIN_KEY", "")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="http://localhost:8001/auth/login")
+
+
+def require_admin(x_admin_key: str = Header(...)) -> None:
+    """Gate for internal/ops-only routes (debug scheduler controls) - not
+    tied to a user account, just a shared secret only the team knows."""
+    if not ADMIN_KEY or x_admin_key != ADMIN_KEY:
+        raise HTTPException(status_code=403, detail="Forbidden")
 
 
 def decode_jwt_token(token: str) -> Dict[str, Any]:
